@@ -1,0 +1,118 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* =========================================
+   NEON-ON-NEAR-BLACK SHOWCASE THEME
+   Single fixed palette — no light/dark toggle.
+   ========================================= */
+
+:root {
+  --bg: #060608;
+  --text: #9a9aa5;
+  --text-contrast: #f7f7f5;
+  --card-bg: #0d0d10;
+  --border-color: rgba(255, 255, 255, 0.08);
+
+  --accent-volt: #d6ff3f; /* acid lime — primary accent */
+  --accent-volt-ink: #0a0e02; /* near-black text for on-volt surfaces */
+  --accent-flux: #ff2f92; /* hot magenta — secondary accent */
+  --accent-flux-ink: #1a0210; /* near-black text for on-flux surfaces */
+  --accent-cyan: #33e8ff; /* tertiary — sparing use */
+
+  --font-display: var(--font-syne), sans-serif;
+  --font-body: var(--font-space-grotesk), sans-serif;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+  background-color: var(--bg);
+  scrollbar-width: thin;
+  scrollbar-color: var(--accent-volt) var(--bg);
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg);
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: var(--accent-volt);
+  background-clip: padding-box;
+  border: 2px solid var(--bg);
+  border-radius: 999px;
+}
+
+body {
+  font-family: var(--font-body);
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.6;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  cursor: none;
+}
+
+@media (hover: none), (pointer: coarse) {
+  body {
+    cursor: auto;
+  }
+}
+
+h1,
+h2,
+h3,
+h4 {
+  font-family: var(--font-display);
+}
+
+/* Hover-only custom cursor is layered on top via CustomCursor.tsx; hide the
+   native cursor on precise pointers only (see the body rule above) so touch
+   devices keep their normal cursor/tap behavior. */
+
+@keyframes marqueeLoop {
+  from {
+    transform: translateX(0%);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+@keyframes preloaderPulse {
+  0%,
+  100% {
+    opacity: 0.4;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.perspective-1200 {
+  perspective: 1200px;
+}
+
+.flip-card-inner {
+  transform-style: preserve-3d;
+  transition: transform 0.6s cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+.flip-card-face {
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+.flip-card-back {
+  transform: rotateY(180deg);
+}
