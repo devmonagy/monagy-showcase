@@ -52,28 +52,34 @@ export default function ExperienceSection() {
 
   useGSAP(
     () => {
-      gsap.utils.toArray<HTMLElement>(".exp-card").forEach((card) => {
-        gsap.fromTo(
-          card,
-          { opacity: 0, y: 60 },
-          {
-            opacity: 1,
-            y: 0,
-            duration: 0.9,
-            ease: "power3.out",
-            scrollTrigger: { trigger: card, start: "top 85%" },
-          },
-        );
-      });
-
-      // Stacked-deck pin — desktop (fine pointer) only, mirroring exactly
-      // where ScrollSmoother is active: position:sticky misbehaves inside
-      // the smoother's transformed content wrapper, so pins stand in for
-      // it there. Touch devices skip the smoother entirely and use native
-      // position:sticky instead (globals.css) — compositor-driven, so the
-      // deck can't lag or flicker mid-scroll the way JS pinning does.
+      // Everything scroll-gated lives behind the fine-pointer query. On
+      // touch devices content is simply visible — no opacity-0 waiting on
+      // a ScrollTrigger to fire. Repeated real-device reports proved that
+      // on phones those reveals could stay un-fired for many seconds
+      // (leaving whole sections blank), and a reveal animation is never
+      // worth a blank page. Desktop keeps the full choreography.
       const mm = gsap.matchMedia();
       mm.add(FINE_POINTER_QUERY, () => {
+        gsap.utils.toArray<HTMLElement>(".exp-card").forEach((card) => {
+          gsap.fromTo(
+            card,
+            { opacity: 0, y: 60 },
+            {
+              opacity: 1,
+              y: 0,
+              duration: 0.9,
+              ease: "power3.out",
+              scrollTrigger: { trigger: card, start: "top 85%" },
+            },
+          );
+        });
+
+        // Stacked-deck pin — desktop (fine pointer) only, mirroring exactly
+        // where ScrollSmoother is active: position:sticky misbehaves inside
+        // the smoother's transformed content wrapper, so pins stand in for
+        // it there. Touch devices skip the smoother entirely and use native
+        // position:sticky instead (globals.css) — compositor-driven, so the
+        // deck can't lag or flicker mid-scroll the way JS pinning does.
         const wraps = gsap.utils.toArray<HTMLElement>(".exp-card-wrap");
         const lastOffset = 84 + (wraps.length - 1) * 18;
         wraps.forEach((wrap, i) => {
