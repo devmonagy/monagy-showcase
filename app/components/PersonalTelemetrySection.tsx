@@ -7,6 +7,7 @@ import { useGSAP } from "@gsap/react";
 import Image from "next/image";
 import { CONDITION_LABEL, orbGradient, WeatherIcon } from "./WeatherVisuals";
 import type { WeatherData } from "../api/weather/route";
+import { FINE_POINTER_QUERY } from "./SmoothScroll";
 
 if (typeof window !== "undefined") {
   gsap.registerPlugin(ScrollTrigger);
@@ -254,22 +255,28 @@ export default function PersonalTelemetrySection() {
   useGSAP(
     () => {
       // Modules "slot into the board": rise + scale with a slight overshoot.
-      gsap.fromTo(
-        ".telemetry-reveal",
-        { opacity: 0, y: 50, scale: 0.94 },
-        {
-          opacity: 1,
-          y: 0,
-          scale: 1,
-          duration: 0.9,
-          stagger: 0.1,
-          ease: "back.out(1.4)",
-          scrollTrigger: {
-            trigger: scopeRef.current,
-            start: "top 78%",
+      // Desktop only — on touch the tiles are visible from first paint
+      // instead of waiting at opacity 0 for a ScrollTrigger that real
+      // phones repeatedly failed to fire on time.
+      const mm = gsap.matchMedia();
+      mm.add(FINE_POINTER_QUERY, () => {
+        gsap.fromTo(
+          ".telemetry-reveal",
+          { opacity: 0, y: 50, scale: 0.94 },
+          {
+            opacity: 1,
+            y: 0,
+            scale: 1,
+            duration: 0.9,
+            stagger: 0.1,
+            ease: "back.out(1.4)",
+            scrollTrigger: {
+              trigger: scopeRef.current,
+              start: "top 78%",
+            },
           },
-        },
-      );
+        );
+      });
     },
     { scope: scopeRef },
   );
