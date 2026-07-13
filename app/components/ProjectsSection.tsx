@@ -81,7 +81,7 @@ export default function ProjectsSection() {
       ref={sectionRef}
       className="relative min-h-screen flex flex-col justify-center overflow-hidden"
     >
-      <div className="px-5 sm:px-6 md:px-8 min-[900px]:px-10 mb-16 sm:mb-24 min-[900px]:mb-32 flex items-end justify-between gap-6 max-w-6xl min-[900px]:max-w-none mx-auto min-[900px]:mx-0 w-full">
+      <div className="px-5 sm:px-6 md:px-8 min-[900px]:px-10 mb-16 sm:mb-24 min-[900px]:mb-32 flex items-end justify-between gap-6 max-w-content min-[900px]:max-w-none mx-auto min-[900px]:mx-0 w-full">
         <h2 className="font-[family-name:var(--font-syne)] font-extrabold text-4xl sm:text-6xl md:text-7xl tracking-tighter text-[var(--text-contrast)] leading-none">
           Selected
           <br />
@@ -104,7 +104,7 @@ export default function ProjectsSection() {
           return (
             <article
               key={project.id}
-              className="project-slide relative shrink-0 w-[88vw] sm:w-[72vw] min-[900px]:w-[64vw] max-w-[960px]"
+              className="project-slide relative shrink-0 w-[88vw] sm:w-[72vw] min-[900px]:w-[64vw] max-w-[60rem]"
             >
               {/* Ghost slide index — z-20 floats the hollow numeral OVER the
                   image corner (outline-only, so nothing underneath is

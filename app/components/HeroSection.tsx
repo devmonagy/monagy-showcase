@@ -98,7 +98,7 @@ export default function HeroSection() {
           {[0, 1].map((copy) => (
             <span
               key={copy}
-              className="text-outline block font-[family-name:var(--font-syne)] font-extrabold text-[16vw] leading-none tracking-tighter pr-10"
+              className="text-outline block font-[family-name:var(--font-syne)] font-extrabold text-[clamp(3rem,16vw,20rem)] leading-none tracking-tighter pr-10"
             >
               DEVELOPER — ENGINEER — CREATOR —&nbsp;
             </span>
@@ -118,6 +118,12 @@ export default function HeroSection() {
             </defs>
             <text
               style={{
+                // Values here are in the SVG's own user-coordinate space
+                // (viewBox 0 0 100 100): the browser scales this text
+                // together with the circle path whenever the rendered box
+                // size differs from the viewBox, so it already grows in
+                // lockstep with the w-24/w-32 wrapper under the fluid root
+                // scale — no separate fix needed here.
                 fontSize: "10px",
                 fill: "var(--accent-volt)",
                 letterSpacing: "2.4px",

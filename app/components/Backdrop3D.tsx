@@ -42,15 +42,18 @@ const SPARKLE_COLORS = [
 ];
 
 // 3D wireframe cube built from six bordered faces — CSS preserve-3d, no WebGL.
-const CUBE_SIZE = 150;
-const HALF = CUBE_SIZE / 2;
+// Sized in rem (150px at the 16px base root) rather than raw JS pixels so it
+// grows with the fluid root scale at 1920px+ the same way the ambient orbs
+// around it already do, instead of staying pinned to a fixed size.
+const CUBE_SIZE_REM = 9.375;
+const HALF_REM = CUBE_SIZE_REM / 2;
 const CUBE_FACES: React.CSSProperties[] = [
-  { transform: `translateZ(${HALF}px)` },
-  { transform: `rotateY(180deg) translateZ(${HALF}px)` },
-  { transform: `rotateY(90deg) translateZ(${HALF}px)` },
-  { transform: `rotateY(-90deg) translateZ(${HALF}px)` },
-  { transform: `rotateX(90deg) translateZ(${HALF}px)` },
-  { transform: `rotateX(-90deg) translateZ(${HALF}px)` },
+  { transform: `translateZ(${HALF_REM}rem)` },
+  { transform: `rotateY(180deg) translateZ(${HALF_REM}rem)` },
+  { transform: `rotateY(90deg) translateZ(${HALF_REM}rem)` },
+  { transform: `rotateY(-90deg) translateZ(${HALF_REM}rem)` },
+  { transform: `rotateX(90deg) translateZ(${HALF_REM}rem)` },
+  { transform: `rotateX(-90deg) translateZ(${HALF_REM}rem)` },
 ];
 
 export default function Backdrop3D() {
@@ -71,17 +74,23 @@ export default function Backdrop3D() {
 
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
 
-    // DPR capped at 1: these are soft 1-2px glows on a background layer —
-    // retina sharpness is invisible here and a 1.4x-viewport canvas at 2x
-    // DPR would quadruple the pixels cleared every frame.
+    // DPR capped at 2, not left uncapped: on a 3x-DPR phone or a wide 4K/8K
+    // desktop monitor, the raw ratio would multiply the backing-store pixel
+    // count (and the per-frame clear cost) far past what these soft 1-2px
+    // glows can even show. Capping at 2 keeps retina/4K displays sharp
+    // without paying for resolution the glow can't render anyway. Drawing
+    // math below stays in logical (CSS) pixels — only the backing store and
+    // context transform scale with DPR, via ctx.setTransform.
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
     let width = 0;
     let height = 0;
     const resize = () => {
       // offsetWidth/Height: layout size, unaffected by the parallax transform
       width = layer.offsetWidth;
       height = layer.offsetHeight;
-      canvas.width = width;
-      canvas.height = height;
+      canvas.width = width * dpr;
+      canvas.height = height * dpr;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     };
     resize();
     window.addEventListener("resize", resize);
@@ -230,9 +239,9 @@ export default function Backdrop3D() {
       aria-hidden="true"
     >
       {/* Ambient glow orbs — far layer */}
-      <div className="ambient-orb bd-far absolute top-[-12%] left-[-8%] w-[46vw] h-[46vw] max-w-[640px] max-h-[640px] rounded-full bg-[var(--accent-violet)] opacity-[0.10] blur-[130px]" />
-      <div className="ambient-orb bd-far absolute top-[38%] right-[-12%] w-[40vw] h-[40vw] max-w-[560px] max-h-[560px] rounded-full bg-[var(--accent-cyan)] opacity-[0.07] blur-[130px]" />
-      <div className="ambient-orb bd-far absolute bottom-[-14%] left-[22%] w-[42vw] h-[42vw] max-w-[600px] max-h-[600px] rounded-full bg-[var(--accent-volt)] opacity-[0.06] blur-[140px]" />
+      <div className="ambient-orb bd-far absolute top-[-12%] left-[-8%] w-[46vw] h-[46vw] max-w-[40rem] max-h-[40rem] rounded-full bg-[var(--accent-violet)] opacity-[0.10] blur-[130px]" />
+      <div className="ambient-orb bd-far absolute top-[38%] right-[-12%] w-[40vw] h-[40vw] max-w-[35rem] max-h-[35rem] rounded-full bg-[var(--accent-cyan)] opacity-[0.07] blur-[130px]" />
+      <div className="ambient-orb bd-far absolute bottom-[-14%] left-[22%] w-[42vw] h-[42vw] max-w-[37.5rem] max-h-[37.5rem] rounded-full bg-[var(--accent-volt)] opacity-[0.06] blur-[140px]" />
 
       {/* Fine dot grid + scroll-sparkle canvas — far layer texture so black
           never reads as empty. One shared wrapper so the sparkles ride the
@@ -273,8 +282,8 @@ export default function Backdrop3D() {
         <div
           className="relative animate-[spinCube_32s_linear_infinite]"
           style={{
-            width: CUBE_SIZE,
-            height: CUBE_SIZE,
+            width: `${CUBE_SIZE_REM}rem`,
+            height: `${CUBE_SIZE_REM}rem`,
             transformStyle: "preserve-3d",
           }}
         >

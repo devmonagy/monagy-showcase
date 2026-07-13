@@ -43,7 +43,7 @@ export default function Navbar() {
           MN<span className="text-[var(--accent-volt)]">.</span>
         </a>
 
-        <ul className="flex items-center gap-3 sm:gap-6 font-mono text-[10px] sm:text-xs uppercase tracking-widest text-[var(--text)]">
+        <ul className="flex items-center gap-3 sm:gap-6 font-mono text-[0.625rem] sm:text-xs uppercase tracking-widest text-[var(--text)]">
           {NAV_LINKS.map((link) => (
             <li key={link.href}>
               <a
@@ -62,7 +62,7 @@ export default function Navbar() {
           download
           target="_blank"
           rel="noopener noreferrer"
-          className="hidden sm:inline-flex items-center gap-2 rounded-full bg-[var(--accent-volt)] text-[var(--accent-volt-ink)] px-4 py-2 font-mono text-[11px] font-bold uppercase tracking-widest hover:scale-105 transition-transform duration-200"
+          className="hidden sm:inline-flex items-center gap-2 rounded-full bg-[var(--accent-volt)] text-[var(--accent-volt-ink)] px-4 py-2 font-mono text-[0.6875rem] font-bold uppercase tracking-widest hover:scale-105 transition-transform duration-200"
         >
           Resume
         </a>
