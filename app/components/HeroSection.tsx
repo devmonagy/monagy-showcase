@@ -15,64 +15,63 @@ export default function HeroSection() {
 
   useGSAP(
     () => {
-      const mm = gsap.matchMedia();
-
-      // Desktop: pin the hero for one viewport of scroll while the
-      // headline/tagline/body reveal in scrub-driven stages, then release
-      // into normal scroll.
-      mm.add("(min-width: 900px)", () => {
-        gsap.timeline({
-          scrollTrigger: {
-            trigger: sectionRef.current,
-            start: "top top",
-            end: "+=100%",
-            scrub: 1,
-            pin: true,
-            invalidateOnRefresh: true,
-          },
-        })
-          .fromTo(
-            ".hero-line",
-            { yPercent: 110 },
-            { yPercent: 0, stagger: 0.15, ease: "power4.out" },
-          )
-          .fromTo(
-            ".hero-fade",
-            { opacity: 0, y: 30 },
-            { opacity: 1, y: 0, stagger: 0.08, ease: "power3.out" },
-            "-=0.3",
-          );
+      // Entrance plays immediately on mount (the preloader gates mounting,
+      // so this fires right as the curtain lifts) — scrub-driven reveals
+      // here left the whole hero blank until the first scroll.
+      const tl = gsap.timeline({
+        defaults: { ease: "power4.out" },
+        delay: 0.15,
       });
 
-      // Mobile: plain stagger-in on enter, no pin — avoids pinned-scroll
-      // height/jank issues on small viewports.
-      mm.add("(max-width: 899px)", () => {
-        gsap.fromTo(
-          ".hero-line",
-          { yPercent: 110 },
-          {
-            yPercent: 0,
-            stagger: 0.12,
-            duration: 1,
-            ease: "power4.out",
-            scrollTrigger: { trigger: sectionRef.current, start: "top 85%" },
-          },
-        );
-        gsap.fromTo(
+      tl.fromTo(
+        ".hero-line",
+        { yPercent: 110 },
+        { yPercent: 0, duration: 1.2, stagger: 0.12 },
+      )
+        .fromTo(
           ".hero-fade",
-          { opacity: 0, y: 20 },
-          {
-            opacity: 1,
-            y: 0,
-            stagger: 0.08,
-            duration: 0.8,
-            ease: "power3.out",
-            scrollTrigger: { trigger: sectionRef.current, start: "top 80%" },
-          },
+          { opacity: 0, y: 26 },
+          { opacity: 1, y: 0, duration: 0.9, stagger: 0.08 },
+          "-=0.7",
+        )
+        .fromTo(
+          ".hero-badge",
+          { scale: 0, rotate: -40 },
+          { scale: 1, rotate: 0, duration: 0.8, ease: "back.out(1.6)" },
+          "-=0.6",
         );
+
+      // Ghost strip drifts forever — full words stay readable as they roll
+      // through, instead of one oversized word clipping to "DEVE".
+      gsap.to(".hero-ghost-track", {
+        xPercent: -50,
+        ease: "none",
+        duration: 28,
+        repeat: -1,
       });
 
-      return () => mm.revert();
+      // Scroll parallax on top of the entrance: ghost strip sinks, content
+      // drifts — depth cue as the hero releases into the page.
+      gsap.to(".hero-ghost", {
+        yPercent: 40,
+        ease: "none",
+        scrollTrigger: {
+          trigger: sectionRef.current,
+          start: "top top",
+          end: "bottom top",
+          scrub: 0.8,
+        },
+      });
+      gsap.to(".hero-inner", {
+        yPercent: -8,
+        ease: "none",
+        scrollTrigger: {
+          trigger: sectionRef.current,
+          start: "top top",
+          end: "bottom top",
+          scrub: 0.8,
+        },
+      });
     },
     { scope: sectionRef },
   );
@@ -81,19 +80,68 @@ export default function HeroSection() {
     <section
       id="about"
       ref={sectionRef}
-      className="relative min-h-screen flex flex-col justify-center px-4 sm:px-6 md:px-8 py-28 sm:py-0 overflow-hidden"
+      className="relative min-h-screen flex flex-col justify-center px-4 sm:px-6 md:px-8 py-28 sm:py-24 overflow-hidden"
     >
-      <div className="absolute top-1/3 right-[-10%] w-[500px] h-[500px] bg-[var(--accent-flux)] opacity-[0.08] rounded-full blur-[140px] pointer-events-none" />
-      <div className="absolute bottom-0 left-[-10%] w-[400px] h-[400px] bg-[var(--accent-volt)] opacity-[0.08] rounded-full blur-[140px] pointer-events-none" />
+      {/* Ghost outline strip — massive, behind everything, loops forever
+          and parallax-sinks on scroll so full words stay readable */}
+      <div
+        className="hero-ghost absolute bottom-[4%] left-0 w-full overflow-hidden pointer-events-none select-none"
+        aria-hidden="true"
+      >
+        <div className="hero-ghost-track flex w-max whitespace-nowrap">
+          {[0, 1].map((copy) => (
+            <span
+              key={copy}
+              className="text-outline block font-[family-name:var(--font-syne)] font-extrabold text-[16vw] leading-none tracking-tighter pr-10"
+            >
+              DEVELOPER — ENGINEER — CREATOR —&nbsp;
+            </span>
+          ))}
+        </div>
+      </div>
 
-      <div className="max-w-4xl mx-auto w-full relative z-10">
+      {/* Spinning circular badge */}
+      <div className="hero-badge absolute top-24 right-3 sm:top-28 sm:right-10 md:right-16 w-24 h-24 sm:w-32 sm:h-32 pointer-events-none select-none">
+        <div className="absolute inset-0 animate-[spinSlow_16s_linear_infinite]">
+          <svg viewBox="0 0 100 100" className="w-full h-full">
+            <defs>
+              <path
+                id="badge-circle"
+                d="M50,50 m-38,0 a38,38 0 1,1 76,0 a38,38 0 1,1 -76,0"
+              />
+            </defs>
+            <text
+              style={{
+                fontSize: "10px",
+                fill: "var(--accent-volt)",
+                letterSpacing: "2.4px",
+                fontFamily: "var(--font-body)",
+                textTransform: "uppercase",
+              }}
+            >
+              <textPath href="#badge-circle">
+                Select projects • Based in NYC •
+              </textPath>
+            </text>
+          </svg>
+        </div>
+        <span className="absolute inset-0 flex items-center justify-center text-[var(--accent-volt)] text-xl">
+          ↓
+        </span>
+      </div>
+
+      <div className="hero-inner max-w-4xl mx-auto w-full relative z-10">
         <div className="overflow-hidden mb-3">
-          <span className="hero-line inline-block font-mono text-xs sm:text-sm text-[var(--accent-volt)] tracking-widest uppercase font-semibold">
+          <span className="hero-line inline-flex items-center gap-3 font-mono text-xs sm:text-sm text-[var(--accent-volt)] tracking-widest uppercase font-semibold">
+            <span className="w-8 h-px bg-[var(--accent-volt)]" />
             Software Developer
           </span>
         </div>
 
-        <h1 className="font-[family-name:var(--font-syne)] font-extrabold text-[15vw] sm:text-8xl md:text-9xl leading-[0.95] tracking-tighter text-[var(--text-contrast)]">
+        {/* clamp() keeps the longest line ("Mohamed") narrower than the
+            max-w-4xl column at every viewport — fixed sizes clipped the
+            final letters behind the reveal masks. */}
+        <h1 className="font-[family-name:var(--font-syne)] font-extrabold text-[clamp(2.4rem,11.2vw,6.75rem)] leading-[0.95] tracking-tighter text-[var(--text-contrast)]">
           <span className="overflow-hidden block">
             <span className="hero-line block">Mohamed</span>
           </span>
@@ -105,7 +153,7 @@ export default function HeroSection() {
         </h1>
 
         <div className="overflow-hidden mt-4 sm:mt-6">
-          <p className="hero-line font-[family-name:var(--font-syne)] font-bold text-xl sm:text-2xl md:text-3xl text-[var(--accent-flux)] tracking-tight">
+          <p className="hero-line font-[family-name:var(--font-syne)] font-bold text-xl sm:text-2xl md:text-3xl text-[var(--accent-cyan)] tracking-tight">
             {SITE.tagline}
           </p>
         </div>
@@ -139,6 +187,14 @@ export default function HeroSection() {
             <span aria-hidden="true">↓</span>
           </a>
         </div>
+      </div>
+
+      {/* Scroll cue */}
+      <div className="hero-fade absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 pointer-events-none">
+        <span className="font-mono text-[10px] uppercase tracking-[0.3em] text-[var(--text)] opacity-70">
+          Scroll
+        </span>
+        <span className="w-px h-10 bg-gradient-to-b from-[var(--accent-volt)] to-transparent animate-pulse" />
       </div>
     </section>
   );

@@ -11,18 +11,22 @@ if (typeof window !== "undefined") {
   gsap.registerPlugin(ScrollTrigger);
 }
 
-const ACCENTS = ["var(--accent-volt)", "var(--accent-flux)", "var(--accent-cyan)"];
+const SLIDE_TONES = [
+  { accent: "var(--accent-volt)", ink: "var(--accent-volt-ink)" },
+  { accent: "var(--accent-cyan)", ink: "var(--accent-cyan-ink)" },
+];
 
 export default function ProjectsSection() {
   const sectionRef = useRef<HTMLDivElement>(null);
   const trackRef = useRef<HTMLDivElement>(null);
+  const progressRef = useRef<HTMLDivElement>(null);
 
   useGSAP(
     () => {
       const mm = gsap.matchMedia();
 
-      // Desktop: pin the section and drive the track's horizontal position
-      // from vertical scroll — the pinned-horizontal-scroll showcase.
+      // Desktop: pin the section and drive the track horizontally from
+      // vertical scroll, with a progress bar synced to the same distance.
       mm.add("(min-width: 900px)", () => {
         const track = trackRef.current;
         const section = sectionRef.current;
@@ -44,18 +48,35 @@ export default function ProjectsSection() {
           },
         });
 
+        const progress = gsap.fromTo(
+          progressRef.current,
+          { scaleX: 0 },
+          {
+            scaleX: 1,
+            ease: "none",
+            scrollTrigger: {
+              trigger: section,
+              start: "top top",
+              end: () => `+=${getScrollAmount()}`,
+              scrub: 1,
+              invalidateOnRefresh: true,
+            },
+          },
+        );
+
         return () => {
           tween.scrollTrigger?.kill();
           tween.kill();
+          progress.scrollTrigger?.kill();
+          progress.kill();
         };
       });
 
-      // Mobile: no pin — the row is a native horizontal scroll-snap strip,
-      // just fade the cards in as the section enters.
+      // Mobile: native horizontal scroll-snap; slides just fade up on enter.
       mm.add("(max-width: 899px)", () => {
         gsap.fromTo(
-          ".project-card",
-          { opacity: 0, y: 30 },
+          ".project-slide",
+          { opacity: 0, y: 40 },
           {
             opacity: 1,
             y: 0,
@@ -76,82 +97,133 @@ export default function ProjectsSection() {
     <section
       id="projects"
       ref={sectionRef}
-      className="relative py-20 sm:py-28 px-4 sm:px-6 md:px-8 min-[900px]:py-0 min-[900px]:min-h-screen min-[900px]:flex min-[900px]:flex-col min-[900px]:justify-center overflow-hidden"
+      className="relative py-20 sm:py-28 min-[900px]:py-0 min-[900px]:min-h-screen min-[900px]:flex min-[900px]:flex-col min-[900px]:justify-center overflow-hidden"
     >
-      <div className="max-w-6xl mx-auto w-full min-[900px]:max-w-none min-[900px]:px-8">
-        <div className="flex items-center gap-4 mb-10 sm:mb-14">
-          <h2 className="font-[family-name:var(--font-syne)] font-extrabold text-2xl sm:text-3xl md:text-4xl text-[var(--text-contrast)]">
-            Some Things I&rsquo;ve Built
-          </h2>
-          <div className="h-px flex-1 bg-[var(--border-color)]" />
-        </div>
+      <div className="px-4 sm:px-6 md:px-8 min-[900px]:px-10 mb-16 sm:mb-24 min-[900px]:mb-32 flex items-end justify-between gap-6 max-w-6xl min-[900px]:max-w-none mx-auto min-[900px]:mx-0 w-full">
+        <h2 className="font-[family-name:var(--font-syne)] font-extrabold text-4xl sm:text-6xl md:text-7xl tracking-tighter text-[var(--text-contrast)] leading-none">
+          Selected
+          <br />
+          <span className="text-outline-volt">Works</span>
+        </h2>
+        <span className="hidden sm:flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.3em] text-[var(--text)] opacity-60 pb-2">
+          Scroll
+          <span aria-hidden="true">→</span>
+        </span>
       </div>
 
       <div
         ref={trackRef}
-        className="flex overflow-x-auto snap-x snap-mandatory min-[900px]:overflow-visible min-[900px]:snap-none pb-6 min-[900px]:pb-0 -mx-4 px-4 sm:-mx-6 sm:px-6 min-[900px]:mx-0 min-[900px]:px-8 gap-6 min-[900px]:gap-10"
+        className="flex items-start overflow-x-auto snap-x snap-mandatory min-[900px]:overflow-visible min-[900px]:snap-none pb-6 min-[900px]:pb-0 px-4 sm:px-6 min-[900px]:px-10 gap-10 min-[900px]:gap-24"
       >
         {PROJECTS.map((project, i) => {
-          const accent = ACCENTS[i % ACCENTS.length];
+          const tone = SLIDE_TONES[i % SLIDE_TONES.length];
+          const tiltEven = i % 2 === 0;
 
           return (
-            <a
+            <article
               key={project.id}
-              href={project.liveUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="project-card group shrink-0 snap-center w-[85vw] sm:w-[65vw] min-[900px]:w-[55vw] min-[900px]:max-w-[760px] rounded-2xl overflow-hidden border bg-[var(--card-bg)] flex flex-col"
-              style={{ borderColor: "var(--border-color)" }}
+              className="project-slide relative shrink-0 snap-center w-[88vw] sm:w-[72vw] min-[900px]:w-[64vw] max-w-[960px]"
             >
-              <div className="relative w-full h-[220px] sm:h-[320px] min-[900px]:h-[380px] overflow-hidden">
-                {project.status && (
-                  <div
-                    className="absolute top-4 left-4 z-10 text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded"
-                    style={{ backgroundColor: accent, color: "var(--bg)" }}
-                  >
-                    {project.status}
-                  </div>
-                )}
-                <Image
-                  src={project.image}
-                  alt={project.title}
-                  fill
-                  sizes="(min-width: 900px) 55vw, 85vw"
-                  className="object-cover object-center grayscale-[60%] opacity-90 group-hover:grayscale-0 group-hover:opacity-100 group-hover:scale-105 transition-all duration-700 ease-out"
-                />
-                <div
-                  className="absolute inset-0 pointer-events-none mix-blend-color opacity-30 group-hover:opacity-0 transition-opacity duration-500"
-                  style={{ backgroundColor: accent }}
-                />
-              </div>
+              {/* Ghost slide index — z-20 floats the hollow numeral OVER the
+                  image corner (outline-only, so nothing underneath is
+                  actually blocked) instead of burying it behind the frame */}
+              <span
+                className="absolute -top-12 sm:-top-20 min-[900px]:-top-28 -left-2 z-20 font-[family-name:var(--font-syne)] font-extrabold text-[6rem] sm:text-[10rem] min-[900px]:text-[13rem] leading-none tracking-tighter pointer-events-none select-none"
+                style={{
+                  color: "transparent",
+                  WebkitTextStroke: `2px ${tone.accent}`,
+                  opacity: 0.55,
+                }}
+                aria-hidden="true"
+              >
+                0{i + 1}
+              </span>
 
-              <div className="p-5 sm:p-7 flex flex-col gap-3 flex-1">
-                <span
-                  className="font-mono text-[10px] uppercase tracking-widest"
-                  style={{ color: accent }}
+              <div className="relative z-10 grid min-[900px]:grid-cols-[1.15fr_1fr] gap-6 min-[900px]:gap-12 items-start">
+                {/* Tilted screenshot frame */}
+                <a
+                  href={project.liveUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={`group relative block aspect-[16/10] rounded-2xl overflow-hidden border-2 transition-transform duration-500 ease-out will-change-transform ${
+                    tiltEven
+                      ? "rotate-[-2.5deg] hover:rotate-0"
+                      : "rotate-[2.5deg] hover:rotate-0"
+                  } hover:scale-[1.02]`}
+                  style={{
+                    borderColor: tone.accent,
+                    boxShadow: "0 24px 70px rgba(0,0,0,0.5)",
+                  }}
                 >
-                  {project.subtitle}
-                </span>
-                <h3 className="font-[family-name:var(--font-syne)] font-bold text-lg sm:text-xl text-[var(--text-contrast)]">
-                  {project.title}
-                </h3>
-                <p className="text-xs sm:text-sm text-[var(--text)] leading-relaxed line-clamp-3">
-                  {project.description}
-                </p>
-                <ul className="mt-auto flex flex-wrap gap-1.5 pt-2 font-mono text-[10px] text-[var(--text)] opacity-80">
-                  {project.tech.map((t) => (
-                    <li
-                      key={t}
-                      className="px-2 py-1 rounded-full border border-[var(--border-color)]"
+                  {project.status && (
+                    <span
+                      className="absolute top-4 left-4 z-10 text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded"
+                      style={{ backgroundColor: tone.accent, color: tone.ink }}
                     >
-                      {t}
-                    </li>
-                  ))}
-                </ul>
+                      {project.status}
+                    </span>
+                  )}
+                  <Image
+                    src={project.image}
+                    alt={project.title}
+                    fill
+                    sizes="(min-width: 900px) 40vw, 88vw"
+                    className="object-cover object-center grayscale-[50%] opacity-90 group-hover:grayscale-0 group-hover:opacity-100 group-hover:scale-105 transition-all duration-700 ease-out"
+                  />
+                  <div
+                    className="absolute inset-0 pointer-events-none mix-blend-color opacity-25 group-hover:opacity-0 transition-opacity duration-500"
+                    style={{ backgroundColor: tone.accent }}
+                  />
+                </a>
+
+                {/* Slide copy */}
+                <div className="flex flex-col gap-4 self-center">
+                  <span
+                    className="font-mono text-[10px] sm:text-xs uppercase tracking-[0.25em]"
+                    style={{ color: tone.accent }}
+                  >
+                    {project.subtitle}
+                  </span>
+                  <h3 className="font-[family-name:var(--font-syne)] font-extrabold text-2xl sm:text-4xl min-[900px]:text-5xl tracking-tight text-[var(--text-contrast)] leading-[1.05]">
+                    {project.title}
+                  </h3>
+                  <p className="text-xs sm:text-sm min-[900px]:text-base text-[var(--text)] leading-relaxed max-w-md">
+                    {project.description}
+                  </p>
+                  <ul className="flex flex-wrap gap-1.5 font-mono text-[9px] sm:text-[10px] uppercase tracking-wider text-[var(--text)]">
+                    {project.tech.map((t) => (
+                      <li
+                        key={t}
+                        className="px-2.5 py-1 rounded-full border border-[var(--border-color)]"
+                      >
+                        {t}
+                      </li>
+                    ))}
+                  </ul>
+                  <a
+                    href={project.liveUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-2 inline-flex w-max items-center gap-2 rounded-full px-5 py-3 font-mono text-[11px] font-bold uppercase tracking-widest transition-transform duration-200 hover:scale-105 hover:-rotate-1"
+                    style={{ backgroundColor: tone.accent, color: tone.ink }}
+                  >
+                    Launch App
+                    <span aria-hidden="true">↗</span>
+                  </a>
+                </div>
               </div>
-            </a>
+            </article>
           );
         })}
+      </div>
+
+      {/* Horizontal progress bar — desktop pinned mode only */}
+      <div className="hidden min-[900px]:block absolute bottom-10 left-10 right-10 h-[3px] rounded-full bg-white/10 overflow-hidden">
+        <div
+          ref={progressRef}
+          className="h-full w-full origin-left bg-[var(--accent-volt)]"
+          style={{ transform: "scaleX(0)" }}
+        />
       </div>
     </section>
   );
