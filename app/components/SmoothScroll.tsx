@@ -74,18 +74,36 @@ export default function SmoothScroll({
       // against the final layout right as scrolling unlocks; otherwise
       // trigger start/end points stay pinned to whatever was on screen at
       // that first paint and every animation reads "late" by however far
-      // the real layout drifted — which looks exactly like having to
-      // scroll and scroll before content catches up. Waiting on
-      // document.fonts.ready first avoids a second drift: custom fonts
-      // swapping in after this refresh (common on a throttled mobile
-      // connection) reflow text and silently invalidate the positions we
-      // just measured.
-      const refresh = () => requestAnimationFrame(() => ScrollTrigger.refresh());
-      if (document.fonts?.ready) {
-        document.fonts.ready.then(refresh);
-      } else {
-        refresh();
-      }
+      // the real layout drifted — content stays invisible at its stale
+      // (wrong) trigger position until something finally corrects it.
+      //
+      // A previous version gated this ENTIRELY behind document.fonts.ready
+      // to also catch font-swap reflow — but on a real, possibly-throttled
+      // mobile connection that promise can take several seconds to settle,
+      // and scrolling is already unlocked well before then. The result:
+      // sections stayed blank while scrolling through them, only
+      // reappearing once fonts finally loaded and the delayed refresh
+      // retroactively fired their reveals — which is exactly what a
+      // screen recording of the bug showed happening.
+      //
+      // Fix: refresh immediately so the common case is correct from frame
+      // one, then fire a few more untimed passes as things opportunistically
+      // settle. None of these block or gate anything — they only correct
+      // further if a later one finds the layout has shifted.
+      const refresh = () => ScrollTrigger.refresh();
+      requestAnimationFrame(refresh);
+      const t1 = window.setTimeout(refresh, 500);
+      const t2 = window.setTimeout(refresh, 1500);
+      const t3 = window.setTimeout(refresh, 3500);
+      document.fonts?.ready?.then(refresh).catch(() => {});
+      window.addEventListener("load", refresh);
+
+      return () => {
+        window.clearTimeout(t1);
+        window.clearTimeout(t2);
+        window.clearTimeout(t3);
+        window.removeEventListener("load", refresh);
+      };
     }
   }, [locked]);
 
