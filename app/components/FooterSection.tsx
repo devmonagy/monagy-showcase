@@ -5,7 +5,6 @@ import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { useGSAP } from "@gsap/react";
 import { NAV_LINKS, SOCIALS } from "../data/content";
-import { FINE_POINTER_QUERY } from "./SmoothScroll";
 
 if (typeof window !== "undefined") {
   gsap.registerPlugin(ScrollTrigger);
@@ -16,23 +15,18 @@ export default function FooterSection() {
 
   useGSAP(
     () => {
-      // Desktop-only reveal — on touch the footer is visible from first
-      // paint rather than gated on a ScrollTrigger firing.
-      const mm = gsap.matchMedia();
-      mm.add(FINE_POINTER_QUERY, () => {
-        gsap.fromTo(
-          ".footer-reveal",
-          { opacity: 0, y: 30 },
-          {
-            opacity: 1,
-            y: 0,
-            stagger: 0.08,
-            duration: 0.9,
-            ease: "power3.out",
-            scrollTrigger: { trigger: footerRef.current, start: "top 90%" },
-          },
-        );
-      });
+      gsap.fromTo(
+        ".footer-reveal",
+        { opacity: 0, y: 30 },
+        {
+          opacity: 1,
+          y: 0,
+          stagger: 0.08,
+          duration: 0.9,
+          ease: "power3.out",
+          scrollTrigger: { trigger: footerRef.current, start: "top 90%" },
+        },
+      );
     },
     { scope: footerRef },
   );

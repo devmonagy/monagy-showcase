@@ -5,7 +5,6 @@ import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { useGSAP } from "@gsap/react";
 import { SITE, SOCIALS } from "../data/content";
-import { FINE_POINTER_QUERY } from "./SmoothScroll";
 
 if (typeof window !== "undefined") {
   gsap.registerPlugin(ScrollTrigger);
@@ -19,37 +18,31 @@ export default function ContactSection() {
 
   useGSAP(
     () => {
-      // Desktop-only reveals: on touch devices this content stays visible
-      // from first paint — real phones repeatedly failed to fire these
-      // ScrollTriggers on time, leaving the section blank mid-scroll.
-      const mm = gsap.matchMedia();
-      mm.add(FINE_POINTER_QUERY, () => {
-        gsap.fromTo(
-          ".contact-reveal",
-          { opacity: 0, y: 50 },
-          {
-            opacity: 1,
-            y: 0,
-            stagger: 0.12,
-            duration: 1.1,
-            ease: "power4.out",
-            scrollTrigger: { trigger: sectionRef.current, start: "top 75%" },
-          },
-        );
+      gsap.fromTo(
+        ".contact-reveal",
+        { opacity: 0, y: 50 },
+        {
+          opacity: 1,
+          y: 0,
+          stagger: 0.12,
+          duration: 1.1,
+          ease: "power4.out",
+          scrollTrigger: { trigger: sectionRef.current, start: "top 75%" },
+        },
+      );
 
-        // The big solid line gets its own scale-punch on top of the shared
-        // rise — the section's one "wow" beat.
-        gsap.fromTo(
-          ".contact-punch",
-          { scale: 0.8 },
-          {
-            scale: 1,
-            duration: 1.2,
-            ease: "back.out(1.4)",
-            scrollTrigger: { trigger: sectionRef.current, start: "top 70%" },
-          },
-        );
-      });
+      // The big solid line gets its own scale-punch on top of the shared
+      // rise — the section's one "wow" beat.
+      gsap.fromTo(
+        ".contact-punch",
+        { scale: 0.8 },
+        {
+          scale: 1,
+          duration: 1.2,
+          ease: "back.out(1.4)",
+          scrollTrigger: { trigger: sectionRef.current, start: "top 70%" },
+        },
+      );
     },
     { scope: sectionRef },
   );
