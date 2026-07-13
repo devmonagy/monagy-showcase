@@ -5,6 +5,7 @@ import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { useGSAP } from "@gsap/react";
 import { EXPERIENCES } from "../data/content";
+import { FINE_POINTER_QUERY } from "./SmoothScroll";
 
 if (typeof window !== "undefined") {
   gsap.registerPlugin(ScrollTrigger);
@@ -65,24 +66,25 @@ export default function ExperienceSection() {
         );
       });
 
-      // Stacked-deck pin, same on every device — mirrors ProjectsSection's
-      // horizontal pin, which is confirmed working well on real phones.
-      // Plain ScrollTrigger.pin with no ScrollSmoother involved never needs
-      // to intercept touch events, so it's safe here for the same reason.
-      // An earlier version fell back to native position:sticky on touch,
-      // reasoning it'd be cheaper/safer — but on a real device it never
-      // actually reproduced the stacking effect (cards just faded in at
-      // full height, no overlap), so that fallback is gone.
-      const wraps = gsap.utils.toArray<HTMLElement>(".exp-card-wrap");
-      const lastOffset = 84 + (wraps.length - 1) * 18;
-      wraps.forEach((wrap, i) => {
-        ScrollTrigger.create({
-          trigger: wrap,
-          start: `top ${84 + i * 18}px`,
-          endTrigger: wraps[wraps.length - 1],
-          end: `top ${lastOffset}px`,
-          pin: true,
-          pinSpacing: false,
+      // Stacked-deck pin — desktop (fine pointer) only, mirroring exactly
+      // where ScrollSmoother is active: position:sticky misbehaves inside
+      // the smoother's transformed content wrapper, so pins stand in for
+      // it there. Touch devices skip the smoother entirely and use native
+      // position:sticky instead (globals.css) — compositor-driven, so the
+      // deck can't lag or flicker mid-scroll the way JS pinning does.
+      const mm = gsap.matchMedia();
+      mm.add(FINE_POINTER_QUERY, () => {
+        const wraps = gsap.utils.toArray<HTMLElement>(".exp-card-wrap");
+        const lastOffset = 84 + (wraps.length - 1) * 18;
+        wraps.forEach((wrap, i) => {
+          ScrollTrigger.create({
+            trigger: wrap,
+            start: `top ${84 + i * 18}px`,
+            endTrigger: wraps[wraps.length - 1],
+            end: `top ${lastOffset}px`,
+            pin: true,
+            pinSpacing: false,
+          });
         });
       });
     },
