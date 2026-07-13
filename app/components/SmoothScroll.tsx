@@ -87,21 +87,20 @@ export default function SmoothScroll({
       // screen recording of the bug showed happening.
       //
       // Fix: refresh immediately so the common case is correct from frame
-      // one, then fire a few more untimed passes as things opportunistically
-      // settle. None of these block or gate anything — they only correct
-      // further if a later one finds the layout has shifted.
+      // one, then exactly two more passes tied to real, semantically
+      // meaningful events — document.fonts.ready and window's load event
+      // (fonts/images/subresources all finished) — rather than a handful of
+      // arbitrary timers. Each refresh() forces a synchronous layout read
+      // across every trigger on the page; on the weaker CPUs this bug
+      // actually shows up on, firing that five-plus times in a few seconds
+      // was itself real, avoidable jank stacked on top of the slow load
+      // the user was already fighting.
       const refresh = () => ScrollTrigger.refresh();
       requestAnimationFrame(refresh);
-      const t1 = window.setTimeout(refresh, 500);
-      const t2 = window.setTimeout(refresh, 1500);
-      const t3 = window.setTimeout(refresh, 3500);
       document.fonts?.ready?.then(refresh).catch(() => {});
       window.addEventListener("load", refresh);
 
       return () => {
-        window.clearTimeout(t1);
-        window.clearTimeout(t2);
-        window.clearTimeout(t3);
         window.removeEventListener("load", refresh);
       };
     }
