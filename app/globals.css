@@ -43,9 +43,10 @@ html {
      horizontal overflow to clip. body's overflow-x:hidden below handles
      desktop, but iOS lets horizontal panning/rubber-banding sneak past it
      — which reads as the whole app being loosely draggable side to side.
-     `clip` forbids horizontal scrolling entirely without creating a new
-     scroll container, and overscroll-behavior-x kills any leftover
-     horizontal rubber-band chaining. */
+     `clip` forbids horizontal scrolling entirely WITHOUT creating a
+     scroll container (overflow-x:hidden here would break position:sticky
+     for the experience deck), and overscroll-behavior-x kills any
+     leftover horizontal rubber-band chaining. */
   overflow-x: clip;
   overscroll-behavior-x: none;
 }
@@ -87,6 +88,16 @@ h2,
 h3,
 h4 {
   font-family: var(--font-display);
+}
+
+/* Experience deck on touch devices: native position:sticky (top offsets
+   are inline per card). Compositor-driven, zero per-frame JS — the
+   ScrollTrigger pins that replace it on desktop exist only because
+   sticky can't live inside ScrollSmoother's transformed wrapper. */
+@media (hover: none), (pointer: coarse) {
+  .exp-card-wrap {
+    position: sticky;
+  }
 }
 
 /* Outlined ghost typography — transparent fill, hairline stroke */
