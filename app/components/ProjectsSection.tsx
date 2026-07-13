@@ -23,72 +23,54 @@ export default function ProjectsSection() {
 
   useGSAP(
     () => {
-      const mm = gsap.matchMedia();
+      // Pin the section and drive the track horizontally from vertical
+      // scroll, with a progress bar synced to the same distance — same
+      // mechanism at every breakpoint. This is plain ScrollTrigger.pin with
+      // no ScrollSmoother involved, so it rides native scroll/touch
+      // directly; unlike the smoother, it never needs to intercept touch
+      // events, which is what makes it safe to run on phones.
+      const track = trackRef.current;
+      const section = sectionRef.current;
+      if (!track || !section) return;
 
-      // Desktop: pin the section and drive the track horizontally from
-      // vertical scroll, with a progress bar synced to the same distance.
-      mm.add("(min-width: 900px)", () => {
-        const track = trackRef.current;
-        const section = sectionRef.current;
-        if (!track || !section) return;
+      const getScrollAmount = () =>
+        Math.max(track.scrollWidth - window.innerWidth, 0);
 
-        const getScrollAmount = () =>
-          Math.max(track.scrollWidth - window.innerWidth, 0);
+      const tween = gsap.to(track, {
+        x: () => -getScrollAmount(),
+        ease: "none",
+        scrollTrigger: {
+          trigger: section,
+          start: "top top",
+          end: () => `+=${getScrollAmount()}`,
+          scrub: 1,
+          pin: true,
+          invalidateOnRefresh: true,
+        },
+      });
 
-        const tween = gsap.to(track, {
-          x: () => -getScrollAmount(),
+      const progress = gsap.fromTo(
+        progressRef.current,
+        { scaleX: 0 },
+        {
+          scaleX: 1,
           ease: "none",
           scrollTrigger: {
             trigger: section,
             start: "top top",
             end: () => `+=${getScrollAmount()}`,
             scrub: 1,
-            pin: true,
             invalidateOnRefresh: true,
           },
-        });
+        },
+      );
 
-        const progress = gsap.fromTo(
-          progressRef.current,
-          { scaleX: 0 },
-          {
-            scaleX: 1,
-            ease: "none",
-            scrollTrigger: {
-              trigger: section,
-              start: "top top",
-              end: () => `+=${getScrollAmount()}`,
-              scrub: 1,
-              invalidateOnRefresh: true,
-            },
-          },
-        );
-
-        return () => {
-          tween.scrollTrigger?.kill();
-          tween.kill();
-          progress.scrollTrigger?.kill();
-          progress.kill();
-        };
-      });
-
-      // Mobile: native horizontal scroll-snap; slides just fade up on enter.
-      mm.add("(max-width: 899px)", () => {
-        gsap.fromTo(
-          ".project-slide",
-          { opacity: 0, y: 40 },
-          {
-            opacity: 1,
-            y: 0,
-            stagger: 0.12,
-            duration: 0.8,
-            ease: "power3.out",
-            scrollTrigger: { trigger: sectionRef.current, start: "top 80%" },
-          },
-        );
-      });
-
-      return () => mm.revert();
+      return () => {
+        tween.scrollTrigger?.kill();
+        tween.kill();
+        progress.scrollTrigger?.kill();
+        progress.kill();
+      };
     },
     { scope: sectionRef },
   );
@@ -97,7 +79,7 @@ export default function ProjectsSection() {
     <section
       id="projects"
       ref={sectionRef}
-      className="relative py-20 sm:py-28 min-[900px]:py-0 min-[900px]:min-h-screen min-[900px]:flex min-[900px]:flex-col min-[900px]:justify-center overflow-hidden"
+      className="relative min-h-screen flex flex-col justify-center overflow-hidden"
     >
       <div className="px-5 sm:px-6 md:px-8 min-[900px]:px-10 mb-16 sm:mb-24 min-[900px]:mb-32 flex items-end justify-between gap-6 max-w-6xl min-[900px]:max-w-none mx-auto min-[900px]:mx-0 w-full">
         <h2 className="font-[family-name:var(--font-syne)] font-extrabold text-4xl sm:text-6xl md:text-7xl tracking-tighter text-[var(--text-contrast)] leading-none">
@@ -113,7 +95,7 @@ export default function ProjectsSection() {
 
       <div
         ref={trackRef}
-        className="flex items-start overflow-x-auto snap-x snap-mandatory min-[900px]:overflow-visible min-[900px]:snap-none pb-6 min-[900px]:pb-0 px-5 sm:px-6 min-[900px]:px-10 gap-10 min-[900px]:gap-24"
+        className="flex items-start px-5 sm:px-6 min-[900px]:px-10 gap-10 min-[900px]:gap-24"
       >
         {PROJECTS.map((project, i) => {
           const tone = SLIDE_TONES[i % SLIDE_TONES.length];
@@ -122,7 +104,7 @@ export default function ProjectsSection() {
           return (
             <article
               key={project.id}
-              className="project-slide relative shrink-0 snap-center w-[88vw] sm:w-[72vw] min-[900px]:w-[64vw] max-w-[960px]"
+              className="project-slide relative shrink-0 w-[88vw] sm:w-[72vw] min-[900px]:w-[64vw] max-w-[960px]"
             >
               {/* Ghost slide index — z-20 floats the hollow numeral OVER the
                   image corner (outline-only, so nothing underneath is
@@ -177,7 +159,7 @@ export default function ProjectsSection() {
                 </a>
 
                 {/* Slide copy */}
-                <div className="flex flex-col gap-4 self-center">
+                <div className="flex flex-col gap-3 sm:gap-4 self-center">
                   <span
                     className="font-mono text-[10px] sm:text-xs uppercase tracking-[0.25em]"
                     style={{ color: tone.accent }}
@@ -187,7 +169,12 @@ export default function ProjectsSection() {
                   <h3 className="font-[family-name:var(--font-syne)] font-extrabold text-2xl sm:text-4xl min-[900px]:text-5xl tracking-tight text-[var(--text-contrast)] leading-[1.05]">
                     {project.title}
                   </h3>
-                  <p className="text-xs sm:text-sm min-[900px]:text-base text-[var(--text)] leading-relaxed max-w-md">
+                  {/* Clamped below the pinned breakpoint: the whole card
+                      stack shares one height (the tallest card), and this
+                      section is pinned full-bleed on every device now — an
+                      unclamped description can push that shared height past
+                      a short phone's viewport and clip the button below. */}
+                  <p className="text-xs sm:text-sm min-[900px]:text-base text-[var(--text)] leading-relaxed max-w-md line-clamp-3 min-[900px]:line-clamp-none">
                     {project.description}
                   </p>
                   <ul className="flex flex-wrap gap-1.5 font-mono text-[9px] sm:text-[10px] uppercase tracking-wider text-[var(--text)]">
@@ -217,8 +204,10 @@ export default function ProjectsSection() {
         })}
       </div>
 
-      {/* Horizontal progress bar — desktop pinned mode only */}
-      <div className="hidden min-[900px]:block absolute bottom-10 left-10 right-10 h-[3px] rounded-full bg-white/10 overflow-hidden">
+      {/* Horizontal progress bar — pin runs at every breakpoint now, so
+          this is the only affordance telling touch users there's no
+          direct swipe here, scrolling drives it */}
+      <div className="absolute bottom-6 sm:bottom-8 min-[900px]:bottom-10 left-5 sm:left-6 min-[900px]:left-10 right-5 sm:right-6 min-[900px]:right-10 h-[3px] rounded-full bg-white/10 overflow-hidden">
         <div
           ref={progressRef}
           className="h-full w-full origin-left bg-[var(--accent-volt)]"
