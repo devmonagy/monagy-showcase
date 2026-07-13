@@ -52,45 +52,41 @@ export default function ExperienceSection() {
 
   useGSAP(
     () => {
-      // Everything scroll-gated lives behind the fine-pointer query. On
-      // touch devices content is simply visible — no opacity-0 waiting on
-      // a ScrollTrigger to fire. Repeated real-device reports proved that
-      // on phones those reveals could stay un-fired for many seconds
-      // (leaving whole sections blank), and a reveal animation is never
-      // worth a blank page. Desktop keeps the full choreography.
-      const mm = gsap.matchMedia();
-      mm.add(FINE_POINTER_QUERY, () => {
-        gsap.utils.toArray<HTMLElement>(".exp-card").forEach((card) => {
-          gsap.fromTo(
-            card,
-            { opacity: 0, y: 60 },
-            {
-              opacity: 1,
-              y: 0,
-              duration: 0.9,
-              ease: "power3.out",
-              scrollTrigger: { trigger: card, start: "top 85%" },
-            },
-          );
-        });
+      gsap.utils.toArray<HTMLElement>(".exp-card").forEach((card) => {
+        gsap.fromTo(
+          card,
+          { opacity: 0, y: 60 },
+          {
+            opacity: 1,
+            y: 0,
+            duration: 0.9,
+            ease: "power3.out",
+            scrollTrigger: { trigger: card, start: "top 85%" },
+          },
+        );
+      });
 
-        // Stacked-deck pin — desktop (fine pointer) only, mirroring exactly
-        // where ScrollSmoother is active: position:sticky misbehaves inside
-        // the smoother's transformed content wrapper, so pins stand in for
-        // it there. Touch devices skip the smoother entirely and use native
-        // position:sticky instead (globals.css) — compositor-driven, so the
-        // deck can't lag or flicker mid-scroll the way JS pinning does.
-        const wraps = gsap.utils.toArray<HTMLElement>(".exp-card-wrap");
-        const lastOffset = 84 + (wraps.length - 1) * 18;
-        wraps.forEach((wrap, i) => {
-          ScrollTrigger.create({
-            trigger: wrap,
-            start: `top ${84 + i * 18}px`,
-            endTrigger: wraps[wraps.length - 1],
-            end: `top ${lastOffset}px`,
-            pin: true,
-            pinSpacing: false,
-          });
+      // Stacked-deck pin, same on every device. iOS Safari/Chrome (both
+      // WebKit — Apple requires it) have a long-documented bug where
+      // position:fixed elements stop repainting during momentum scroll and
+      // visibly lag/detach until the scroll settles, which is exactly what
+      // made this deck read as broken/blank on phones. pinType:"transform"
+      // is GSAP's official workaround: it pins via a transform instead of
+      // position:fixed, so it stays on the compositor and keeps updating
+      // through the whole gesture. Desktop keeps the default (fixed).
+      const isFine = window.matchMedia(FINE_POINTER_QUERY).matches;
+      const wraps = gsap.utils.toArray<HTMLElement>(".exp-card-wrap");
+      const lastOffset = 84 + (wraps.length - 1) * 18;
+      wraps.forEach((wrap, i) => {
+        ScrollTrigger.create({
+          trigger: wrap,
+          start: `top ${84 + i * 18}px`,
+          endTrigger: wraps[wraps.length - 1],
+          end: `top ${lastOffset}px`,
+          pin: true,
+          pinSpacing: false,
+          pinType: isFine ? "fixed" : "transform",
+          anticipatePin: isFine ? 0 : 1,
         });
       });
     },
@@ -115,8 +111,8 @@ export default function ExperienceSection() {
           </span>
         </div>
 
-        {/* Sticky stack: each card pins near the top and the next one slides
-            up over it, edges peeking in a deck. */}
+        {/* Pinned stack: each card locks near the top and the next one
+            slides up over it, edges peeking in a deck. */}
         <div className="relative">
           {EXPERIENCES.map((exp, i) => {
             const look = CARD_LOOKS[i % CARD_LOOKS.length];

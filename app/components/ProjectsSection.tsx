@@ -6,6 +6,7 @@ import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { useGSAP } from "@gsap/react";
 import { PROJECTS } from "../data/content";
+import { FINE_POINTER_QUERY } from "./SmoothScroll";
 
 if (typeof window !== "undefined") {
   gsap.registerPlugin(ScrollTrigger);
@@ -23,61 +24,61 @@ export default function ProjectsSection() {
 
   useGSAP(
     () => {
-      // Desktop (≥900px): pin the section and drive the track horizontally
-      // from vertical scroll, with a progress bar synced to the same
-      // distance. Below 900px the track is a native scroll-snap carousel
-      // instead — an earlier revision ran this pin on phones too, and the
-      // full-viewport track translating sideways during iOS momentum
-      // scroll is exactly what read as "the whole app slides left/right."
-      // Scroll-jacked horizontal motion is a mouse-wheel idiom; on touch,
-      // swiping the row is the platform-native gesture and composites on
-      // the GPU with zero JS per frame.
-      const mm = gsap.matchMedia();
+      // Pin the section and drive the track horizontally from vertical
+      // scroll, with a progress bar synced to the same distance — same
+      // mechanism on every device. pinType:"transform" on touch works
+      // around a long-documented iOS Safari/Chrome (both WebKit) bug where
+      // position:fixed elements stop repainting during momentum scroll and
+      // visibly lag/detach from the page until it settles — which is
+      // exactly what made this section's full-viewport track read as "the
+      // whole app slides left/right" on phones. Transform-based pinning
+      // stays on the compositor and keeps updating through the gesture.
+      const track = trackRef.current;
+      const section = sectionRef.current;
+      if (!track || !section) return;
 
-      mm.add("(min-width: 900px)", () => {
-        const track = trackRef.current;
-        const section = sectionRef.current;
-        if (!track || !section) return;
+      const isFine = window.matchMedia(FINE_POINTER_QUERY).matches;
 
-        const getScrollAmount = () =>
-          Math.max(track.scrollWidth - window.innerWidth, 0);
+      const getScrollAmount = () =>
+        Math.max(track.scrollWidth - window.innerWidth, 0);
 
-        const tween = gsap.to(track, {
-          x: () => -getScrollAmount(),
+      const tween = gsap.to(track, {
+        x: () => -getScrollAmount(),
+        ease: "none",
+        scrollTrigger: {
+          trigger: section,
+          start: "top top",
+          end: () => `+=${getScrollAmount()}`,
+          scrub: 1,
+          pin: true,
+          pinType: isFine ? "fixed" : "transform",
+          anticipatePin: isFine ? 0 : 1,
+          invalidateOnRefresh: true,
+        },
+      });
+
+      const progress = gsap.fromTo(
+        progressRef.current,
+        { scaleX: 0 },
+        {
+          scaleX: 1,
           ease: "none",
           scrollTrigger: {
             trigger: section,
             start: "top top",
             end: () => `+=${getScrollAmount()}`,
             scrub: 1,
-            pin: true,
             invalidateOnRefresh: true,
           },
-        });
+        },
+      );
 
-        const progress = gsap.fromTo(
-          progressRef.current,
-          { scaleX: 0 },
-          {
-            scaleX: 1,
-            ease: "none",
-            scrollTrigger: {
-              trigger: section,
-              start: "top top",
-              end: () => `+=${getScrollAmount()}`,
-              scrub: 1,
-              invalidateOnRefresh: true,
-            },
-          },
-        );
-
-        return () => {
-          tween.scrollTrigger?.kill();
-          tween.kill();
-          progress.scrollTrigger?.kill();
-          progress.kill();
-        };
-      });
+      return () => {
+        tween.scrollTrigger?.kill();
+        tween.kill();
+        progress.scrollTrigger?.kill();
+        progress.kill();
+      };
     },
     { scope: sectionRef },
   );
@@ -86,7 +87,7 @@ export default function ProjectsSection() {
     <section
       id="projects"
       ref={sectionRef}
-      className="relative py-20 sm:py-28 min-[900px]:py-0 min-[900px]:min-h-screen min-[900px]:flex min-[900px]:flex-col min-[900px]:justify-center overflow-hidden"
+      className="relative min-h-screen flex flex-col justify-center overflow-hidden"
     >
       <div className="px-5 sm:px-6 md:px-8 min-[900px]:px-10 mb-16 sm:mb-24 min-[900px]:mb-32 flex items-end justify-between gap-6 max-w-6xl min-[900px]:max-w-none mx-auto min-[900px]:mx-0 w-full">
         <h2 className="font-[family-name:var(--font-syne)] font-extrabold text-4xl sm:text-6xl md:text-7xl tracking-tighter text-[var(--text-contrast)] leading-none">
@@ -100,13 +101,9 @@ export default function ProjectsSection() {
         </span>
       </div>
 
-      {/* Below 900px: native scroll-snap swipe carousel. overscroll-x-contain
-          keeps a swipe past either end from chaining into horizontal drag on
-          the page itself. At ≥900px the same element becomes the pinned,
-          scroll-jacked track. */}
       <div
         ref={trackRef}
-        className="flex items-start overflow-x-auto snap-x snap-mandatory overscroll-x-contain min-[900px]:overflow-visible min-[900px]:snap-none min-[900px]:overscroll-x-auto pb-6 min-[900px]:pb-0 px-5 sm:px-6 min-[900px]:px-10 gap-10 min-[900px]:gap-24"
+        className="flex items-start px-5 sm:px-6 min-[900px]:px-10 gap-10 min-[900px]:gap-24"
       >
         {PROJECTS.map((project, i) => {
           const tone = SLIDE_TONES[i % SLIDE_TONES.length];
@@ -115,7 +112,7 @@ export default function ProjectsSection() {
           return (
             <article
               key={project.id}
-              className="project-slide relative shrink-0 snap-center w-[88vw] sm:w-[72vw] min-[900px]:w-[64vw] max-w-[960px]"
+              className="project-slide relative shrink-0 w-[88vw] sm:w-[72vw] min-[900px]:w-[64vw] max-w-[960px]"
             >
               {/* Ghost slide index — z-20 floats the hollow numeral OVER the
                   image corner (outline-only, so nothing underneath is
@@ -215,10 +212,10 @@ export default function ProjectsSection() {
         })}
       </div>
 
-      {/* Horizontal progress bar — desktop pinned mode only; the mobile
-          carousel communicates position natively via the next card peeking
-          in from the edge */}
-      <div className="hidden min-[900px]:block absolute bottom-10 left-10 right-10 h-[3px] rounded-full bg-white/10 overflow-hidden">
+      {/* Horizontal progress bar — pin runs at every breakpoint now, so
+          this is the only affordance telling touch users there's no
+          direct swipe here, scrolling drives it */}
+      <div className="absolute bottom-6 sm:bottom-8 min-[900px]:bottom-10 left-5 sm:left-6 min-[900px]:left-10 right-5 sm:right-6 min-[900px]:right-10 h-[3px] rounded-full bg-white/10 overflow-hidden">
         <div
           ref={progressRef}
           className="h-full w-full origin-left bg-[var(--accent-volt)]"

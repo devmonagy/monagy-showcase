@@ -4,7 +4,6 @@ import { useRef } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { useGSAP } from "@gsap/react";
-import { FINE_POINTER_QUERY } from "./SmoothScroll";
 
 if (typeof window !== "undefined") {
   gsap.registerPlugin(ScrollTrigger);
@@ -49,25 +48,19 @@ export default function Marquee({
       tweenRef.current = tween;
 
       // Punch-in entrance: the band swings up from below with extra tilt,
-      // settling into its resting angle. Desktop only — on touch the band
-      // must never start at opacity 0 waiting on a ScrollTrigger that real
-      // phones repeatedly failed to fire on time; its inline rotate(tilt)
-      // keeps the resting angle without the tween.
-      const mm = gsap.matchMedia();
-      mm.add(FINE_POINTER_QUERY, () => {
-        gsap.fromTo(
-          bandRef.current,
-          { y: 90, rotate: tilt + 6, opacity: 0 },
-          {
-            y: 0,
-            rotate: tilt,
-            opacity: 1,
-            duration: 1.1,
-            ease: "power4.out",
-            scrollTrigger: { trigger: containerRef.current, start: "top 92%" },
-          },
-        );
-      });
+      // settling into its resting angle.
+      gsap.fromTo(
+        bandRef.current,
+        { y: 90, rotate: tilt + 6, opacity: 0 },
+        {
+          y: 0,
+          rotate: tilt,
+          opacity: 1,
+          duration: 1.1,
+          ease: "power4.out",
+          scrollTrigger: { trigger: containerRef.current, start: "top 92%" },
+        },
+      );
 
       // Scroll-velocity feedback: fast scrolling speeds the loop up and
       // skews the type in the scroll direction; a per-frame decay relaxes
