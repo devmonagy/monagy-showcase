@@ -23,7 +23,7 @@ export default function Preloader({
 
       tl.to(counter, {
         value: 100,
-        duration: 1.6,
+        duration: 1.3,
         ease: "power1.inOut",
         onUpdate: () => {
           if (countRef.current) {
@@ -67,6 +67,9 @@ export default function Preloader({
           className="font-[family-name:var(--font-syne)] font-extrabold text-[18vw] sm:text-[12vw] leading-none tracking-tighter text-[var(--text-contrast)] tabular-nums"
         >
           000
+        </span>
+        <span className="absolute bottom-10 left-1/2 -translate-x-1/2 font-mono text-[10px] uppercase tracking-[0.4em] text-[var(--accent-volt)]">
+          Mohamed Nagy — Portfolio
         </span>
       </div>
       <div

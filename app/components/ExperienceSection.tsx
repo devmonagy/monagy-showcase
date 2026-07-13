@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useRef } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { useGSAP } from "@gsap/react";
@@ -10,30 +10,80 @@ if (typeof window !== "undefined") {
   gsap.registerPlugin(ScrollTrigger);
 }
 
+// Three color-blocked looks cycling down the stack: solid volt, dark with a
+// cyan frame, solid cyan. Solid cards carry near-black ink for contrast.
+const CARD_LOOKS = [
+  {
+    bg: "var(--accent-volt)",
+    ink: "var(--accent-volt-ink)",
+    sub: "rgba(10, 14, 2, 0.72)",
+    pillBorder: "rgba(10, 14, 2, 0.3)",
+    chipBg: "rgba(10, 14, 2, 0.9)",
+    chipInk: "var(--accent-volt)",
+    rotate: "-0.6deg",
+    numberClass: "text-[var(--accent-volt-ink)] opacity-[0.12]",
+  },
+  {
+    bg: "var(--card-bg)",
+    ink: "var(--text-contrast)",
+    sub: "var(--text)",
+    pillBorder: "rgba(255, 255, 255, 0.16)",
+    chipBg: "var(--accent-cyan)",
+    chipInk: "var(--accent-cyan-ink)",
+    rotate: "0.6deg",
+    numberClass: "text-outline opacity-60",
+    border: "1px solid rgba(51, 232, 255, 0.4)",
+  },
+  {
+    bg: "var(--accent-cyan)",
+    ink: "var(--accent-cyan-ink)",
+    sub: "rgba(2, 19, 23, 0.72)",
+    pillBorder: "rgba(2, 19, 23, 0.3)",
+    chipBg: "rgba(2, 19, 23, 0.9)",
+    chipInk: "var(--accent-cyan)",
+    rotate: "-0.4deg",
+    numberClass: "text-[var(--accent-cyan-ink)] opacity-[0.12]",
+  },
+];
+
 export default function ExperienceSection() {
   const sectionRef = useRef<HTMLDivElement>(null);
-  const [flipped, setFlipped] = useState<Record<string, boolean>>({});
 
   useGSAP(
     () => {
-      gsap.fromTo(
-        ".exp-card",
-        { opacity: 0, y: 40 },
-        {
-          opacity: 1,
-          y: 0,
-          stagger: 0.12,
-          duration: 0.9,
-          ease: "power3.out",
-          scrollTrigger: { trigger: sectionRef.current, start: "top 75%" },
-        },
-      );
+      gsap.utils.toArray<HTMLElement>(".exp-card").forEach((card) => {
+        gsap.fromTo(
+          card,
+          { opacity: 0, y: 60 },
+          {
+            opacity: 1,
+            y: 0,
+            duration: 0.9,
+            ease: "power3.out",
+            scrollTrigger: { trigger: card, start: "top 85%" },
+          },
+        );
+      });
+
+      // Stacked-deck pin: each card locks at its staggered offset as the
+      // next one scrolls up over it. Built on ScrollTrigger.pin rather than
+      // position: sticky, which doesn't track reliably inside ScrollSmoother's
+      // transform-driven content wrapper.
+      const wraps = gsap.utils.toArray<HTMLElement>(".exp-card-wrap");
+      const lastOffset = 84 + (wraps.length - 1) * 18;
+      wraps.forEach((wrap, i) => {
+        ScrollTrigger.create({
+          trigger: wrap,
+          start: `top ${84 + i * 18}px`,
+          endTrigger: wraps[wraps.length - 1],
+          end: `top ${lastOffset}px`,
+          pin: true,
+          pinSpacing: false,
+        });
+      });
     },
     { scope: sectionRef },
   );
-
-  const toggleFlip = (id: string) =>
-    setFlipped((prev) => ({ ...prev, [id]: !prev[id] }));
 
   return (
     <section
@@ -42,96 +92,98 @@ export default function ExperienceSection() {
       className="relative py-20 sm:py-28 md:py-36 px-4 sm:px-6 md:px-8"
     >
       <div className="max-w-6xl mx-auto">
-        <div className="flex items-center gap-4 mb-12 sm:mb-16">
-          <h2 className="font-[family-name:var(--font-syne)] font-extrabold text-2xl sm:text-3xl md:text-4xl text-[var(--text-contrast)]">
-            Experience
+        <div className="flex items-end justify-between gap-4 mb-12 sm:mb-16">
+          <h2 className="font-[family-name:var(--font-syne)] font-extrabold text-4xl sm:text-6xl md:text-7xl tracking-tighter text-[var(--text-contrast)] leading-none">
+            Where I&rsquo;ve
+            <br />
+            <span className="text-outline-volt">Worked</span>
           </h2>
-          <div className="h-px flex-1 bg-[var(--border-color)]" />
+          <span className="hidden sm:block font-mono text-[10px] uppercase tracking-[0.3em] text-[var(--text)] opacity-60 pb-2">
+            2018 — Present
+          </span>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {/* Sticky stack: each card pins near the top and the next one slides
+            up over it, edges peeking in a deck. */}
+        <div className="relative">
           {EXPERIENCES.map((exp, i) => {
-            const tone = i % 2 === 0 ? "volt" : "flux";
-            const accent =
-              tone === "volt" ? "var(--accent-volt)" : "var(--accent-flux)";
-            const isFlipped = !!flipped[exp.id];
+            const look = CARD_LOOKS[i % CARD_LOOKS.length];
 
             return (
-              <div
-                key={exp.id}
-                className="exp-card perspective-1200 h-[380px] sm:h-[420px] group"
-                onTouchStart={() => toggleFlip(exp.id)}
-              >
-                <div
-                  className={`flip-card-inner relative w-full h-full ${
-                    isFlipped ? "" : "group-hover:[transform:rotateY(180deg)]"
-                  }`}
-                  style={isFlipped ? { transform: "rotateY(180deg)" } : undefined}
+              <div key={exp.id} className="exp-card-wrap mb-8 sm:mb-12">
+                <article
+                  className="exp-card relative overflow-hidden rounded-3xl p-6 sm:p-10 md:p-14 shadow-[0_30px_80px_rgba(0,0,0,0.55)]"
+                  style={{
+                    backgroundColor: look.bg,
+                    color: look.ink,
+                    border: look.border,
+                    transform: `rotate(${look.rotate})`,
+                  }}
                 >
-                  {/* Front face */}
-                  <div
-                    className="flip-card-face absolute inset-0 rounded-2xl p-6 sm:p-8 flex flex-col justify-between bg-[var(--card-bg)] border"
-                    style={{ borderColor: accent }}
+                  {/* Giant index number */}
+                  <span
+                    className={`absolute -top-4 sm:-top-8 right-4 sm:right-8 font-[family-name:var(--font-syne)] font-extrabold text-[8rem] sm:text-[13rem] leading-none tracking-tighter pointer-events-none select-none ${look.numberClass}`}
+                    aria-hidden="true"
                   >
+                    0{i + 1}
+                  </span>
+
+                  <div className="relative z-10 grid md:grid-cols-[1fr_1.3fr] gap-6 md:gap-12">
                     <div>
                       <span
-                        className="font-mono text-[10px] uppercase tracking-widest px-2.5 py-1 rounded-full"
-                        style={{ backgroundColor: accent, color: "var(--bg)" }}
+                        className="inline-block font-mono text-[10px] sm:text-xs font-bold uppercase tracking-widest px-3 py-1.5 rounded-full"
+                        style={{
+                          backgroundColor: look.chipBg,
+                          color: look.chipInk,
+                        }}
                       >
                         {exp.range}
                       </span>
-                      <h3 className="mt-4 font-[family-name:var(--font-syne)] font-extrabold text-xl sm:text-2xl text-[var(--text-contrast)] leading-tight">
+                      <h3 className="mt-5 font-[family-name:var(--font-syne)] font-extrabold text-3xl sm:text-4xl md:text-5xl leading-[1.02] tracking-tight">
                         {exp.role}
                       </h3>
                       <a
                         href={exp.url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="mt-1 inline-block text-sm text-[var(--text)] hover:underline"
-                        onClick={(e) => e.stopPropagation()}
+                        className="mt-3 inline-block font-mono text-xs sm:text-sm uppercase tracking-widest underline underline-offset-4 decoration-2 hover:opacity-70 transition-opacity"
+                        style={{ color: look.sub }}
                       >
                         {exp.company}
                       </a>
+                      <p
+                        className="mt-6 text-sm sm:text-base leading-relaxed max-w-sm"
+                        style={{ color: look.sub }}
+                      >
+                        {exp.summary}
+                      </p>
                     </div>
-                    <p className="text-xs sm:text-sm text-[var(--text)] leading-relaxed line-clamp-4">
-                      {exp.summary}
-                    </p>
-                    <span className="font-mono text-[10px] uppercase tracking-widest text-[var(--text)] opacity-60">
-                      Hover / tap for details →
-                    </span>
-                  </div>
 
-                  {/* Back face */}
-                  <div
-                    className="flip-card-face flip-card-back absolute inset-0 rounded-2xl p-6 sm:p-8 flex flex-col overflow-y-auto bg-[var(--card-bg)] border"
-                    style={{ borderColor: accent }}
-                  >
-                    <h4
-                      className="font-[family-name:var(--font-syne)] font-bold text-sm uppercase tracking-wide mb-3"
-                      style={{ color: accent }}
-                    >
-                      {exp.role}
-                    </h4>
-                    <ul className="space-y-2 text-xs sm:text-[13px] text-[var(--text)] leading-relaxed">
-                      {exp.details.map((d, idx) => (
-                        <li key={idx} className="flex gap-2">
-                          <span style={{ color: accent }}>—</span>
-                          <span>{d}</span>
-                        </li>
-                      ))}
-                    </ul>
-                    <div className="mt-4 flex flex-wrap gap-1.5">
-                      {exp.skills.map((s) => (
-                        <span
-                          key={s}
-                          className="font-mono text-[9px] px-2 py-1 rounded-full border border-[var(--border-color)] text-[var(--text)]"
-                        >
-                          {s}
-                        </span>
-                      ))}
+                    <div className="flex flex-col justify-between gap-6">
+                      <ul className="space-y-3 text-[13px] sm:text-sm leading-relaxed">
+                        {exp.details.map((d, idx) => (
+                          <li key={idx} className="flex gap-3">
+                            <span className="font-mono font-bold shrink-0">
+                              →
+                            </span>
+                            <span style={{ color: look.sub }}>{d}</span>
+                          </li>
+                        ))}
+                      </ul>
+                      <div className="flex flex-wrap gap-1.5">
+                        {exp.skills.map((s) => (
+                          <span
+                            key={s}
+                            className="font-mono text-[9px] sm:text-[10px] uppercase tracking-wider px-2.5 py-1 rounded-full border"
+                            style={{ borderColor: look.pillBorder }}
+                          >
+                            {s}
+                          </span>
+                        ))}
+                      </div>
                     </div>
                   </div>
-                </div>
+                </article>
               </div>
             );
           })}

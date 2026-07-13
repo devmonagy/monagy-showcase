@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { ScrollSmoother } from "gsap/ScrollSmoother";
 import { NAV_LINKS, SITE } from "../data/content";
 
 export default function Navbar() {
@@ -15,7 +16,14 @@ export default function Navbar() {
 
   const handleClick = (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
     e.preventDefault();
-    document.querySelector(href)?.scrollIntoView({ behavior: "smooth" });
+    const smoother = ScrollSmoother.get();
+    if (smoother) {
+      smoother.scrollTo(href === "#top" ? 0 : href, true, "top top");
+    } else if (href === "#top") {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    } else {
+      document.querySelector(href)?.scrollIntoView({ behavior: "smooth" });
+    }
   };
 
   return (
@@ -29,7 +37,7 @@ export default function Navbar() {
       <nav className="max-w-6xl mx-auto flex items-center justify-between px-4 sm:px-6 md:px-8 h-16 sm:h-20">
         <a
           href="#top"
-          onClick={(e) => handleClick(e, "body")}
+          onClick={(e) => handleClick(e, "#top")}
           className="font-[family-name:var(--font-syne)] font-extrabold text-lg sm:text-xl tracking-tight text-[var(--text-contrast)]"
         >
           MN<span className="text-[var(--accent-volt)]">.</span>

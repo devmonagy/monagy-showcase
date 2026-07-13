@@ -94,23 +94,16 @@ export default function FooterSection() {
           </div>
         </div>
 
-        <div className="footer-reveal w-full select-none pointer-events-none overflow-hidden">
-          <svg
-            viewBox="0 0 800 180"
-            className="w-full h-auto"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <text
-              x="50%"
-              y="60%"
-              dominantBaseline="middle"
-              textAnchor="middle"
-              className="font-[family-name:var(--font-syne)] font-extrabold tracking-tighter"
-              style={{ fontSize: "170px", fill: "var(--text-contrast)", opacity: 0.06 }}
-            >
-              MOHAMED NAGY
-            </text>
-          </svg>
+        {/* Giant wordmark — echoes the navbar logo. Flex-centered IN FLOW:
+            the container is symmetrically padded and mx-auto-centered, so a
+            child that fits inside it centers exactly. (A w-screen breakout
+            was 5px off-center — 100vw includes the scrollbar.) Sizes are
+            clamped so the mark always fits the container at every width. */}
+        <div className="footer-reveal select-none pointer-events-none flex justify-center leading-[0.8]">
+          <span className="font-[family-name:var(--font-syne)] font-extrabold tracking-tighter text-[28vw] sm:text-[24vw] leading-[0.8]">
+            <span className="text-outline-volt">MN</span>
+            <span className="text-[var(--accent-volt)]">.</span>
+          </span>
         </div>
 
         <div className="footer-reveal flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-t border-[var(--border-color)] pt-8 font-mono text-[10px] tracking-wider text-[var(--text)] opacity-70">
