@@ -27,6 +27,14 @@ interface NowPlayingData {
 const SPOTIFY_POLL_MS = 8000;
 const SPOTIFY_HIDDEN_POLL_MS = 25000;
 const WEATHER_POLL_MS = 5 * 60 * 1000;
+// This section mounts immediately with the rest of the page (nothing here
+// is gated on scroll position), so its very first fetch would otherwise
+// fire the instant the page loads — right when fonts, images, and the
+// preloader's own JS are already competing for a mobile connection's
+// bandwidth and the main thread. This widget has a placeholder state for
+// exactly this reason; a beat of delay here is free. requestIdleCallback
+// isn't used — Safari (all of iOS) has never implemented it.
+const INITIAL_FETCH_DELAY_MS = 1200;
 
 function useNowPlaying(): NowPlayingData {
   const [data, setData] = useState<NowPlayingData>({ isPlaying: false });
@@ -51,7 +59,7 @@ function useNowPlaying(): NowPlayingData {
       }
     };
 
-    poll();
+    timeoutId = window.setTimeout(poll, INITIAL_FETCH_DELAY_MS);
     return () => {
       cancelled = true;
       window.clearTimeout(timeoutId);
@@ -81,7 +89,7 @@ function useWeather(): WeatherData | null {
       if (!cancelled) timeoutId = window.setTimeout(poll, WEATHER_POLL_MS);
     };
 
-    poll();
+    timeoutId = window.setTimeout(poll, INITIAL_FETCH_DELAY_MS);
     return () => {
       cancelled = true;
       window.clearTimeout(timeoutId);
