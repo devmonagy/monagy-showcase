@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Preloader from "./components/Preloader";
 import CustomCursor from "./components/CustomCursor";
 import Backdrop3D from "./components/Backdrop3D";
@@ -17,6 +17,16 @@ import { TECH_STACK } from "./data/content";
 
 export default function Home() {
   const [isLoaded, setIsLoaded] = useState(false);
+
+  // Safety net: the preloader's own GSAP timeline normally flips this via
+  // onComplete, but a slow/busy real device is exactly the case where a
+  // timeline can stall — and with nothing else to release it, that used to
+  // mean the page stayed permanently hidden behind the curtain with
+  // scrolling dead. This guarantees the reveal fires no matter what.
+  useEffect(() => {
+    const timer = window.setTimeout(() => setIsLoaded(true), 6000);
+    return () => window.clearTimeout(timer);
+  }, []);
 
   return (
     <div className="min-h-screen bg-[var(--bg)] text-[var(--text)]">
@@ -37,8 +47,9 @@ export default function Home() {
       {/* The page mounts immediately UNDER the preloader (z-999), so slow
           devices pay the layout/hydration cost while the counter runs —
           the curtain then reveals a finished page instead of a blank
-          frame. The hero holds its entrance until `play` flips true, and
-          SmoothScroll stays locked so nothing scrolls behind the loader. */}
+          frame. The hero plays its own entrance immediately (see
+          HeroSection), so it's already settled by the time the curtain
+          lifts without needing a cross-component signal to release it. */}
 
       {/* Fixed 3D depth layer behind everything. Rendered outside the
           ScrollSmoother wrapper below: #smooth-content is moved via a
@@ -52,7 +63,7 @@ export default function Home() {
       <div id="smooth-wrapper">
         <div id="smooth-content">
           <main className="relative z-10">
-            <HeroSection play={isLoaded} />
+            <HeroSection />
             <Marquee items={TECH_STACK} tone="volt" duration={20} tilt={-2} />
             <ExperienceSection />
             {/* Desktop-only top clearance (className, NOT a wrapper div:
