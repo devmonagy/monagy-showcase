@@ -99,7 +99,7 @@ export default function ProjectsSection() {
       ref={sectionRef}
       className="relative py-20 sm:py-28 min-[900px]:py-0 min-[900px]:min-h-screen min-[900px]:flex min-[900px]:flex-col min-[900px]:justify-center overflow-hidden"
     >
-      <div className="px-4 sm:px-6 md:px-8 min-[900px]:px-10 mb-16 sm:mb-24 min-[900px]:mb-32 flex items-end justify-between gap-6 max-w-6xl min-[900px]:max-w-none mx-auto min-[900px]:mx-0 w-full">
+      <div className="px-5 sm:px-6 md:px-8 min-[900px]:px-10 mb-16 sm:mb-24 min-[900px]:mb-32 flex items-end justify-between gap-6 max-w-6xl min-[900px]:max-w-none mx-auto min-[900px]:mx-0 w-full">
         <h2 className="font-[family-name:var(--font-syne)] font-extrabold text-4xl sm:text-6xl md:text-7xl tracking-tighter text-[var(--text-contrast)] leading-none">
           Selected
           <br />
@@ -113,7 +113,7 @@ export default function ProjectsSection() {
 
       <div
         ref={trackRef}
-        className="flex items-start overflow-x-auto snap-x snap-mandatory min-[900px]:overflow-visible min-[900px]:snap-none pb-6 min-[900px]:pb-0 px-4 sm:px-6 min-[900px]:px-10 gap-10 min-[900px]:gap-24"
+        className="flex items-start overflow-x-auto snap-x snap-mandatory min-[900px]:overflow-visible min-[900px]:snap-none pb-6 min-[900px]:pb-0 px-5 sm:px-6 min-[900px]:px-10 gap-10 min-[900px]:gap-24"
       >
         {PROJECTS.map((project, i) => {
           const tone = SLIDE_TONES[i % SLIDE_TONES.length];

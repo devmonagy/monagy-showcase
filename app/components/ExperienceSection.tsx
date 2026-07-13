@@ -5,6 +5,7 @@ import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { useGSAP } from "@gsap/react";
 import { EXPERIENCES } from "../data/content";
+import { FINE_POINTER_QUERY } from "./SmoothScroll";
 
 if (typeof window !== "undefined") {
   gsap.registerPlugin(ScrollTrigger);
@@ -65,20 +66,25 @@ export default function ExperienceSection() {
         );
       });
 
-      // Stacked-deck pin: each card locks at its staggered offset as the
-      // next one scrolls up over it. Built on ScrollTrigger.pin rather than
-      // position: sticky, which doesn't track reliably inside ScrollSmoother's
-      // transform-driven content wrapper.
-      const wraps = gsap.utils.toArray<HTMLElement>(".exp-card-wrap");
-      const lastOffset = 84 + (wraps.length - 1) * 18;
-      wraps.forEach((wrap, i) => {
-        ScrollTrigger.create({
-          trigger: wrap,
-          start: `top ${84 + i * 18}px`,
-          endTrigger: wraps[wraps.length - 1],
-          end: `top ${lastOffset}px`,
-          pin: true,
-          pinSpacing: false,
+      // Stacked-deck pin — desktop (fine pointer) only, mirroring exactly
+      // where ScrollSmoother is active: position:sticky misbehaves inside
+      // the smoother's transformed content wrapper, so pins stand in for
+      // it there. Touch devices skip the smoother entirely and use native
+      // position:sticky instead (globals.css) — compositor-driven, so the
+      // deck can't lag or flicker mid-scroll the way JS pinning does.
+      const mm = gsap.matchMedia();
+      mm.add(FINE_POINTER_QUERY, () => {
+        const wraps = gsap.utils.toArray<HTMLElement>(".exp-card-wrap");
+        const lastOffset = 84 + (wraps.length - 1) * 18;
+        wraps.forEach((wrap, i) => {
+          ScrollTrigger.create({
+            trigger: wrap,
+            start: `top ${84 + i * 18}px`,
+            endTrigger: wraps[wraps.length - 1],
+            end: `top ${lastOffset}px`,
+            pin: true,
+            pinSpacing: false,
+          });
         });
       });
     },
@@ -89,7 +95,7 @@ export default function ExperienceSection() {
     <section
       id="experience"
       ref={sectionRef}
-      className="relative py-20 sm:py-28 md:py-36 px-4 sm:px-6 md:px-8"
+      className="relative py-20 sm:py-28 md:py-32 px-5 sm:px-6 md:px-8"
     >
       <div className="max-w-6xl mx-auto">
         <div className="flex items-end justify-between gap-4 mb-12 sm:mb-16">
@@ -110,7 +116,16 @@ export default function ExperienceSection() {
             const look = CARD_LOOKS[i % CARD_LOOKS.length];
 
             return (
-              <div key={exp.id} className="exp-card-wrap mb-8 sm:mb-12">
+              <div
+                key={exp.id}
+                // Padding, NOT margin: ScrollTrigger's pin-spacers swallow
+                // margins on pinned elements (pinSpacing: false), which let
+                // the deck overflow the section's bottom padding and butt
+                // against the marquee below. Padding sits inside the pinned
+                // box, so the spacing survives pinning.
+                className="exp-card-wrap pb-8 sm:pb-12"
+                style={{ top: `${84 + i * 18}px` }}
+              >
                 <article
                   className="exp-card relative overflow-hidden rounded-3xl p-6 sm:p-10 md:p-14 shadow-[0_30px_80px_rgba(0,0,0,0.55)]"
                   style={{

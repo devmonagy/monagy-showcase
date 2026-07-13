@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef } from "react";
+import { useEffect, useRef } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { useGSAP } from "@gsap/react";
@@ -10,23 +10,27 @@ if (typeof window !== "undefined") {
   gsap.registerPlugin(ScrollTrigger);
 }
 
-export default function HeroSection() {
+export default function HeroSection({ play = false }: { play?: boolean }) {
   const sectionRef = useRef<HTMLDivElement>(null);
+  const introRef = useRef<gsap.core.Timeline | null>(null);
 
   useGSAP(
     () => {
-      // Entrance plays immediately on mount (the preloader gates mounting,
-      // so this fires right as the curtain lifts) — scrub-driven reveals
-      // here left the whole hero blank until the first scroll.
+      // Entrance is built paused at mount: the whole page now renders
+      // behind the preloader, so the fromTo "from" states hide the hero
+      // immediately (no flash) and `play` releases the timeline right as
+      // the curtain lifts — the intro is never wasted off-screen.
       const tl = gsap.timeline({
         defaults: { ease: "power4.out" },
-        delay: 0.15,
+        paused: true,
       });
+      introRef.current = tl;
 
       tl.fromTo(
         ".hero-line",
         { yPercent: 110 },
         { yPercent: 0, duration: 1.2, stagger: 0.12 },
+        0.15,
       )
         .fromTo(
           ".hero-fade",
@@ -76,11 +80,15 @@ export default function HeroSection() {
     { scope: sectionRef },
   );
 
+  useEffect(() => {
+    if (play) introRef.current?.play();
+  }, [play]);
+
   return (
     <section
       id="about"
       ref={sectionRef}
-      className="relative min-h-screen flex flex-col justify-center px-4 sm:px-6 md:px-8 py-28 sm:py-24 overflow-hidden"
+      className="relative min-h-screen flex flex-col justify-center px-5 sm:px-6 md:px-8 py-24 sm:py-28 overflow-hidden"
     >
       {/* Ghost outline strip — massive, behind everything, loops forever
           and parallax-sinks on scroll so full words stay readable */}

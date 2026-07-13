@@ -16,6 +16,8 @@ type MarqueeProps = {
   direction?: "left" | "right";
   /** Degrees — tilts the whole band so it cuts diagonally across the page */
   tilt?: number;
+  /** Extra classes for the outer container (e.g. contextual margins) */
+  className?: string;
 };
 
 export default function Marquee({
@@ -24,6 +26,7 @@ export default function Marquee({
   duration = 22,
   direction = "left",
   tilt = 0,
+  className = "",
 }: MarqueeProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const bandRef = useRef<HTMLDivElement>(null);
@@ -74,6 +77,10 @@ export default function Marquee({
 
       const decay = () => {
         const current = Number(gsap.getProperty(trackRef.current, "skewX")) || 0;
+        // At rest there's nothing to relax — skip the per-frame writes so
+        // an idle page (3 marquee tickers) costs nothing.
+        if (Math.abs(current) < 0.05 && Math.abs(tween.timeScale() - 1) < 0.01)
+          return;
         gsap.set(trackRef.current, { skewX: current * 0.92 });
         tween.timeScale(gsap.utils.interpolate(tween.timeScale(), 1, 0.05));
       };
@@ -107,7 +114,7 @@ export default function Marquee({
     // don't clip against neighboring sections.
     <div
       ref={containerRef}
-      className="relative z-20 py-6 sm:py-8 overflow-visible"
+      className={`relative z-20 py-8 sm:py-10 overflow-visible ${className}`}
     >
       <div
         ref={bandRef}
