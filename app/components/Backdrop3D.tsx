@@ -230,9 +230,9 @@ export default function Backdrop3D() {
       aria-hidden="true"
     >
       {/* Ambient glow orbs — far layer */}
-      <div className="bd-far absolute top-[-12%] left-[-8%] w-[46vw] h-[46vw] max-w-[640px] max-h-[640px] rounded-full bg-[var(--accent-violet)] opacity-[0.10] blur-[130px]" />
-      <div className="bd-far absolute top-[38%] right-[-12%] w-[40vw] h-[40vw] max-w-[560px] max-h-[560px] rounded-full bg-[var(--accent-cyan)] opacity-[0.07] blur-[130px]" />
-      <div className="bd-far absolute bottom-[-14%] left-[22%] w-[42vw] h-[42vw] max-w-[600px] max-h-[600px] rounded-full bg-[var(--accent-volt)] opacity-[0.06] blur-[140px]" />
+      <div className="ambient-orb bd-far absolute top-[-12%] left-[-8%] w-[46vw] h-[46vw] max-w-[640px] max-h-[640px] rounded-full bg-[var(--accent-violet)] opacity-[0.10] blur-[130px]" />
+      <div className="ambient-orb bd-far absolute top-[38%] right-[-12%] w-[40vw] h-[40vw] max-w-[560px] max-h-[560px] rounded-full bg-[var(--accent-cyan)] opacity-[0.07] blur-[130px]" />
+      <div className="ambient-orb bd-far absolute bottom-[-14%] left-[22%] w-[42vw] h-[42vw] max-w-[600px] max-h-[600px] rounded-full bg-[var(--accent-volt)] opacity-[0.06] blur-[140px]" />
 
       {/* Fine dot grid + scroll-sparkle canvas — far layer texture so black
           never reads as empty. One shared wrapper so the sparkles ride the
