@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useRef } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { useGSAP } from "@gsap/react";
@@ -10,27 +10,29 @@ if (typeof window !== "undefined") {
   gsap.registerPlugin(ScrollTrigger);
 }
 
-export default function HeroSection({ play = false }: { play?: boolean }) {
+export default function HeroSection() {
   const sectionRef = useRef<HTMLDivElement>(null);
-  const introRef = useRef<gsap.core.Timeline | null>(null);
 
   useGSAP(
     () => {
-      // Entrance is built paused at mount: the whole page now renders
-      // behind the preloader, so the fromTo "from" states hide the hero
-      // immediately (no flash) and `play` releases the timeline right as
-      // the curtain lifts — the intro is never wasted off-screen.
+      // Plays immediately on mount, delay and all — the preloader covers
+      // the page for ~2.85s (1.3s counter + 0.55s curtain + 0.9s slide),
+      // comfortably longer than this ~2s timeline, so it's already fully
+      // settled by the time the curtain lifts. A previous version built
+      // this paused and released it via a `play` prop tied to the
+      // preloader's onComplete — one more cross-component signal that had
+      // to fire correctly, and on real mobile devices it sometimes didn't,
+      // leaving the hero permanently invisible. Auto-playing here has no
+      // such dependency.
       const tl = gsap.timeline({
         defaults: { ease: "power4.out" },
-        paused: true,
+        delay: 0.15,
       });
-      introRef.current = tl;
 
       tl.fromTo(
         ".hero-line",
         { yPercent: 110 },
         { yPercent: 0, duration: 1.2, stagger: 0.12 },
-        0.15,
       )
         .fromTo(
           ".hero-fade",
@@ -79,10 +81,6 @@ export default function HeroSection({ play = false }: { play?: boolean }) {
     },
     { scope: sectionRef },
   );
-
-  useEffect(() => {
-    if (play) introRef.current?.play();
-  }, [play]);
 
   return (
     <section

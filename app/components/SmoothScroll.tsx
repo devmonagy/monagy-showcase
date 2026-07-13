@@ -47,16 +47,14 @@ export default function SmoothScroll({
   useEffect(() => {
     // Desktop: pause/resume the smoother's own render loop — its wrapper
     // is already position:fixed+overflow:hidden, so nothing scrolls while
-    // paused regardless.
+    // paused regardless. Touch devices have no smoother to pause; they
+    // rely solely on the preloader's own touch-action:none. An earlier
+    // version also hard-locked document.documentElement's CSS overflow
+    // here as a second line of defense — that's exactly the kind of state
+    // that, if its release ever fails to fire on a real device for any
+    // reason, leaves scrolling permanently dead with no way to recover.
+    // Not worth it for a rare cosmetic edge case.
     smootherRef.current?.paused(locked);
-
-    // Touch devices have no smoother to pause. The preloader's own
-    // touch-action:none blocks direct swipes on it, but iOS can still let
-    // rubber-band/momentum scrolling sneak the real (tall) document
-    // underneath — hard-lock html scroll as a second line of defense.
-    if (!isFineRef.current) {
-      document.documentElement.style.overflow = locked ? "hidden" : "";
-    }
 
     if (!locked) {
       // Every section's ScrollTrigger is created the instant it mounts —
