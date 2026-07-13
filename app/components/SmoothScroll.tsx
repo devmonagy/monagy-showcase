@@ -7,6 +7,17 @@ import { ScrollSmoother } from "gsap/ScrollSmoother";
 
 if (typeof window !== "undefined") {
   gsap.registerPlugin(ScrollTrigger, ScrollSmoother);
+
+  // Mobile Safari/Chrome fire resize events as the address bar collapses
+  // and expands during scroll — ScrollTrigger recalculates (and re-pins)
+  // on every one by default. That mid-scroll churn is what made pinned
+  // sections and reveal triggers unstable on phones: positions kept
+  // getting recomputed against a viewport that was still settling, so
+  // content stayed effectively undiscoverable until the browser chrome
+  // finally stopped moving near the bottom of the page. This was
+  // previously only set on ScrollSmoother's own config, which never runs
+  // on touch devices — the one place that actually needed it had nothing.
+  ScrollTrigger.config({ ignoreMobileResize: true });
 }
 
 // Shared device split: smoothing (and the ScrollTrigger pins that depend
@@ -64,8 +75,17 @@ export default function SmoothScroll({
       // trigger start/end points stay pinned to whatever was on screen at
       // that first paint and every animation reads "late" by however far
       // the real layout drifted — which looks exactly like having to
-      // scroll and scroll before content catches up.
-      requestAnimationFrame(() => ScrollTrigger.refresh());
+      // scroll and scroll before content catches up. Waiting on
+      // document.fonts.ready first avoids a second drift: custom fonts
+      // swapping in after this refresh (common on a throttled mobile
+      // connection) reflow text and silently invalidate the positions we
+      // just measured.
+      const refresh = () => requestAnimationFrame(() => ScrollTrigger.refresh());
+      if (document.fonts?.ready) {
+        document.fonts.ready.then(refresh);
+      } else {
+        refresh();
+      }
     }
   }, [locked]);
 
