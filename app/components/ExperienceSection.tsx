@@ -118,7 +118,12 @@ export default function ExperienceSection() {
             return (
               <div
                 key={exp.id}
-                className="exp-card-wrap mb-8 sm:mb-12"
+                // Padding, NOT margin: ScrollTrigger's pin-spacers swallow
+                // margins on pinned elements (pinSpacing: false), which let
+                // the deck overflow the section's bottom padding and butt
+                // against the marquee below. Padding sits inside the pinned
+                // box, so the spacing survives pinning.
+                className="exp-card-wrap pb-8 sm:pb-12"
                 style={{ top: `${84 + i * 18}px` }}
               >
                 <article

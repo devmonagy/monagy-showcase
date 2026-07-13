@@ -55,12 +55,21 @@ export default function Home() {
             <HeroSection play={isLoaded} />
             <Marquee items={TECH_STACK} tone="volt" duration={20} tilt={-2} />
             <ExperienceSection />
+            {/* Desktop-only top clearance (className, NOT a wrapper div:
+                ScrollTrigger's pin-spacer around #projects re-parents
+                main's children, and inserting new siblings there makes
+                React's insertBefore throw): Projects below is min-h-screen
+                with vertically centered content, so its heading sits well
+                into the section — without this the band reads as glued to
+                the experience deck while floating far above "Selected
+                Works". Mobile rhythm is already symmetric. */}
             <Marquee
               items={["TAKING SELECT PROJECTS"]}
               tone="cyan"
               duration={24}
               direction="right"
               tilt={2}
+              className="min-[900px]:mt-16"
             />
             <ProjectsSection />
             <ContactSection />

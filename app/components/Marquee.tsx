@@ -16,6 +16,8 @@ type MarqueeProps = {
   direction?: "left" | "right";
   /** Degrees — tilts the whole band so it cuts diagonally across the page */
   tilt?: number;
+  /** Extra classes for the outer container (e.g. contextual margins) */
+  className?: string;
 };
 
 export default function Marquee({
@@ -24,6 +26,7 @@ export default function Marquee({
   duration = 22,
   direction = "left",
   tilt = 0,
+  className = "",
 }: MarqueeProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const bandRef = useRef<HTMLDivElement>(null);
@@ -111,7 +114,7 @@ export default function Marquee({
     // don't clip against neighboring sections.
     <div
       ref={containerRef}
-      className="relative z-20 py-8 sm:py-10 overflow-visible"
+      className={`relative z-20 py-8 sm:py-10 overflow-visible ${className}`}
     >
       <div
         ref={bandRef}
