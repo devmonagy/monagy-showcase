@@ -42,7 +42,7 @@ export default function FooterSection() {
       ref={footerRef}
       className="relative border-t border-[var(--border-color)] pt-20 sm:pt-24 pb-10 px-5 sm:px-6 md:px-8 overflow-hidden"
     >
-      <div className="max-w-6xl mx-auto flex flex-col gap-14">
+      <div className="max-w-content mx-auto flex flex-col gap-14">
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-10">
           <div className="footer-reveal flex flex-col gap-3">
             <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-[var(--accent-volt)]">
@@ -106,7 +106,7 @@ export default function FooterSection() {
             was 5px off-center — 100vw includes the scrollbar.) Sizes are
             clamped so the mark always fits the container at every width. */}
         <div className="footer-reveal select-none pointer-events-none flex justify-center leading-[0.8]">
-          <span className="font-[family-name:var(--font-syne)] font-extrabold tracking-tighter text-[28vw] sm:text-[24vw] leading-[0.8]">
+          <span className="font-[family-name:var(--font-syne)] font-extrabold tracking-tighter text-[clamp(6rem,24vw,30rem)] leading-[0.8]">
             <span className="text-outline-volt">MN</span>
             <span className="text-[var(--accent-volt)]">.</span>
           </span>

@@ -286,7 +286,7 @@ export default function PersonalTelemetrySection() {
       ref={scopeRef}
       className="relative py-20 sm:py-28 px-5 sm:px-6 md:px-8"
     >
-      <div className="max-w-6xl mx-auto">
+      <div className="max-w-content mx-auto">
         <div className="telemetry-reveal flex items-end justify-between gap-4 mb-12 sm:mb-16">
           <h2 className="font-[family-name:var(--font-syne)] font-extrabold text-4xl sm:text-6xl md:text-7xl tracking-tighter text-[var(--text-contrast)] leading-none">
             Off The
@@ -307,7 +307,7 @@ export default function PersonalTelemetrySection() {
             port="Port_01 // Audio_Out"
             serial="SN MN-A01"
             tone="volt"
-            className="min-[900px]:col-span-7 min-h-[210px] sm:min-h-[240px]"
+            className="min-[900px]:col-span-7 min-h-[13.125rem] sm:min-h-[15rem]"
           >
             {nowPlaying.isPlaying ? (
               <a
@@ -366,7 +366,7 @@ export default function PersonalTelemetrySection() {
             port="Sensor_02 // Atmos"
             serial="SN MN-W02"
             tone="cyan"
-            className="min-[900px]:col-span-5 min-h-[210px] sm:min-h-[240px]"
+            className="min-[900px]:col-span-5 min-h-[13.125rem] sm:min-h-[15rem]"
           >
             {weather ? (
               <div className="flex flex-col gap-4">
@@ -438,7 +438,7 @@ export default function PersonalTelemetrySection() {
             port="Module_03 // Geo"
             serial="SN MN-G03"
             tone="cyan"
-            className="min-[900px]:col-span-5 min-h-[190px]"
+            className="min-[900px]:col-span-5 min-h-[11.875rem]"
           >
             <div className="flex items-center gap-5 sm:gap-6">
               <span className="font-[family-name:var(--font-syne)] font-extrabold text-5xl sm:text-6xl leading-none text-[var(--accent-cyan)] tabular-nums">
@@ -476,7 +476,7 @@ export default function PersonalTelemetrySection() {
             port="Slot_04 // Firmware"
             serial="SN MN-F04"
             tone="volt"
-            className="min-[900px]:col-span-7 min-h-[190px]"
+            className="min-[900px]:col-span-7 min-h-[11.875rem]"
           >
             <div>
               <span className="block font-mono text-[10px] sm:text-xs uppercase tracking-widest opacity-60 mb-2">

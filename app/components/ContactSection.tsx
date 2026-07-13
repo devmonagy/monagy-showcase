@@ -79,7 +79,7 @@ export default function ContactSection() {
     >
       {/* Rotating starburst behind the headline */}
       <div
-        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[130vw] max-w-[900px] aspect-square pointer-events-none select-none opacity-[0.1]"
+        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[130vw] max-w-[56.25rem] aspect-square pointer-events-none select-none opacity-[0.1]"
         aria-hidden="true"
       >
         <svg
@@ -98,8 +98,8 @@ export default function ContactSection() {
       </div>
 
       {/* Ambient corner glows */}
-      <div className="ambient-orb absolute top-[-10%] right-[-10%] w-[40vw] h-[40vw] max-w-[480px] max-h-[480px] rounded-full bg-[var(--accent-cyan)] opacity-[0.08] blur-[120px] pointer-events-none" />
-      <div className="ambient-orb absolute bottom-[-10%] left-[-10%] w-[40vw] h-[40vw] max-w-[480px] max-h-[480px] rounded-full bg-[var(--accent-volt)] opacity-[0.08] blur-[120px] pointer-events-none" />
+      <div className="ambient-orb absolute top-[-10%] right-[-10%] w-[40vw] h-[40vw] max-w-[30rem] max-h-[30rem] rounded-full bg-[var(--accent-cyan)] opacity-[0.08] blur-[120px] pointer-events-none" />
+      <div className="ambient-orb absolute bottom-[-10%] left-[-10%] w-[40vw] h-[40vw] max-w-[30rem] max-h-[30rem] rounded-full bg-[var(--accent-volt)] opacity-[0.08] blur-[120px] pointer-events-none" />
 
       <div className="relative z-10 flex flex-col items-center text-center px-5 sm:px-6">
         <span className="contact-reveal inline-flex items-center gap-3 font-mono text-xs sm:text-sm text-[var(--accent-volt)] tracking-widest uppercase font-semibold mb-6">

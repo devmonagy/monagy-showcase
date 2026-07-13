@@ -51,6 +51,19 @@ html {
   overscroll-behavior-x: none;
 }
 
+/* Fluid root scale for ultra-wide/4K/8K displays. Tailwind's spacing,
+   type, and maxWidth scales are all rem-based, so bumping the root
+   font-size here makes padding, gaps, borders, and text grow
+   proportionally everywhere without per-component overrides. Plateaus
+   around ~2900px — 8K needs pixel density more than linear content
+   growth, since it's typically viewed at the same physical distance as
+   1440p/4K, so runaway scaling past that point would just waste space. */
+@media (min-width: 1920px) {
+  html {
+    font-size: clamp(16px, 0.62vw + 8.1px, 26px);
+  }
+}
+
 ::-webkit-scrollbar {
   width: 10px;
   height: 10px;
