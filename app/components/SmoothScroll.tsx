@@ -24,9 +24,11 @@ export default function SmoothScroll({
   locked?: boolean;
 }) {
   const smootherRef = useRef<ScrollSmoother | null>(null);
+  const isFineRef = useRef(false);
 
   useEffect(() => {
-    if (!window.matchMedia(FINE_POINTER_QUERY).matches) return;
+    isFineRef.current = window.matchMedia(FINE_POINTER_QUERY).matches;
+    if (!isFineRef.current) return;
 
     const smoother = ScrollSmoother.create({
       wrapper: "#smooth-wrapper",
@@ -36,10 +38,6 @@ export default function SmoothScroll({
     });
     smootherRef.current = smoother;
 
-    // Section ScrollTriggers mount before the smoother re-parents the
-    // page — re-measure everything against the final layout.
-    ScrollTrigger.refresh();
-
     return () => {
       smootherRef.current = null;
       smoother.kill();
@@ -47,7 +45,30 @@ export default function SmoothScroll({
   }, []);
 
   useEffect(() => {
+    // Desktop: pause/resume the smoother's own render loop — its wrapper
+    // is already position:fixed+overflow:hidden, so nothing scrolls while
+    // paused regardless.
     smootherRef.current?.paused(locked);
+
+    // Touch devices have no smoother to pause. The preloader's own
+    // touch-action:none blocks direct swipes on it, but iOS can still let
+    // rubber-band/momentum scrolling sneak the real (tall) document
+    // underneath — hard-lock html scroll as a second line of defense.
+    if (!isFineRef.current) {
+      document.documentElement.style.overflow = locked ? "hidden" : "";
+    }
+
+    if (!locked) {
+      // Every section's ScrollTrigger is created the instant it mounts —
+      // which, now that the page renders behind the preloader, is before
+      // fonts/layout have necessarily settled. Re-measure everything
+      // against the final layout right as scrolling unlocks; otherwise
+      // trigger start/end points stay pinned to whatever was on screen at
+      // that first paint and every animation reads "late" by however far
+      // the real layout drifted — which looks exactly like having to
+      // scroll and scroll before content catches up.
+      requestAnimationFrame(() => ScrollTrigger.refresh());
+    }
   }, [locked]);
 
   return null;
