@@ -68,7 +68,7 @@ export default function ContactSection() {
     <section
       id="contact"
       ref={sectionRef}
-      className="relative min-h-screen flex flex-col justify-center py-24 sm:py-32 overflow-hidden"
+      className="relative min-h-screen flex flex-col justify-center py-20 sm:py-28 overflow-hidden"
     >
       {/* Rotating starburst behind the headline */}
       <div
@@ -94,7 +94,7 @@ export default function ContactSection() {
       <div className="absolute top-[-10%] right-[-10%] w-[40vw] h-[40vw] max-w-[480px] max-h-[480px] rounded-full bg-[var(--accent-cyan)] opacity-[0.08] blur-[120px] pointer-events-none" />
       <div className="absolute bottom-[-10%] left-[-10%] w-[40vw] h-[40vw] max-w-[480px] max-h-[480px] rounded-full bg-[var(--accent-volt)] opacity-[0.08] blur-[120px] pointer-events-none" />
 
-      <div className="relative z-10 flex flex-col items-center text-center px-4 sm:px-6">
+      <div className="relative z-10 flex flex-col items-center text-center px-5 sm:px-6">
         <span className="contact-reveal inline-flex items-center gap-3 font-mono text-xs sm:text-sm text-[var(--accent-volt)] tracking-widest uppercase font-semibold mb-6">
           <span className="w-8 h-px bg-[var(--accent-volt)]" />
           Get In Touch

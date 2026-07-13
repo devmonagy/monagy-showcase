@@ -34,7 +34,7 @@ export default function FooterSection() {
   return (
     <footer
       ref={footerRef}
-      className="relative border-t border-[var(--border-color)] pt-16 pb-10 px-4 sm:px-6 md:px-8 overflow-hidden"
+      className="relative border-t border-[var(--border-color)] pt-20 sm:pt-24 pb-10 px-5 sm:px-6 md:px-8 overflow-hidden"
     >
       <div className="max-w-6xl mx-auto flex flex-col gap-14">
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-10">

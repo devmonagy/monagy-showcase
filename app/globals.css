@@ -80,6 +80,16 @@ h4 {
   font-family: var(--font-display);
 }
 
+/* Experience deck on touch devices: native position:sticky (top offsets
+   are inline per card). Compositor-driven, zero per-frame JS — the
+   ScrollTrigger pins that replace it on desktop exist only because
+   sticky can't live inside ScrollSmoother's transformed wrapper. */
+@media (hover: none), (pointer: coarse) {
+  .exp-card-wrap {
+    position: sticky;
+  }
+}
+
 /* Outlined ghost typography — transparent fill, hairline stroke */
 .text-outline {
   -webkit-text-stroke: 1.5px rgba(247, 247, 245, 0.16);

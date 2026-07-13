@@ -58,7 +58,7 @@ export default function Preloader({
   return (
     <div
       ref={wrapperRef}
-      className="fixed inset-0 z-[999] overflow-hidden"
+      className="fixed inset-0 z-[999] overflow-hidden touch-none overscroll-contain"
       aria-hidden="true"
     >
       <div className="absolute inset-0 bg-[var(--bg)] flex items-center justify-center">

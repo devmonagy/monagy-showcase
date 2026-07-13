@@ -74,6 +74,10 @@ export default function Marquee({
 
       const decay = () => {
         const current = Number(gsap.getProperty(trackRef.current, "skewX")) || 0;
+        // At rest there's nothing to relax — skip the per-frame writes so
+        // an idle page (3 marquee tickers) costs nothing.
+        if (Math.abs(current) < 0.05 && Math.abs(tween.timeScale() - 1) < 0.01)
+          return;
         gsap.set(trackRef.current, { skewX: current * 0.92 });
         tween.timeScale(gsap.utils.interpolate(tween.timeScale(), 1, 0.05));
       };
@@ -107,7 +111,7 @@ export default function Marquee({
     // don't clip against neighboring sections.
     <div
       ref={containerRef}
-      className="relative z-20 py-6 sm:py-8 overflow-visible"
+      className="relative z-20 py-8 sm:py-10 overflow-visible"
     >
       <div
         ref={bandRef}
