@@ -244,6 +244,10 @@ export default function PersonalTelemetrySection() {
   const sectionRef = useRef<HTMLDivElement>(null);
   const gridRef = useRef<HTMLDivElement>(null);
   const barRefs = useRef<(HTMLSpanElement | null)[]>([]);
+  const trackLinkRef = useRef<HTMLAnchorElement>(null);
+  const titleWrapRef = useRef<HTMLDivElement>(null);
+  const titleTrackRef = useRef<HTMLDivElement>(null);
+  const titleCopyRef = useRef<HTMLSpanElement>(null);
   const globeStageRef = useRef<HTMLDivElement>(null);
   const pinRefs = useRef<(HTMLButtonElement | null)[]>([]);
   const continentRefs = useRef<(SVGPathElement | null)[]>([]);
@@ -406,6 +410,60 @@ export default function PersonalTelemetrySection() {
       };
     },
     { scope: sectionRef },
+  );
+
+  /* ---- Now-playing title marquee — only kicks in when the title
+     actually overflows its box, so short titles stay put. Two identical
+     copies sit side by side; scrolling exactly one copy-width + gap then
+     snapping back to 0 is invisible (the snap lands on pixel-identical
+     content), which is what makes the loop read as seamless instead of
+     jumpy. A hold at each end (instead of nonstop scrolling) is what
+     real title marquees do and reads as far less frantic. ---- */
+  useGSAP(
+    () => {
+      const wrap = titleWrapRef.current;
+      const track = titleTrackRef.current;
+      const copy = titleCopyRef.current;
+      if (!wrap || !track || !copy || !nowPlaying.isPlaying) return;
+
+      gsap.set(track, { x: 0 });
+
+      const second = track.children[1] as HTMLElement | undefined;
+      if (!second) return;
+
+      // Exact pixel gap between the two copies, measured rather than
+      // assumed — this site's root font-size scales up on very wide
+      // viewports, which would silently throw off any hardcoded value.
+      const distance = second.getBoundingClientRect().left - copy.getBoundingClientRect().left;
+      const overflow = copy.offsetWidth - wrap.clientWidth;
+
+      if (overflow <= 4) return; // fits (or near enough) — leave it static
+
+      if (window.matchMedia("(prefers-reduced-motion: reduce)").matches)
+        return;
+
+      const PX_PER_SEC = 46; // constant pace — long titles just take longer
+      const scrollDuration = distance / PX_PER_SEC;
+
+      const tl = gsap.timeline({ repeat: -1 });
+      tl.to(track, { x: 0, duration: 1.4 }) // hold at the start
+        .to(track, { x: -distance, duration: scrollDuration, ease: "none" })
+        .to(track, { x: -distance, duration: 0.9 }) // hold at the end
+        .set(track, { x: 0 }); // seamless — copy 2 here looks identical to copy 1 at rest
+
+      const link = trackLinkRef.current;
+      const pause = () => tl.pause();
+      const resume = () => tl.resume();
+      link?.addEventListener("mouseenter", pause);
+      link?.addEventListener("mouseleave", resume);
+
+      return () => {
+        tl.kill();
+        link?.removeEventListener("mouseenter", pause);
+        link?.removeEventListener("mouseleave", resume);
+      };
+    },
+    { scope: sectionRef, dependencies: [nowPlaying.title, nowPlaying.isPlaying] },
   );
 
   /* ---- The globe — an orthographic projection rotated by yaw, no WebGL
@@ -631,6 +689,7 @@ export default function PersonalTelemetrySection() {
 
                   {nowPlaying.isPlaying ? (
                     <a
+                      ref={trackLinkRef}
                       href={nowPlaying.url}
                       target="_blank"
                       rel="noopener noreferrer"
@@ -646,9 +705,22 @@ export default function PersonalTelemetrySection() {
                         />
                       )}
                       <div className="min-w-0">
-                        <span className="block font-[family-name:var(--font-syne)] font-extrabold text-xl sm:text-3xl text-[var(--text-contrast)] leading-tight truncate group-hover/track:text-[var(--accent-volt)] transition-colors duration-300">
-                          {nowPlaying.title}
-                        </span>
+                        <div ref={titleWrapRef} className="relative overflow-hidden">
+                          <div ref={titleTrackRef} className="flex w-max whitespace-nowrap">
+                            <span
+                              ref={titleCopyRef}
+                              className="font-[family-name:var(--font-syne)] font-extrabold text-xl sm:text-3xl text-[var(--text-contrast)] leading-tight group-hover/track:text-[var(--accent-volt)] transition-colors duration-300"
+                            >
+                              {nowPlaying.title}
+                            </span>
+                            <span
+                              aria-hidden="true"
+                              className="ml-12 font-[family-name:var(--font-syne)] font-extrabold text-xl sm:text-3xl text-[var(--text-contrast)] leading-tight group-hover/track:text-[var(--accent-volt)] transition-colors duration-300"
+                            >
+                              {nowPlaying.title}
+                            </span>
+                          </div>
+                        </div>
                         <span className="block font-mono text-[11px] sm:text-sm opacity-60 truncate mt-1">
                           {nowPlaying.artist} ↗
                         </span>
