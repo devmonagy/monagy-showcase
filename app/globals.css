@@ -232,7 +232,7 @@ h4 {
    single shared GSAP ticker (amplitude/speed swap with playback state),
    so there's no CSS keyframe to fight with it. */
 .otc-bar {
-  transform-origin: bottom;
+  transform-origin: center;
   will-change: transform;
 }
 

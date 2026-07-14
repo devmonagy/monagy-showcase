@@ -213,6 +213,19 @@ const LEARNING = {
 
 const NUM_BARS = 28;
 
+// Cyan → volt spectrum for the waveform — same two accents as the
+// Three.js/WebGL heading's gradient, spread across the bar sequence
+// instead of blended in a single fill.
+const BAR_CYAN: [number, number, number] = [51, 232, 255]; // #33e8ff
+const BAR_VOLT: [number, number, number] = [214, 255, 63]; // #d6ff3f
+
+function barSpectrumColor(t: number): string {
+  const r = Math.round(BAR_CYAN[0] + (BAR_VOLT[0] - BAR_CYAN[0]) * t);
+  const g = Math.round(BAR_CYAN[1] + (BAR_VOLT[1] - BAR_CYAN[1]) * t);
+  const b = Math.round(BAR_CYAN[2] + (BAR_VOLT[2] - BAR_CYAN[2]) * t);
+  return `rgb(${r}, ${g}, ${b})`;
+}
+
 // Idle bob rhythm per island body — all different so the four never
 // breathe in sync, which is what sells "floating" over "animated together".
 // Lives on the body only; labels sit outside it and never move.
@@ -343,9 +356,11 @@ export default function PersonalTelemetrySection() {
   );
 
   /* ---- Audio waveform — one shared ticker instead of per-bar tweens.
-     Idle: a slow, synchronized sine sweep. Playing: faster + randomized
-     per-bar wobble so it reads as reacting to music. Frame cost gated to
-     while the section is on screen. ---- */
+     Idle: a slow, synchronized sine sweep. Playing: three layered sine
+     waves per bar (different frequency/phase each) summed together, so
+     the motion reads as musical/organic instead of one obvious loop.
+     Bars grow from the center (see items-center + transform-origin) like
+     a real spectrum analyzer. Frame cost gated to while on screen. ---- */
   useGSAP(
     () => {
       if (window.matchMedia("(prefers-reduced-motion: reduce)").matches)
@@ -359,15 +374,18 @@ export default function PersonalTelemetrySection() {
       const tick = () => {
         t += 0.045;
         const playing = isPlayingRef.current;
-        const amp = playing ? 0.8 : 0.24;
-        const speed = playing ? 1.7 : 0.9;
         bars.forEach((bar, i) => {
-          const phase = i * (playing ? 0.5 : 0.32);
-          const wobble = playing ? Math.sin(t * 2.6 + i * 1.3) * 0.18 : 0;
-          const scale = Math.max(
-            0.06,
-            0.14 + amp * (0.5 + 0.5 * Math.sin(t * speed + phase)) + wobble,
-          );
+          let scale: number;
+          if (playing) {
+            const w1 = Math.sin(t * 2.2 + i * 0.55);
+            const w2 = Math.sin(t * 3.7 + i * 1.15) * 0.5;
+            const w3 = Math.sin(t * 5.3 + i * 0.27) * 0.3;
+            const combined = (w1 + w2 + w3) / 1.8;
+            scale = Math.max(0.08, 0.5 + combined * 0.5);
+          } else {
+            const phase = i * 0.32;
+            scale = Math.max(0.06, 0.14 + 0.24 * (0.5 + 0.5 * Math.sin(t * 0.9 + phase)));
+          }
           bar.style.transform = `scaleY(${scale})`;
         });
       };
@@ -578,7 +596,7 @@ export default function PersonalTelemetrySection() {
             <div className="otc-drift mt-8 sm:mt-10 mb-16 sm:mb-24">
               <div className="otc-island">
                 <div
-                  className="otc-bob"
+                  className="otc-bob max-w-xs sm:max-w-sm"
                   style={
                     {
                       "--bob-dur": BOB[0].dur,
@@ -586,21 +604,29 @@ export default function PersonalTelemetrySection() {
                     } as React.CSSProperties
                   }
                 >
-                  <div className="flex items-end gap-[3px] sm:gap-1 h-10 sm:h-12 mb-6">
-                    {Array.from({ length: NUM_BARS }).map((_, i) => (
-                      <span
-                        key={i}
-                        ref={(el) => {
-                          barRefs.current[i] = el;
-                        }}
-                        className="otc-bar w-[3px] sm:w-1 h-full rounded-full"
-                        style={{
-                          backgroundColor: nowPlaying.isPlaying
-                            ? "var(--accent-volt)"
-                            : "rgba(154,154,165,0.4)",
-                        }}
-                      />
-                    ))}
+                  <div className="flex items-center gap-[3px] sm:gap-1 h-10 sm:h-12 mb-6">
+                    {Array.from({ length: NUM_BARS }).map((_, i) => {
+                      const spectrumColor = barSpectrumColor(
+                        i / (NUM_BARS - 1),
+                      );
+                      return (
+                        <span
+                          key={i}
+                          ref={(el) => {
+                            barRefs.current[i] = el;
+                          }}
+                          className="otc-bar w-[3px] sm:w-1 h-full rounded-full"
+                          style={{
+                            backgroundColor: nowPlaying.isPlaying
+                              ? spectrumColor
+                              : "rgba(154,154,165,0.4)",
+                            boxShadow: nowPlaying.isPlaying
+                              ? `0 0 6px ${spectrumColor}`
+                              : "none",
+                          }}
+                        />
+                      );
+                    })}
                   </div>
 
                   {nowPlaying.isPlaying ? (
@@ -608,7 +634,7 @@ export default function PersonalTelemetrySection() {
                       href={nowPlaying.url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex items-center gap-4 group/track"
+                      className="flex items-center gap-4 group/track min-w-0"
                     >
                       {nowPlaying.albumArt && (
                         <Image
