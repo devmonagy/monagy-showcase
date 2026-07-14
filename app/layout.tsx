@@ -16,18 +16,25 @@ const spaceGrotesk = Space_Grotesk({
   display: "swap",
 });
 
-const SITE_TITLE = "Mohamed Nagy | Showcase";
+const SITE_TITLE = "Mohamed Nagy - Software Developer";
 const SITE_DESCRIPTION =
   "Mohamed Nagy — Software Developer. A high-energy, color-blocked showcase of experience and projects.";
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://monagy.com"),
   title: SITE_TITLE,
   description: SITE_DESCRIPTION,
   openGraph: {
     title: SITE_TITLE,
     description: SITE_DESCRIPTION,
+    url: "https://monagy.com",
     siteName: "Mohamed Nagy",
     type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: SITE_TITLE,
+    description: SITE_DESCRIPTION,
   },
 };
 
