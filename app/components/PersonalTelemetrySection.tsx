@@ -286,7 +286,7 @@ export default function PersonalTelemetrySection() {
       ref={scopeRef}
       className="relative py-20 sm:py-28 px-5 sm:px-6 md:px-8"
     >
-      <div className="max-w-content mx-auto">
+      <div className="max-w-6xl mx-auto">
         <div className="telemetry-reveal flex items-end justify-between gap-4 mb-12 sm:mb-16">
           <h2 className="font-[family-name:var(--font-syne)] font-extrabold text-4xl sm:text-6xl md:text-7xl tracking-tighter text-[var(--text-contrast)] leading-none">
             Off The

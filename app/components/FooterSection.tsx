@@ -42,7 +42,7 @@ export default function FooterSection() {
       ref={footerRef}
       className="relative border-t border-[var(--border-color)] pt-20 sm:pt-24 pb-10 px-5 sm:px-6 md:px-8 overflow-hidden"
     >
-      <div className="max-w-content mx-auto flex flex-col gap-14">
+      <div className="max-w-6xl mx-auto flex flex-col gap-14">
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-10">
           <div className="footer-reveal flex flex-col gap-3">
             <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-[var(--accent-volt)]">
