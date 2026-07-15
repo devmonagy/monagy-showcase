@@ -1,0 +1,3901 @@
+This file is a merged representation of the entire codebase, combined into a single document by Repomix.
+
+<file_summary>
+This section contains a summary of this file.
+
+<purpose>
+This file contains a packed representation of the entire repository's contents.
+It is designed to be easily consumable by AI systems for analysis, code review,
+or other automated processes.
+</purpose>
+
+<file_format>
+The content is organized as follows:
+1. This summary section
+2. Repository information
+3. Directory structure
+4. Repository files (if enabled)
+5. Multiple file entries, each consisting of:
+  - File path as an attribute
+  - Full contents of the file
+</file_format>
+
+<usage_guidelines>
+- This file should be treated as read-only. Any changes should be made to the
+  original repository files, not this packed version.
+- When processing this file, use the file path to distinguish
+  between different files in the repository.
+- Be aware that this file may contain sensitive information. Handle it with
+  the same level of security as you would the original repository.
+</usage_guidelines>
+
+<notes>
+- Some files may have been excluded based on .gitignore rules and Repomix's configuration
+- Binary files are not included in this packed representation. Please refer to the Repository Structure section for a complete list of file paths, including binary files
+- Files matching patterns in .gitignore are excluded
+- Files matching default ignore patterns are excluded
+- Files are sorted by Git change count (files with more changes are at the bottom)
+</notes>
+
+</file_summary>
+
+<directory_structure>
+.claude/
+  launch.json
+  settings.local.json
+app/
+  api/
+    now-playing/
+      route.ts
+    spotify/
+      authorize/
+        route.ts
+      callback/
+        route.ts
+    weather/
+      route.ts
+  components/
+    Backdrop3D.tsx
+    ContactSection.tsx
+    CustomCursor.tsx
+    ExperienceSection.tsx
+    FooterSection.tsx
+    HeroSection.tsx
+    Marquee.tsx
+    Navbar.tsx
+    PersonalTelemetrySection.tsx
+    Preloader.tsx
+    ProjectsSection.tsx
+    SmoothScroll.tsx
+    WeatherVisuals.tsx
+  data/
+    content.ts
+  lib/
+    spotify.ts
+  globals.css
+  layout.tsx
+  page.tsx
+public/
+  assets/
+    APATax.webp
+    blogwebapp-screen.webp
+    FusionRXDubai.webp
+    MoLightv1.webp
+    Resume-MohamedNAGY.pdf
+.gitignore
+next.config.ts
+package.json
+postcss.config.js
+tailwind.config.ts
+tsconfig.json
+</directory_structure>
+
+<files>
+This section contains the contents of the repository's files.
+
+<file path=".claude/settings.local.json">
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx tsc *)",
+      "Bash(node -e \"console.log\\(require\\('./node_modules/gsap/package.json'\\).version\\)\")",
+      "Bash(npm uninstall *)",
+      "Bash(npx eslint *)",
+      "Bash(npm run *)",
+      "Bash(gh auth *)",
+      "Bash(gh repo *)",
+      "Bash(git checkout *)",
+      "Bash(git add *)",
+      "Bash(echo \"exit: $?\")",
+      "Bash(git commit -m ' *)",
+      "Bash(git push *)",
+      "Bash(gh pr create --title 'Live telemetry widgets, 3D backdrop, and scroll/animation polish' --body ' *)",
+      "Bash(gh pr *)",
+      "Bash(git fetch *)",
+      "Bash(gh pr create --title 'Fix mobile scroll jank, preloader delay, and marquee centering' --body ' *)",
+      "Bash(git pull *)",
+      "Bash(git branch *)",
+      "Bash(ffmpeg -version)",
+      "Bash(which python *)",
+      "Bash(where python *)",
+      "Bash(where python3 *)",
+      "Bash(where py *)",
+      "Bash(where winget *)",
+      "Bash(winget install *)",
+      "Bash(/c/Users/bette/AppData/Local/Microsoft/WinGet/Packages/Gyan.FFmpeg_Microsoft.Winget.Source_8wekyb3d8bbwe/ffmpeg-8.1.2-full_build/bin/ffmpeg.exe -i '/c/Users/bette/Downloads/39e8cb6f-5efe-4060-b5ff-6ed693e144bb \\(1\\).mp4')",
+      "Bash(/c/Users/bette/AppData/Local/Microsoft/WinGet/Packages/Gyan.FFmpeg_Microsoft.Winget.Source_8wekyb3d8bbwe/ffmpeg-8.1.2-full_build/bin/ffmpeg.exe -y -i '/c/Users/bette/Downloads/39e8cb6f-5efe-4060-b5ff-6ed693e144bb \\(1\\).mp4' -vf fps=1,scale=390:-1 /c/Webdev/monagy-showcase/.scratch_frames/frame_%03d.png)",
+      "Bash(echo \"clean: $?\")",
+      "Bash(gh pr create --title 'Fix sections staying blank until scrolled past, then fixing themselves' --body ' *)"
+    ]
+  }
+}
+</file>
+
+<file path=".claude/launch.json">
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "dev",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev"],
+      "port": 3000
+    }
+  ]
+}
+</file>
+
+<file path="app/api/now-playing/route.ts">
+// app/api/now-playing/route.ts
+import { NextResponse } from "next/server";
+import { getNowPlaying } from "@/app/lib/spotify";
+
+export const dynamic = "force-dynamic";
+
+export async function GET() {
+  try {
+    const nowPlaying = await getNowPlaying();
+    return NextResponse.json(nowPlaying, {
+      headers: { "Cache-Control": "no-store" },
+    });
+  } catch {
+    // Missing/invalid credentials, Spotify hiccup, etc. — fail closed to
+    // "offline" rather than surfacing an error state in the widget.
+    return NextResponse.json(
+      { isPlaying: false },
+      { headers: { "Cache-Control": "no-store" } },
+    );
+  }
+}
+</file>
+
+<file path="app/api/spotify/authorize/route.ts">
+// app/api/spotify/authorize/route.ts
+// One-time setup route: visit this once (locally or in prod, matching
+// whichever redirect URI is registered in the Spotify dashboard) to grant
+// this app access to your own account's playback state. It redirects to
+// Spotify's consent screen, which redirects back to /api/spotify/callback
+// with a code that gets exchanged for a refresh token.
+import { NextResponse } from "next/server";
+
+export const dynamic = "force-dynamic";
+
+export async function GET(request: Request) {
+  const clientId = process.env.SPOTIFY_CLIENT_ID;
+  if (!clientId) {
+    return NextResponse.json(
+      { error: "Missing SPOTIFY_CLIENT_ID" },
+      { status: 500 },
+    );
+  }
+
+  // Deliberately NOT derived from request.url: Next's dev server reports
+  // request.url with hostname "localhost" regardless of the actual host
+  // used to reach it (confirmed by curling 127.0.0.1 directly and still
+  // getting "localhost" back), and Spotify's redirect URI policy rejects
+  // "localhost" outright (only the literal 127.0.0.1/::1 loopback address
+  // is accepted, "https" required otherwise) — so a request-derived value
+  // can never match what's registered in the Spotify dashboard locally.
+  const redirectUri = process.env.SPOTIFY_REDIRECT_URI;
+  if (!redirectUri) {
+    return NextResponse.json(
+      { error: "Missing SPOTIFY_REDIRECT_URI" },
+      { status: 500 },
+    );
+  }
+
+  const params = new URLSearchParams({
+    response_type: "code",
+    client_id: clientId,
+    scope: "user-read-currently-playing user-read-playback-state",
+    redirect_uri: redirectUri,
+  });
+
+  return NextResponse.redirect(
+    `https://accounts.spotify.com/authorize?${params.toString()}`,
+  );
+}
+</file>
+
+<file path="app/api/spotify/callback/route.ts">
+// app/api/spotify/callback/route.ts
+// Companion to /api/spotify/authorize — exchanges the one-time code Spotify
+// hands back for a refresh token, and prints it once so it can be copied
+// into SPOTIFY_REFRESH_TOKEN. Nothing is persisted here; safe to leave in
+// place (the code is single-use and expires in minutes), but there's no
+// reason to keep hitting it after setup.
+import { NextResponse } from "next/server";
+
+export const dynamic = "force-dynamic";
+
+export async function GET(request: Request) {
+  const url = new URL(request.url);
+  const code = url.searchParams.get("code");
+  const error = url.searchParams.get("error");
+
+  if (error) {
+    return NextResponse.json({ error }, { status: 400 });
+  }
+  if (!code) {
+    return NextResponse.json({ error: "Missing code" }, { status: 400 });
+  }
+
+  const clientId = process.env.SPOTIFY_CLIENT_ID;
+  const clientSecret = process.env.SPOTIFY_CLIENT_SECRET;
+  if (!clientId || !clientSecret) {
+    return NextResponse.json(
+      { error: "Missing SPOTIFY_CLIENT_ID / SPOTIFY_CLIENT_SECRET" },
+      { status: 500 },
+    );
+  }
+
+  // Must exactly match the redirect_uri used in /api/spotify/authorize —
+  // see the comment there for why this isn't derived from request.url.
+  const redirectUri = process.env.SPOTIFY_REDIRECT_URI;
+  if (!redirectUri) {
+    return NextResponse.json(
+      { error: "Missing SPOTIFY_REDIRECT_URI" },
+      { status: 500 },
+    );
+  }
+
+  const tokenRes = await fetch("https://accounts.spotify.com/api/token", {
+    method: "POST",
+    headers: {
+      Authorization: `Basic ${Buffer.from(`${clientId}:${clientSecret}`).toString("base64")}`,
+      "Content-Type": "application/x-www-form-urlencoded",
+    },
+    body: new URLSearchParams({
+      grant_type: "authorization_code",
+      code,
+      redirect_uri: redirectUri,
+    }),
+  });
+
+  const data = await tokenRes.json();
+
+  if (!tokenRes.ok) {
+    return NextResponse.json({ error: data }, { status: 400 });
+  }
+
+  return new NextResponse(
+    `<!doctype html>
+<html><body style="font-family:monospace;padding:2rem;max-width:640px;margin:0 auto">
+<h1>Spotify connected</h1>
+<p>Copy this into <b>SPOTIFY_REFRESH_TOKEN</b> (local .env.local and your host's env vars), then redeploy:</p>
+<pre style="white-space:pre-wrap;word-break:break-all;background:#eee;padding:1rem;border-radius:8px">${data.refresh_token}</pre>
+<p>This token doesn't expire on its own — you only need to do this once.</p>
+</body></html>`,
+    { headers: { "Content-Type": "text/html; charset=utf-8" } },
+  );
+}
+</file>
+
+<file path="app/api/weather/route.ts">
+// app/api/weather/route.ts
+import { NextResponse } from "next/server";
+
+export const dynamic = "force-dynamic";
+
+// NYC — matches the latitude already shown elsewhere on the site (About's
+// "LOC: NYC · 40.7654° N").
+const LAT = 40.7654;
+const LON = -73.9814;
+
+export type WeatherCondition =
+  | "clear"
+  | "partly-cloudy"
+  | "cloudy"
+  | "fog"
+  | "drizzle"
+  | "rain"
+  | "snow"
+  | "thunderstorm";
+
+export interface WeatherData {
+  tempF: number;
+  feelsLikeF: number;
+  isDay: boolean;
+  condition: WeatherCondition;
+  windMph: number;
+  humidity: number;
+  sunriseISO: string;
+  sunsetISO: string;
+}
+
+// WMO weather codes (Open-Meteo's `weather_code`) collapsed into the
+// broader categories the frontend has an icon for.
+function codeToCondition(code: number): WeatherCondition {
+  if (code === 0) return "clear";
+  if (code === 1 || code === 2) return "partly-cloudy";
+  if (code === 3) return "cloudy";
+  if (code === 45 || code === 48) return "fog";
+  if ([51, 53, 55, 56, 57].includes(code)) return "drizzle";
+  if ([61, 63, 65, 66, 67, 80, 81, 82].includes(code)) return "rain";
+  if ([71, 73, 75, 77, 85, 86].includes(code)) return "snow";
+  if ([95, 96, 99].includes(code)) return "thunderstorm";
+  return "cloudy";
+}
+
+// Open-Meteo — free, no API key/signup required at all (unlike most
+// weather APIs), which is why it's the one used here.
+export async function GET() {
+  try {
+    const url =
+      `https://api.open-meteo.com/v1/forecast?latitude=${LAT}&longitude=${LON}` +
+      `&current=temperature_2m,apparent_temperature,weather_code,is_day,wind_speed_10m,relative_humidity_2m` +
+      `&daily=sunrise,sunset` +
+      `&temperature_unit=fahrenheit&wind_speed_unit=mph` +
+      `&timezone=America%2FNew_York`;
+
+    const res = await fetch(url, { cache: "no-store" });
+    if (!res.ok) throw new Error(`Weather fetch failed: ${res.status}`);
+
+    const data = await res.json();
+    const current = data.current;
+
+    const weather: WeatherData = {
+      tempF: Math.round(current.temperature_2m),
+      feelsLikeF: Math.round(current.apparent_temperature),
+      isDay: current.is_day === 1,
+      condition: codeToCondition(current.weather_code),
+      windMph: Math.round(current.wind_speed_10m),
+      humidity: Math.round(current.relative_humidity_2m),
+      sunriseISO: data.daily?.sunrise?.[0] ?? "",
+      sunsetISO: data.daily?.sunset?.[0] ?? "",
+    };
+
+    return NextResponse.json(weather, {
+      headers: { "Cache-Control": "no-store" },
+    });
+  } catch {
+    return NextResponse.json(
+      { error: true },
+      { status: 503, headers: { "Cache-Control": "no-store" } },
+    );
+  }
+}
+</file>
+
+<file path="app/components/Backdrop3D.tsx">
+"use client";
+
+import { useEffect, useRef } from "react";
+import gsap from "gsap";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
+import { useGSAP } from "@gsap/react";
+
+if (typeof window !== "undefined") {
+  gsap.registerPlugin(ScrollTrigger);
+}
+
+// Dot-grid geometry — must match the CSS background below: 34px tiles with
+// each radial-gradient dot at its tile's center (17,17). Sparkles snap to
+// these points so they read as grid dots lighting up, not loose particles.
+const GRID_STEP = 34;
+const GRID_DOT_OFFSET = 17;
+
+interface Sparkle {
+  x: number;
+  y: number;
+  life: number;
+  maxLife: number;
+  radius: number;
+  /** rgba prefix, e.g. "rgba(247,247,245," — alpha appended per frame */
+  color: string;
+  /** A few sparkles also throw a vertical micro-line that grows as it fades */
+  line: boolean;
+}
+
+// Mostly grid-white so the effect stays ambient; the occasional volt/cyan
+// glint ties it to the brand without turning the background into confetti.
+// Accents deliberately outnumbered 5:2 — they carry far more perceived
+// brightness against the near-black canvas than the white ones do.
+const SPARKLE_COLORS = [
+  "rgba(247,247,245,",
+  "rgba(247,247,245,",
+  "rgba(247,247,245,",
+  "rgba(247,247,245,",
+  "rgba(247,247,245,",
+  "rgba(214,255,63,",
+  "rgba(51,232,255,",
+];
+
+// 3D wireframe cube built from six bordered faces — CSS preserve-3d, no WebGL.
+const CUBE_SIZE = 150;
+const HALF = CUBE_SIZE / 2;
+const CUBE_FACES: React.CSSProperties[] = [
+  { transform: `translateZ(${HALF}px)` },
+  { transform: `rotateY(180deg) translateZ(${HALF}px)` },
+  { transform: `rotateY(90deg) translateZ(${HALF}px)` },
+  { transform: `rotateY(-90deg) translateZ(${HALF}px)` },
+  { transform: `rotateX(90deg) translateZ(${HALF}px)` },
+  { transform: `rotateX(-90deg) translateZ(${HALF}px)` },
+];
+
+export default function Backdrop3D() {
+  const rootRef = useRef<HTMLDivElement>(null);
+  const gridLayerRef = useRef<HTMLDivElement>(null);
+  const sparkleCanvasRef = useRef<HTMLCanvasElement>(null);
+
+  // Scroll-reactive sparkle engine. The canvas shares the grid's parallax
+  // wrapper, so sparkles inherit the exact same transform and stay glued to
+  // real dot positions with zero per-frame alignment math. The rAF loop only
+  // runs while sparkles are alive — an idle page costs nothing.
+  useEffect(() => {
+    const canvas = sparkleCanvasRef.current;
+    const layer = gridLayerRef.current;
+    if (!canvas || !layer) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+
+    // DPR capped at 1: these are soft 1-2px glows on a background layer —
+    // retina sharpness is invisible here and a 1.4x-viewport canvas at 2x
+    // DPR would quadruple the pixels cleared every frame.
+    let width = 0;
+    let height = 0;
+    const resize = () => {
+      // offsetWidth/Height: layout size, unaffected by the parallax transform
+      width = layer.offsetWidth;
+      height = layer.offsetHeight;
+      canvas.width = width;
+      canvas.height = height;
+    };
+    resize();
+    window.addEventListener("resize", resize);
+
+    let sparkles: Sparkle[] = [];
+    let rafId = 0;
+    let running = false;
+
+    const tick = () => {
+      ctx.clearRect(0, 0, width, height);
+      sparkles = sparkles.filter((s) => ++s.life < s.maxLife);
+
+      for (const s of sparkles) {
+        const t = s.life / s.maxLife;
+        // Quick flare-in, long fade-out — reads as a glint, not a blink
+        const alpha = t < 0.25 ? t / 0.25 : 1 - (t - 0.25) / 0.75;
+
+        // Peak alphas kept low on purpose — against the near-black canvas a
+        // background glint should sit just above the grid's own 0.09, never
+        // competing with foreground text for attention.
+        const glow = ctx.createRadialGradient(s.x, s.y, 0, s.x, s.y, s.radius * 4);
+        glow.addColorStop(0, `${s.color}${0.18 * alpha})`);
+        glow.addColorStop(1, `${s.color}0)`);
+        ctx.fillStyle = glow;
+        ctx.beginPath();
+        ctx.arc(s.x, s.y, s.radius * 4, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = `${s.color}${0.4 * alpha})`;
+        ctx.beginPath();
+        ctx.arc(s.x, s.y, s.radius, 0, Math.PI * 2);
+        ctx.fill();
+
+        if (s.line) {
+          const len = 8 + 24 * t;
+          ctx.strokeStyle = `${s.color}${0.15 * alpha})`;
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.moveTo(s.x, s.y - len);
+          ctx.lineTo(s.x, s.y + len);
+          ctx.stroke();
+        }
+      }
+
+      if (sparkles.length) {
+        rafId = requestAnimationFrame(tick);
+      } else {
+        running = false;
+        ctx.clearRect(0, 0, width, height);
+      }
+    };
+
+    const spawn = (count: number) => {
+      // Spawn only inside the slice of this oversized layer that's actually
+      // on screen: the layer extends 20% past the viewport on every side and
+      // is translated by the parallax tween (read back as px via "y").
+      const parallaxY = Number(gsap.getProperty(layer, "y")) || 0;
+      const viewLeft = (width - window.innerWidth) / 2;
+      const viewTop = (height - window.innerHeight) / 2 - parallaxY;
+
+      for (let i = 0; i < count && sparkles.length < 20; i++) {
+        const rawX = viewLeft + Math.random() * window.innerWidth;
+        const rawY = viewTop + Math.random() * window.innerHeight;
+        const x =
+          Math.round((rawX - GRID_DOT_OFFSET) / GRID_STEP) * GRID_STEP +
+          GRID_DOT_OFFSET;
+        const y =
+          Math.round((rawY - GRID_DOT_OFFSET) / GRID_STEP) * GRID_STEP +
+          GRID_DOT_OFFSET;
+        // One glint per dot at a time — stacked draws on the same point
+        // compound their alphas into exactly the hot flash we're avoiding.
+        if (sparkles.some((s) => s.x === x && s.y === y)) continue;
+        sparkles.push({
+          x,
+          y,
+          life: 0,
+          maxLife: 40 + Math.random() * 35,
+          radius: 1 + Math.random() * 0.8,
+          color:
+            SPARKLE_COLORS[Math.floor(Math.random() * SPARKLE_COLORS.length)],
+          line: Math.random() < 0.18,
+        });
+      }
+      if (!running && sparkles.length) {
+        running = true;
+        rafId = requestAnimationFrame(tick);
+      }
+    };
+
+    // Fractional spawn budget keyed to scroll velocity: slow scrolling
+    // trickles out single glints, a hard flick bursts a few at once.
+    let budget = 0;
+    const trigger = ScrollTrigger.create({
+      onUpdate(self) {
+        const velocity = Math.abs(self.getVelocity());
+        if (velocity < 60) return;
+        budget += Math.min(1.5, velocity / 1600);
+        const whole = Math.floor(budget);
+        if (whole > 0) {
+          budget -= whole;
+          spawn(whole);
+        }
+      },
+    });
+
+    return () => {
+      trigger.kill();
+      cancelAnimationFrame(rafId);
+      window.removeEventListener("resize", resize);
+    };
+  }, []);
+
+  useGSAP(
+    () => {
+      // Depth parallax: far layers drift slower than near layers as the page
+      // scrolls, selling the 3D feel without any per-frame JS math.
+      gsap.to(".bd-far", {
+        yPercent: -14,
+        ease: "none",
+        scrollTrigger: {
+          trigger: document.body,
+          start: "top top",
+          end: "max",
+          scrub: 1.2,
+        },
+      });
+      gsap.to(".bd-near", {
+        yPercent: -38,
+        ease: "none",
+        scrollTrigger: {
+          trigger: document.body,
+          start: "top top",
+          end: "max",
+          scrub: 0.8,
+        },
+      });
+    },
+    { scope: rootRef },
+  );
+
+  return (
+    <div
+      ref={rootRef}
+      className="fixed inset-0 overflow-hidden pointer-events-none select-none"
+      style={{ perspective: "1100px" }}
+      aria-hidden="true"
+    >
+      {/* Ambient glow orbs — far layer */}
+      <div className="bd-far absolute top-[-12%] left-[-8%] w-[46vw] h-[46vw] max-w-[640px] max-h-[640px] rounded-full bg-[var(--accent-violet)] opacity-[0.10] blur-[130px]" />
+      <div className="bd-far absolute top-[38%] right-[-12%] w-[40vw] h-[40vw] max-w-[560px] max-h-[560px] rounded-full bg-[var(--accent-cyan)] opacity-[0.07] blur-[130px]" />
+      <div className="bd-far absolute bottom-[-14%] left-[22%] w-[42vw] h-[42vw] max-w-[600px] max-h-[600px] rounded-full bg-[var(--accent-volt)] opacity-[0.06] blur-[140px]" />
+
+      {/* Fine dot grid + scroll-sparkle canvas — far layer texture so black
+          never reads as empty. One shared wrapper so the sparkles ride the
+          same parallax transform as the dots they light up. */}
+      <div ref={gridLayerRef} className="bd-far absolute inset-[-20%]">
+        <div
+          className="absolute inset-0 opacity-[0.09]"
+          style={{
+            backgroundImage:
+              "radial-gradient(rgba(247,247,245,0.65) 1px, transparent 1px)",
+            backgroundSize: `${GRID_STEP}px ${GRID_STEP}px`,
+          }}
+        />
+        <canvas
+          ref={sparkleCanvasRef}
+          className="absolute inset-0 w-full h-full"
+        />
+      </div>
+
+      {/* Perspective grid floor — anchored low, fades upward */}
+      <div
+        className="bd-far absolute left-[-30%] right-[-30%] bottom-[-6%] h-[46vh] opacity-[0.14]"
+        style={{
+          backgroundImage:
+            "linear-gradient(rgba(214,255,63,0.5) 1px, transparent 1px), linear-gradient(90deg, rgba(214,255,63,0.5) 1px, transparent 1px)",
+          backgroundSize: "72px 72px",
+          transform: "rotateX(62deg)",
+          transformOrigin: "bottom center",
+          WebkitMaskImage:
+            "linear-gradient(to top, black 20%, transparent 90%)",
+          maskImage: "linear-gradient(to top, black 20%, transparent 90%)",
+        }}
+      />
+
+      {/* Wireframe cube — near layer, top right. Outer div floats, inner
+          div tumbles; nesting keeps both transforms from fighting. */}
+      <div className="bd-near absolute top-[6%] right-[2%] sm:top-[10%] sm:right-[10%] scale-[0.55] sm:scale-100 origin-top-right animate-[floatY_9s_ease-in-out_infinite]">
+        <div
+          className="relative animate-[spinCube_32s_linear_infinite]"
+          style={{
+            width: CUBE_SIZE,
+            height: CUBE_SIZE,
+            transformStyle: "preserve-3d",
+          }}
+        >
+          {CUBE_FACES.map((style, i) => (
+            <div
+              key={i}
+              className="absolute inset-0 border border-[var(--accent-volt)] opacity-25"
+              style={style}
+            />
+          ))}
+        </div>
+      </div>
+
+      {/* Orbit rings — dashed borders make the spin visible. Near layer. */}
+      <div className="bd-near absolute top-[52%] left-[-6%] sm:left-[2%]">
+        <div className="w-[300px] h-[300px] sm:w-[420px] sm:h-[420px] rounded-full border border-dashed border-[var(--accent-cyan)] opacity-20 animate-[ringSpin_22s_linear_infinite]" />
+      </div>
+      <div className="bd-near absolute bottom-[6%] right-[2%] sm:right-[8%]">
+        <div className="w-[200px] h-[200px] sm:w-[280px] sm:h-[280px] rounded-full border border-dashed border-[var(--accent-violet)] opacity-25 animate-[ringSpinB_18s_linear_infinite]" />
+      </div>
+
+      {/* Floating accent shards — small near-layer geometry */}
+      <div className="bd-near absolute top-[30%] left-[14%] w-3 h-3 bg-[var(--accent-volt)] opacity-40 rotate-45 animate-[floatY_7s_ease-in-out_infinite]" />
+      <div className="bd-near absolute top-[68%] right-[24%] w-2 h-2 bg-[var(--accent-cyan)] opacity-40 rounded-full animate-[floatY_11s_ease-in-out_infinite]" />
+      <div className="bd-near absolute top-[16%] left-[42%] w-2.5 h-10 bg-[var(--accent-violet)] opacity-25 rotate-[24deg] animate-[floatY_13s_ease-in-out_infinite]" />
+    </div>
+  );
+}
+</file>
+
+<file path="app/components/CustomCursor.tsx">
+"use client";
+
+import { useEffect, useRef, useState } from "react";
+import gsap from "gsap";
+
+const HOVER_SELECTOR = "a, button, [role='button'], input, textarea, select";
+
+export default function CustomCursor() {
+  const dotRef = useRef<HTMLDivElement>(null);
+  const ringRef = useRef<HTMLDivElement>(null);
+  const [enabled, setEnabled] = useState(false);
+  const [isHovering, setIsHovering] = useState(false);
+
+  useEffect(() => {
+    setEnabled(window.matchMedia("(hover: hover) and (pointer: fine)").matches);
+  }, []);
+
+  useEffect(() => {
+    if (!enabled) return;
+
+    const setDotX = gsap.quickTo(dotRef.current, "x", {
+      duration: 0.1,
+      ease: "power3.out",
+    });
+    const setDotY = gsap.quickTo(dotRef.current, "y", {
+      duration: 0.1,
+      ease: "power3.out",
+    });
+    const setRingX = gsap.quickTo(ringRef.current, "x", {
+      duration: 0.45,
+      ease: "power3.out",
+    });
+    const setRingY = gsap.quickTo(ringRef.current, "y", {
+      duration: 0.45,
+      ease: "power3.out",
+    });
+
+    const handleMove = (e: MouseEvent) => {
+      setDotX(e.clientX);
+      setDotY(e.clientY);
+      setRingX(e.clientX);
+      setRingY(e.clientY);
+    };
+
+    const handleOver = (e: MouseEvent) => {
+      if ((e.target as HTMLElement)?.closest?.(HOVER_SELECTOR)) {
+        setIsHovering(true);
+      }
+    };
+    const handleOut = (e: MouseEvent) => {
+      if ((e.target as HTMLElement)?.closest?.(HOVER_SELECTOR)) {
+        setIsHovering(false);
+      }
+    };
+
+    window.addEventListener("mousemove", handleMove);
+    document.addEventListener("mouseover", handleOver);
+    document.addEventListener("mouseout", handleOut);
+
+    return () => {
+      window.removeEventListener("mousemove", handleMove);
+      document.removeEventListener("mouseover", handleOver);
+      document.removeEventListener("mouseout", handleOut);
+    };
+  }, [enabled]);
+
+  if (!enabled) return null;
+
+  return (
+    <>
+      <div
+        ref={dotRef}
+        className="fixed top-0 left-0 z-[9999] w-2 h-2 rounded-full bg-[var(--accent-volt)] pointer-events-none -translate-x-1/2 -translate-y-1/2 mix-blend-difference"
+      />
+      <div
+        ref={ringRef}
+        className="fixed top-0 left-0 z-[9999] rounded-full border border-[var(--accent-volt)] pointer-events-none -translate-x-1/2 -translate-y-1/2 mix-blend-difference transition-[width,height] duration-300 ease-out"
+        style={{
+          width: isHovering ? 56 : 32,
+          height: isHovering ? 56 : 32,
+        }}
+      />
+    </>
+  );
+}
+</file>
+
+<file path="app/components/WeatherVisuals.tsx">
+"use client";
+
+// Shared weather visuals for the Off The Clock telemetry board — icon,
+// orb gradient, and label map, split out from the old card widget so the
+// Bento tile can compose them freely. Naturalistic per-condition colors on
+// purpose (sun = warm amber, rain = blue, etc.): a weather readout looks
+// more alive resembling the actual sky than tinted in the brand accent.
+
+import type { WeatherCondition } from "../api/weather/route";
+
+export const CONDITION_LABEL: Record<WeatherCondition, string> = {
+  clear: "Clear",
+  "partly-cloudy": "Partly Cloudy",
+  cloudy: "Cloudy",
+  fog: "Foggy",
+  drizzle: "Drizzle",
+  rain: "Rain",
+  snow: "Snow",
+  thunderstorm: "Thunderstorm",
+};
+
+export function orbGradient(
+  condition: WeatherCondition,
+  isDay: boolean,
+): string {
+  if (condition === "thunderstorm") {
+    return "radial-gradient(circle at 32% 28%, #7c3aed, #1e1b4b)";
+  }
+  if (condition === "snow") {
+    return "radial-gradient(circle at 32% 28%, #f0f9ff, #7dd3fc)";
+  }
+  if (condition === "rain" || condition === "drizzle") {
+    return "radial-gradient(circle at 32% 28%, #38bdf8, #0c4a6e)";
+  }
+  if (condition === "fog") {
+    return "radial-gradient(circle at 32% 28%, #e2e8f0, #64748b)";
+  }
+  if (!isDay) {
+    return "radial-gradient(circle at 32% 28%, #4338ca, #0f172a)";
+  }
+  if (condition === "cloudy") {
+    return "radial-gradient(circle at 32% 28%, #bae6fd, #64748b)";
+  }
+  if (condition === "partly-cloudy") {
+    return "radial-gradient(circle at 32% 28%, #7dd3fc, #2563eb)";
+  }
+  return "radial-gradient(circle at 32% 28%, #fef3c7, #f59e0b)"; // clear day
+}
+
+export function WeatherIcon({
+  condition,
+  isDay,
+}: {
+  condition: WeatherCondition;
+  isDay: boolean;
+}) {
+  const showSun =
+    isDay && (condition === "clear" || condition === "partly-cloudy");
+  const showMoon =
+    !isDay && (condition === "clear" || condition === "partly-cloudy");
+  const showCloud = condition !== "clear";
+  const small = condition === "partly-cloudy"; // sun/moon shrinks when a cloud shares the frame
+
+  return (
+    <svg viewBox="0 0 32 32" className="w-full h-full">
+      <defs>
+        <radialGradient id="sunGradient" cx="35%" cy="35%" r="70%">
+          <stop offset="0%" stopColor="#FEF3C7" />
+          <stop offset="55%" stopColor="#FBBF24" />
+          <stop offset="100%" stopColor="#F59E0B" />
+        </radialGradient>
+        <radialGradient id="moonGradient" cx="35%" cy="35%" r="70%">
+          <stop offset="0%" stopColor="#F8FAFC" />
+          <stop offset="100%" stopColor="#94A3B8" />
+        </radialGradient>
+        <linearGradient id="cloudGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop
+            offset="0%"
+            stopColor={condition === "thunderstorm" ? "#94A3B8" : "#E2E8F0"}
+          />
+          <stop
+            offset="100%"
+            stopColor={condition === "thunderstorm" ? "#475569" : "#94A3B8"}
+          />
+        </linearGradient>
+        {/* Genuine SVG bloom (blur merged with the sharp source) instead of
+            a CSS blur that would soften the whole shape */}
+        <filter id="softGlow" x="-60%" y="-60%" width="220%" height="220%">
+          <feGaussianBlur stdDeviation="1.3" result="blur" />
+          <feMerge>
+            <feMergeNode in="blur" />
+            <feMergeNode in="SourceGraphic" />
+          </feMerge>
+        </filter>
+      </defs>
+
+      {showSun && (
+        <g
+          className="weather-sun-spin"
+          style={{ transformOrigin: small ? "11px 11px" : "16px 16px" }}
+          filter="url(#softGlow)"
+        >
+          <g
+            transform={
+              small ? "translate(2 2) scale(0.72)" : "translate(4 4) scale(1)"
+            }
+          >
+            <circle cx="12" cy="12" r="5" fill="url(#sunGradient)" />
+            <g stroke="#FBBF24" strokeWidth="2" strokeLinecap="round">
+              <line x1="12" y1="1" x2="12" y2="3.5" />
+              <line x1="12" y1="20.5" x2="12" y2="23" />
+              <line x1="1" y1="12" x2="3.5" y2="12" />
+              <line x1="20.5" y1="12" x2="23" y2="12" />
+              <line x1="4.2" y1="4.2" x2="6" y2="6" />
+              <line x1="18" y1="18" x2="19.8" y2="19.8" />
+              <line x1="4.2" y1="19.8" x2="6" y2="18" />
+              <line x1="18" y1="6" x2="19.8" y2="4.2" />
+            </g>
+          </g>
+        </g>
+      )}
+
+      {showMoon && (
+        <g
+          // translate(5.2 5.2) — this path's exact bounding-box center is
+          // (12,12), so scale*12+translate=16 needs translate=5.2 on both
+          // axes to land it dead center (computed, not eyeballed).
+          transform={
+            small
+              ? "translate(3 2) scale(0.68)"
+              : "translate(5.2 5.2) scale(0.9)"
+          }
+          filter="url(#softGlow)"
+        >
+          <path
+            d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"
+            fill="url(#moonGradient)"
+          />
+          <circle
+            cx="20"
+            cy="6"
+            r="0.9"
+            fill="#F8FAFC"
+            className="weather-star weather-star-1"
+          />
+          <circle
+            cx="23"
+            cy="11"
+            r="0.6"
+            fill="#F8FAFC"
+            className="weather-star weather-star-2"
+          />
+        </g>
+      )}
+
+      {showCloud && (
+        // Outer g: static position (SVG transform attribute). Inner g: the
+        // CSS drift animation. Both on one element don't compose — a CSS
+        // transform replaces the attribute transform entirely.
+        <g
+          transform={
+            condition === "partly-cloudy"
+              ? "translate(9 13) scale(0.95)"
+              : "translate(2.2 2.2) scale(1.15)"
+          }
+        >
+          <g className="weather-cloud-drift">
+            <path
+              d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"
+              fill="url(#cloudGradient)"
+            />
+          </g>
+        </g>
+      )}
+
+      {(condition === "rain" || condition === "drizzle") && (
+        <g stroke="#7DD3FC" strokeWidth="1.6" strokeLinecap="round">
+          <line
+            x1="11"
+            y1="26"
+            x2="9.5"
+            y2="30"
+            className="weather-drop weather-drop-1"
+          />
+          <line
+            x1="16"
+            y1="26"
+            x2="14.5"
+            y2="30"
+            className="weather-drop weather-drop-2"
+          />
+          <line
+            x1="21"
+            y1="26"
+            x2="19.5"
+            y2="30"
+            className="weather-drop weather-drop-3"
+          />
+        </g>
+      )}
+
+      {condition === "snow" && (
+        <g fill="#F0F9FF">
+          <circle
+            cx="11"
+            cy="26"
+            r="1.1"
+            className="weather-snow weather-snow-1"
+          />
+          <circle
+            cx="16"
+            cy="29"
+            r="1.1"
+            className="weather-snow weather-snow-2"
+          />
+          <circle
+            cx="21"
+            cy="26"
+            r="1.1"
+            className="weather-snow weather-snow-3"
+          />
+        </g>
+      )}
+
+      {condition === "thunderstorm" && (
+        <path
+          d="M15 14 10 21h4l-1 5 6-8h-4l1-4z"
+          fill="#FDE047"
+          filter="url(#softGlow)"
+          className="weather-bolt"
+        />
+      )}
+
+      {condition === "fog" && (
+        <g
+          stroke="#94A3B8"
+          strokeWidth="1.4"
+          strokeLinecap="round"
+          className="weather-fog"
+        >
+          <line x1="6" y1="16" x2="18" y2="16" />
+          <line x1="9" y1="19.5" x2="24" y2="19.5" />
+          <line x1="6" y1="23" x2="19" y2="23" />
+        </g>
+      )}
+    </svg>
+  );
+}
+</file>
+
+<file path="app/data/content.ts">
+export const SITE = {
+  name: "Mohamed Nagy",
+  tagline: "Engineering high-fidelity visual architectures.",
+  resumeUrl: "/assets/Resume-MohamedNAGY.pdf",
+  email: "contactmonagy@gmail.com",
+};
+
+export const BIO_PARAGRAPHS = [
+  "I am an adaptable software developer with over 7 years of specialized expertise in engineering front-end user experiences while building robust full-stack software structures. My workspace is centered around crafting performant digital systems using React, Next.js, and TypeScript, bound to clean execution architectures.",
+  "I bridge visual design precision with strict production optimization, ensuring software layouts stay fully compliant with modern cross-browser standards and complete accessibility rules.",
+];
+
+export const TECH_STACK = [
+  "React / Next.js",
+  "TypeScript",
+  "Node.js / Express",
+  "MongoDB",
+  "Tailwind CSS",
+  "RESTful APIs",
+];
+
+export type Experience = {
+  id: string;
+  role: string;
+  company: string;
+  url: string;
+  range: string;
+  summary: string;
+  skills: string[];
+  details: string[];
+};
+
+export const EXPERIENCES: Experience[] = [
+  {
+    id: "adapt-software",
+    role: "Software Developer",
+    company: "ADAPT Community Network",
+    url: "https://adaptcommunitynetwork.org/",
+    range: "2025 — Present",
+    summary:
+      "Design and maintain internal organizational Power Apps and custom solutions using modular components, automated workflows, and secure integrations across Dataverse, SQL Server, and Azure services.",
+    skills: [
+      "Power Apps",
+      "Power Automate",
+      "Dataverse",
+      "Architecture",
+      "Azure",
+      "Optimization",
+      "Cloud Flows",
+      "State Management",
+    ],
+    details: [
+      "Develop internal organization Power Apps solutions, improving business process efficiency by ~25%.",
+      "Build reusable component libraries and custom functions, accelerating internal app development by ~30%.",
+      "Integrate Dataverse, REST APIs, and Azure services to enable secure internal data exchange by ~35%.",
+      "Optimize low-code expressions, collections, and backend queries, reducing manual processing time by ~40%.",
+      "Lead Agile sprints to deliver feature-rich application updates, improving team delivery predictability by ~20%.",
+    ],
+  },
+  {
+    id: "adapt-web",
+    role: "Web Developer",
+    company: "ADAPT Community Network",
+    url: "https://adaptcommunitynetwork.org/",
+    range: "2021 — 2025",
+    summary:
+      "Developed and maintained accessible, user-focused WordPress sites using HTML, CSS, JavaScript, and PHP to support organizational goals.",
+    skills: [
+      "HTML5",
+      "CSS3",
+      "JavaScript",
+      "WordPress",
+      "PHP",
+      "REST APIs",
+      "SEO",
+      "WCAG Accessibility",
+    ],
+    details: [
+      "Built responsive SEO-optimized web applications using JavaScript, PHP, WordPress, and REST APIs, improving page load speeds by ~20–30%.",
+      "Developed reusable React components and internal dashboards, reducing manual workflows by ~25%.",
+      "Implemented caching, asset optimization, and code refactoring, decreasing load times by ~30–40%.",
+      "Ensured WCAG 2.2 accessibility and cross-browser compatibility, reducing UI issues by ~20%.",
+    ],
+  },
+  {
+    id: "webdefinitely",
+    role: "Founder & Freelance Developer",
+    company: "webDefinitely",
+    url: "#",
+    range: "2018 — Present",
+    summary:
+      "Partnered with local clients to build custom websites and brand identities, managing everything from domain setup to SEO to deliver polished, user-friendly digital experiences.",
+    skills: [
+      "Full Stack",
+      "React",
+      "Node.js",
+      "SEO",
+      "Client Strategy",
+      "Deployments",
+      "DNS Hosting",
+    ],
+    details: [
+      "Delivered full-stack solutions with JS/React/Node/PHP, improving delivery speed by ~25%.",
+      "Built reusable UI components, cutting dev time by ~30%.",
+      "Handled hosting, DNS, and deployments, reducing launch issues by ~40%.",
+      "Led projects end-to-end, increasing on-time delivery and client satisfaction by ~20%.",
+    ],
+  },
+];
+
+export type Project = {
+  id: string;
+  title: string;
+  subtitle: string;
+  description: string;
+  tech: string[];
+  image: string;
+  liveUrl: string;
+  status?: string;
+};
+
+export const PROJECTS: Project[] = [
+  {
+    id: "blog-engine",
+    title: "Blog Engine",
+    subtitle: "MERN + TypeScript",
+    description:
+      "A full-stack blog engine inspired by platforms like Medium, built with the MERN stack, TypeScript, Tailwind CSS, and modern tooling. Includes robust secure authentication, post management, and a highly optimized, responsive UI.",
+    tech: ["MongoDB", "Express", "React", "Node.js", "TypeScript", "Tailwind CSS", "JWT"],
+    image: "/assets/blogwebapp-screen.webp",
+    liveUrl: "https://blogwebapp.monagy.com",
+    status: "In Development",
+  },
+  {
+    id: "apa-tax",
+    title: "APA Tax Accounting Inc",
+    subtitle: "Website Development & Edits",
+    description:
+      "A high-fidelity multi-page business website for a certified public accounting firm. Clean, semantic markup, optimized PHP templating, and custom Bootstrap layouts, featuring integrated analytics and secure client portal gateways.",
+    tech: ["PHP", "Bootstrap", "JavaScript", "jQuery", "HTML5", "CSS3"],
+    image: "/assets/APATax.webp",
+    liveUrl: "https://apatax.com/",
+  },
+  {
+    id: "fusion-rx",
+    title: "Fusion Apothecary Dubai",
+    subtitle: "WordPress Development",
+    description:
+      "A tailored architectural WordPress theme for a premium medical compounding pharmacy and luxury wellness lab in Dubai. A clean, high-contrast interface showcasing specialized lab facilities and clinical IV drip therapies.",
+    tech: ["WordPress", "PHP", "JavaScript", "HTML5", "CSS3", "Elementor"],
+    image: "/assets/FusionRXDubai.webp",
+    liveUrl: "https://fusionrxdubai.com/",
+  },
+  {
+    id: "v1-portfolio",
+    title: "Portfolio Archive",
+    subtitle: "Version 1 of Personal Portfolio",
+    description:
+      "The initial layout iteration of my personal portfolio platform. Focused heavily on high-performance raw web assets, smooth DOM responsiveness, and micro-interactions built using componentized architectures.",
+    tech: ["React", "TypeScript", "Tailwind CSS", "Next.js", "Vercel"],
+    image: "/assets/MoLightv1.webp",
+    liveUrl: "https://v1.monagy.com",
+  },
+];
+
+export const SOCIALS = [
+  { label: "GitHub", url: "https://github.com/devmonagy" },
+  { label: "LinkedIn", url: "https://www.linkedin.com/in/devmonagy" },
+  { label: "CodePen", url: "https://codepen.io/devmonagy" },
+];
+
+export const NAV_LINKS = [
+  { href: "#about", label: "About" },
+  { href: "#experience", label: "Experience" },
+  { href: "#projects", label: "Projects" },
+  { href: "#contact", label: "Contact" },
+];
+</file>
+
+<file path="app/lib/spotify.ts">
+// app/lib/spotify.ts
+// Server-only. Uses a long-lived refresh token (minted once via
+// /api/spotify/authorize + /api/spotify/callback) to pull a short-lived
+// access token on every call — Spotify access tokens expire in ~1hr, so
+// there's no point caching them across requests for a low-traffic widget.
+
+const TOKEN_URL = "https://accounts.spotify.com/api/token";
+const NOW_PLAYING_URL =
+  "https://api.spotify.com/v1/me/player/currently-playing";
+
+async function getAccessToken(): Promise<string> {
+  const clientId = process.env.SPOTIFY_CLIENT_ID;
+  const clientSecret = process.env.SPOTIFY_CLIENT_SECRET;
+  const refreshToken = process.env.SPOTIFY_REFRESH_TOKEN;
+
+  if (!clientId || !clientSecret || !refreshToken) {
+    throw new Error(
+      "Missing SPOTIFY_CLIENT_ID / SPOTIFY_CLIENT_SECRET / SPOTIFY_REFRESH_TOKEN",
+    );
+  }
+
+  const res = await fetch(TOKEN_URL, {
+    method: "POST",
+    headers: {
+      Authorization: `Basic ${Buffer.from(`${clientId}:${clientSecret}`).toString("base64")}`,
+      "Content-Type": "application/x-www-form-urlencoded",
+    },
+    body: new URLSearchParams({
+      grant_type: "refresh_token",
+      refresh_token: refreshToken,
+    }),
+    cache: "no-store",
+  });
+
+  if (!res.ok) {
+    throw new Error(`Spotify token refresh failed: ${res.status}`);
+  }
+
+  const data = await res.json();
+  return data.access_token as string;
+}
+
+export interface NowPlaying {
+  isPlaying: boolean;
+  title?: string;
+  artist?: string;
+  albumArt?: string;
+  url?: string;
+}
+
+const OFFLINE: NowPlaying = { isPlaying: false };
+
+export async function getNowPlaying(): Promise<NowPlaying> {
+  const accessToken = await getAccessToken();
+
+  const res = await fetch(NOW_PLAYING_URL, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+    cache: "no-store",
+  });
+
+  // 204 = nothing playing right now (also covers private sessions)
+  if (res.status === 204 || !res.ok) {
+    return OFFLINE;
+  }
+
+  const data = await res.json();
+
+  if (!data?.item || !data.is_playing) {
+    return OFFLINE;
+  }
+
+  const isEpisode = data.currently_playing_type === "episode";
+
+  return {
+    isPlaying: true,
+    title: data.item.name,
+    artist: isEpisode
+      ? data.item.show?.name
+      : data.item.artists?.map((a: { name: string }) => a.name).join(", "),
+    albumArt: isEpisode
+      ? data.item.images?.[0]?.url
+      : data.item.album?.images?.[0]?.url,
+    url: data.item.external_urls?.spotify,
+  };
+}
+</file>
+
+<file path=".gitignore">
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+
+# dependencies
+/node_modules
+/.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+
+# testing
+/coverage
+
+# next.js
+/.next/
+/out/
+
+# production
+/build
+
+# misc
+.DS_Store
+*.pem
+
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# env files (can opt-in for committing if needed)
+.env*
+
+# vercel
+.vercel
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
+</file>
+
+<file path="postcss.config.js">
+module.exports = {
+  plugins: {
+    tailwindcss: {},
+    autoprefixer: {},
+  },
+};
+</file>
+
+<file path="tailwind.config.ts">
+import type { Config } from "tailwindcss";
+
+const config: Config = {
+  content: [
+    "./app/**/*.{js,ts,jsx,tsx,mdx}",
+    "./components/**/*.{js,ts,jsx,tsx,mdx}",
+  ],
+  theme: {
+    extend: {},
+  },
+  plugins: [],
+};
+
+export default config;
+</file>
+
+<file path="tsconfig.json">
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "lib": ["dom", "dom.iterable", "esnext"],
+    "allowJs": false,
+    "skipLibCheck": true,
+    "strict": true,
+    "noEmit": true,
+    "esModuleInterop": true,
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "jsx": "react-jsx",
+    "incremental": true,
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ],
+    "paths": {
+      "@/*": ["./*"]
+    }
+  },
+  "include": [
+    "next-env.d.ts",
+    "global.d.ts",
+    "react-app-env.d.ts",
+    "**/*.ts",
+    "**/*.tsx",
+    ".next/types/**/*.ts",
+    ".next/dev/types/**/*.ts",
+    "**/*.mts"
+  ],
+  "exclude": ["node_modules"]
+}
+</file>
+
+<file path="app/layout.tsx">
+import type { Metadata } from "next";
+import { Syne, Space_Grotesk } from "next/font/google";
+import "./globals.css";
+
+const syne = Syne({
+  subsets: ["latin"],
+  weight: ["700", "800"],
+  variable: "--font-syne",
+  display: "swap",
+});
+
+const spaceGrotesk = Space_Grotesk({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-space-grotesk",
+  display: "swap",
+});
+
+const SITE_TITLE = "Mohamed Nagy | Showcase";
+const SITE_DESCRIPTION =
+  "Mohamed Nagy — Software Developer. A high-energy, color-blocked showcase of experience and projects.";
+
+export const metadata: Metadata = {
+  title: SITE_TITLE,
+  description: SITE_DESCRIPTION,
+  openGraph: {
+    title: SITE_TITLE,
+    description: SITE_DESCRIPTION,
+    siteName: "Mohamed Nagy",
+    type: "website",
+  },
+};
+
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    <html lang="en" className={`${syne.variable} ${spaceGrotesk.variable}`}>
+      <body>{children}</body>
+    </html>
+  );
+}
+</file>
+
+<file path="next.config.ts">
+import type { NextConfig } from "next";
+
+const nextConfig: NextConfig = {
+  images: {
+    remotePatterns: [
+      {
+        // Spotify album art for the now-playing telemetry card
+        protocol: "https",
+        hostname: "i.scdn.co",
+      },
+    ],
+  },
+};
+
+export default nextConfig;
+</file>
+
+<file path="package.json">
+{
+  "name": "monagy-showcase",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint"
+  },
+  "dependencies": {
+    "@gsap/react": "^2.1.2",
+    "gsap": "^3.15.0",
+    "next": "^16.0.7",
+    "react": "^19.2.1",
+    "react-dom": "^19.2.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "autoprefixer": "^10",
+    "eslint": "^9",
+    "eslint-config-next": "^16.0.7",
+    "postcss": "^8",
+    "tailwindcss": "3.4.14",
+    "typescript": "^5"
+  }
+}
+</file>
+
+<file path="app/components/Navbar.tsx">
+"use client";
+
+import { useEffect, useState } from "react";
+import { ScrollSmoother } from "gsap/ScrollSmoother";
+import { NAV_LINKS, SITE } from "../data/content";
+
+export default function Navbar() {
+  const [scrolled, setScrolled] = useState(false);
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 20);
+    window.addEventListener("scroll", onScroll, { passive: true });
+    onScroll();
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  const handleClick = (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
+    e.preventDefault();
+    const smoother = ScrollSmoother.get();
+    if (smoother) {
+      smoother.scrollTo(href === "#top" ? 0 : href, true, "top top");
+    } else if (href === "#top") {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    } else {
+      document.querySelector(href)?.scrollIntoView({ behavior: "smooth" });
+    }
+  };
+
+  return (
+    <header
+      className={`fixed top-0 left-0 w-full z-50 transition-all duration-300 ${
+        scrolled
+          ? "bg-[var(--bg)]/80 backdrop-blur-md border-b border-[var(--border-color)]"
+          : "bg-transparent"
+      }`}
+    >
+      <nav className="max-w-6xl mx-auto flex items-center justify-between px-5 sm:px-6 md:px-8 h-16 sm:h-20">
+        <a
+          href="#top"
+          onClick={(e) => handleClick(e, "#top")}
+          className="font-[family-name:var(--font-syne)] font-extrabold text-lg sm:text-xl tracking-tight text-[var(--text-contrast)]"
+        >
+          MN<span className="text-[var(--accent-volt)]">.</span>
+        </a>
+
+        <ul className="flex items-center gap-3 sm:gap-6 font-mono text-[10px] sm:text-xs uppercase tracking-widest text-[var(--text)]">
+          {NAV_LINKS.map((link) => (
+            <li key={link.href}>
+              <a
+                href={link.href}
+                onClick={(e) => handleClick(e, link.href)}
+                className="hover:text-[var(--accent-volt)] transition-colors duration-200"
+              >
+                {link.label}
+              </a>
+            </li>
+          ))}
+        </ul>
+
+        <a
+          href={SITE.resumeUrl}
+          download
+          target="_blank"
+          rel="noopener noreferrer"
+          className="hidden sm:inline-flex items-center gap-2 rounded-full bg-[var(--accent-volt)] text-[var(--accent-volt-ink)] px-4 py-2 font-mono text-[11px] font-bold uppercase tracking-widest hover:scale-105 transition-transform duration-200"
+        >
+          Resume
+        </a>
+      </nav>
+    </header>
+  );
+}
+</file>
+
+<file path="app/components/Preloader.tsx">
+"use client";
+
+import { useRef } from "react";
+import gsap from "gsap";
+import { useGSAP } from "@gsap/react";
+
+export default function Preloader({
+  onComplete,
+}: {
+  onComplete: () => void;
+}) {
+  const wrapperRef = useRef<HTMLDivElement>(null);
+  const overlayRef = useRef<HTMLDivElement>(null);
+  const countRef = useRef<HTMLSpanElement>(null);
+
+  useGSAP(
+    () => {
+      const counter = { value: 0 };
+
+      const tl = gsap.timeline({
+        onComplete,
+      });
+
+      tl.to(counter, {
+        value: 100,
+        duration: 1.3,
+        ease: "power1.inOut",
+        onUpdate: () => {
+          if (countRef.current) {
+            countRef.current.textContent = String(
+              Math.round(counter.value),
+            ).padStart(3, "0");
+          }
+        },
+      })
+        // Volt curtain sweeps up from the bottom, covering the counter
+        .to(overlayRef.current, {
+          scaleY: 1,
+          duration: 0.55,
+          ease: "power4.inOut",
+        })
+        // Whole loader (counter screen + volt curtain) slides up off-screen,
+        // revealing the page underneath — transform-only, stays on the
+        // compositor.
+        .to(
+          wrapperRef.current,
+          {
+            yPercent: -100,
+            duration: 0.9,
+            ease: "power4.inOut",
+          },
+          "+=0.1",
+        );
+    },
+    { scope: wrapperRef },
+  );
+
+  return (
+    <div
+      ref={wrapperRef}
+      className="fixed inset-0 z-[999] overflow-hidden touch-none overscroll-contain"
+      aria-hidden="true"
+    >
+      <div className="absolute inset-0 bg-[var(--bg)] flex items-center justify-center">
+        <span
+          ref={countRef}
+          className="font-[family-name:var(--font-syne)] font-extrabold text-[18vw] sm:text-[12vw] leading-none tracking-tighter text-[var(--text-contrast)] tabular-nums"
+        >
+          000
+        </span>
+        <span className="absolute bottom-10 left-1/2 -translate-x-1/2 font-mono text-[10px] uppercase tracking-[0.4em] text-[var(--accent-volt)]">
+          Mohamed Nagy — Portfolio
+        </span>
+      </div>
+      <div
+        ref={overlayRef}
+        className="absolute inset-0 bg-[var(--accent-volt)] origin-bottom"
+        style={{ transform: "scaleY(0)" }}
+      />
+    </div>
+  );
+}
+</file>
+
+<file path="app/components/ContactSection.tsx">
+"use client";
+
+import { useRef } from "react";
+import gsap from "gsap";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
+import { useGSAP } from "@gsap/react";
+import { SITE, SOCIALS } from "../data/content";
+import { FINE_POINTER_QUERY } from "./SmoothScroll";
+
+if (typeof window !== "undefined") {
+  gsap.registerPlugin(ScrollTrigger);
+}
+
+// 12-ray starburst — rotates slowly behind the headline stack.
+const RAYS = Array.from({ length: 12 }, (_, i) => i * 30);
+
+export default function ContactSection() {
+  const sectionRef = useRef<HTMLDivElement>(null);
+
+  useGSAP(
+    () => {
+      // Desktop-only reveals: on touch devices this content stays visible
+      // from first paint — real phones repeatedly failed to fire these
+      // ScrollTriggers on time, leaving the section blank mid-scroll.
+      const mm = gsap.matchMedia();
+      mm.add(FINE_POINTER_QUERY, () => {
+        gsap.fromTo(
+          ".contact-reveal",
+          { opacity: 0, y: 50 },
+          {
+            opacity: 1,
+            y: 0,
+            stagger: 0.12,
+            duration: 1.1,
+            ease: "power4.out",
+            scrollTrigger: { trigger: sectionRef.current, start: "top 75%" },
+          },
+        );
+
+        // The big solid line gets its own scale-punch on top of the shared
+        // rise — the section's one "wow" beat.
+        gsap.fromTo(
+          ".contact-punch",
+          { scale: 0.8 },
+          {
+            scale: 1,
+            duration: 1.2,
+            ease: "back.out(1.4)",
+            scrollTrigger: { trigger: sectionRef.current, start: "top 70%" },
+          },
+        );
+      });
+    },
+    { scope: sectionRef },
+  );
+
+  const handleMove = (e: React.MouseEvent<HTMLAnchorElement>) => {
+    const el = e.currentTarget;
+    const rect = el.getBoundingClientRect();
+    const dx = e.clientX - rect.left - rect.width / 2;
+    const dy = e.clientY - rect.top - rect.height / 2;
+    gsap.to(el, {
+      x: dx * 0.25,
+      y: dy * 0.35,
+      duration: 0.4,
+      ease: "power2.out",
+    });
+  };
+
+  const handleLeave = (e: React.MouseEvent<HTMLAnchorElement>) => {
+    gsap.to(e.currentTarget, { x: 0, y: 0, duration: 0.6, ease: "power3.out" });
+  };
+
+  return (
+    <section
+      id="contact"
+      ref={sectionRef}
+      className="relative min-h-screen flex flex-col justify-center py-20 sm:py-28 overflow-hidden"
+    >
+      {/* Rotating starburst behind the headline */}
+      <div
+        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[130vw] max-w-[900px] aspect-square pointer-events-none select-none opacity-[0.1]"
+        aria-hidden="true"
+      >
+        <svg
+          viewBox="0 0 200 200"
+          className="w-full h-full animate-[spinSlow_50s_linear_infinite]"
+        >
+          {RAYS.map((deg) => (
+            <path
+              key={deg}
+              d="M100 100 L95 8 L105 8 Z"
+              fill="var(--accent-volt)"
+              transform={`rotate(${deg} 100 100)`}
+            />
+          ))}
+        </svg>
+      </div>
+
+      {/* Ambient corner glows */}
+      <div className="absolute top-[-10%] right-[-10%] w-[40vw] h-[40vw] max-w-[480px] max-h-[480px] rounded-full bg-[var(--accent-cyan)] opacity-[0.08] blur-[120px] pointer-events-none" />
+      <div className="absolute bottom-[-10%] left-[-10%] w-[40vw] h-[40vw] max-w-[480px] max-h-[480px] rounded-full bg-[var(--accent-volt)] opacity-[0.08] blur-[120px] pointer-events-none" />
+
+      <div className="relative z-10 flex flex-col items-center text-center px-5 sm:px-6">
+        <span className="contact-reveal inline-flex items-center gap-3 font-mono text-xs sm:text-sm text-[var(--accent-volt)] tracking-widest uppercase font-semibold mb-6">
+          <span className="w-8 h-px bg-[var(--accent-volt)]" />
+          Get In Touch
+          <span className="w-8 h-px bg-[var(--accent-volt)]" />
+        </span>
+
+        <h2 className="contact-reveal font-[family-name:var(--font-syne)] font-extrabold tracking-tighter leading-[0.95]">
+          <span
+            className="block text-[clamp(1.9rem,6.5vw,4.5rem)] uppercase"
+            style={{
+              color: "transparent",
+              WebkitTextStroke: "1.5px rgba(247,247,245,0.55)",
+            }}
+          >
+            Got a project?
+          </span>
+          <span className="contact-punch block text-[clamp(3.4rem,13vw,10rem)] text-[var(--accent-volt)] uppercase">
+            Let&rsquo;s Talk<span className="text-[var(--accent-cyan)]">.</span>
+          </span>
+        </h2>
+
+        <p className="contact-reveal mt-6 max-w-lg text-sm sm:text-base text-[var(--text)] leading-relaxed">
+          I&rsquo;m employed full-time and selective with freelance — but the
+          right project always gets my attention. Pitch something
+          interesting, or just talk shop.
+        </p>
+
+        {/* Giant magnetic gradient capsule */}
+        <a
+          href={`mailto:${SITE.email}`}
+          onMouseMove={handleMove}
+          onMouseLeave={handleLeave}
+          className="contact-reveal group mt-10 sm:mt-14 inline-flex items-center gap-4 sm:gap-6 rounded-full pl-7 pr-3 py-3 sm:pl-12 sm:pr-4 sm:py-4 font-[family-name:var(--font-syne)] font-bold text-[clamp(0.95rem,3.2vw,1.6rem)] text-[var(--accent-volt-ink)] transition-shadow duration-300 hover:shadow-[0_0_70px_rgba(214,255,63,0.35)]"
+          style={{
+            background:
+              "linear-gradient(135deg, var(--accent-volt), var(--accent-cyan))",
+          }}
+        >
+          {SITE.email}
+          <span className="flex items-center justify-center w-11 h-11 sm:w-16 sm:h-16 rounded-full bg-[var(--bg)] text-[var(--accent-volt)] text-lg sm:text-2xl rotate-45 group-hover:rotate-0 transition-transform duration-300">
+            ↑
+          </span>
+        </a>
+
+        {/* Meta strip: availability + socials */}
+        <div className="contact-reveal mt-10 sm:mt-14 flex flex-wrap items-center justify-center gap-x-8 gap-y-3 font-mono text-[10px] sm:text-xs uppercase tracking-widest text-[var(--text)]">
+          <span className="flex items-center gap-2">
+            <span className="w-1.5 h-1.5 rounded-full bg-[var(--accent-volt)] animate-pulse" />
+            NYC · Select Freelance
+          </span>
+          {SOCIALS.map((s) => (
+            <a
+              key={s.label}
+              href={s.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-[var(--accent-volt)] transition-colors duration-200"
+            >
+              {s.label} ↗
+            </a>
+          ))}
+        </div>
+      </div>
+
+    </section>
+  );
+}
+</file>
+
+<file path="app/components/FooterSection.tsx">
+"use client";
+
+import { useRef } from "react";
+import gsap from "gsap";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
+import { useGSAP } from "@gsap/react";
+import { NAV_LINKS, SOCIALS } from "../data/content";
+import { FINE_POINTER_QUERY } from "./SmoothScroll";
+
+if (typeof window !== "undefined") {
+  gsap.registerPlugin(ScrollTrigger);
+}
+
+export default function FooterSection() {
+  const footerRef = useRef<HTMLDivElement>(null);
+
+  useGSAP(
+    () => {
+      // Desktop-only reveal — on touch the footer is visible from first
+      // paint rather than gated on a ScrollTrigger firing.
+      const mm = gsap.matchMedia();
+      mm.add(FINE_POINTER_QUERY, () => {
+        gsap.fromTo(
+          ".footer-reveal",
+          { opacity: 0, y: 30 },
+          {
+            opacity: 1,
+            y: 0,
+            stagger: 0.08,
+            duration: 0.9,
+            ease: "power3.out",
+            scrollTrigger: { trigger: footerRef.current, start: "top 90%" },
+          },
+        );
+      });
+    },
+    { scope: footerRef },
+  );
+
+  return (
+    <footer
+      ref={footerRef}
+      className="relative border-t border-[var(--border-color)] pt-20 sm:pt-24 pb-10 px-5 sm:px-6 md:px-8 overflow-hidden"
+    >
+      <div className="max-w-6xl mx-auto flex flex-col gap-14">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-10">
+          <div className="footer-reveal flex flex-col gap-3">
+            <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-[var(--accent-volt)]">
+              Navigate
+            </span>
+            <ul className="flex flex-col gap-2 font-[family-name:var(--font-syne)] font-bold text-lg text-[var(--text-contrast)]">
+              {NAV_LINKS.map((link) => (
+                <li key={link.href}>
+                  <a
+                    href={link.href}
+                    className="hover:text-[var(--accent-volt)] transition-colors duration-200"
+                  >
+                    {link.label}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          <div className="footer-reveal flex flex-col gap-3">
+            <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-[var(--text)] opacity-60">
+              Stack
+            </span>
+            <div className="flex flex-wrap gap-2 font-mono text-[11px] text-[var(--text)]">
+              {["React", "Next.js", "TypeScript", "Tailwind CSS", "GSAP"].map(
+                (tech) => (
+                  <span
+                    key={tech}
+                    className="px-2.5 py-1 rounded-full border border-[var(--border-color)]"
+                  >
+                    {tech}
+                  </span>
+                ),
+              )}
+            </div>
+          </div>
+
+          <div className="footer-reveal flex flex-col gap-3 sm:items-end">
+            <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-[var(--text)] opacity-60">
+              Elsewhere
+            </span>
+            <div className="flex flex-col gap-2 font-mono text-xs sm:items-end">
+              {SOCIALS.map((s) => (
+                <a
+                  key={s.label}
+                  href={s.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-[var(--text-contrast)] hover:text-[var(--accent-volt)] transition-colors duration-200"
+                >
+                  {s.label} →
+                </a>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Giant wordmark — echoes the navbar logo. Flex-centered IN FLOW:
+            the container is symmetrically padded and mx-auto-centered, so a
+            child that fits inside it centers exactly. (A w-screen breakout
+            was 5px off-center — 100vw includes the scrollbar.) Sizes are
+            clamped so the mark always fits the container at every width. */}
+        <div className="footer-reveal select-none pointer-events-none flex justify-center leading-[0.8]">
+          <span className="font-[family-name:var(--font-syne)] font-extrabold tracking-tighter text-[28vw] sm:text-[24vw] leading-[0.8]">
+            <span className="text-outline-volt">MN</span>
+            <span className="text-[var(--accent-volt)]">.</span>
+          </span>
+        </div>
+
+        <div className="footer-reveal flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-t border-[var(--border-color)] pt-8 font-mono text-[10px] tracking-wider text-[var(--text)] opacity-70">
+          <span>© {new Date().getFullYear()} Mohamed Nagy — All Rights Reserved</span>
+          <span className="flex items-center gap-2">
+            <span className="w-1.5 h-1.5 rounded-full bg-[var(--accent-volt)] animate-pulse" />
+            Built with Next.js &amp; GSAP
+          </span>
+        </div>
+      </div>
+    </footer>
+  );
+}
+</file>
+
+<file path="app/components/HeroSection.tsx">
+"use client";
+
+import { useRef } from "react";
+import gsap from "gsap";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
+import { useGSAP } from "@gsap/react";
+import { BIO_PARAGRAPHS, SITE, TECH_STACK } from "../data/content";
+
+if (typeof window !== "undefined") {
+  gsap.registerPlugin(ScrollTrigger);
+}
+
+export default function HeroSection() {
+  const sectionRef = useRef<HTMLDivElement>(null);
+
+  useGSAP(
+    () => {
+      // Plays immediately on mount, delay and all — the preloader covers
+      // the page for ~2.85s (1.3s counter + 0.55s curtain + 0.9s slide),
+      // comfortably longer than this ~2s timeline, so it's already fully
+      // settled by the time the curtain lifts. A previous version built
+      // this paused and released it via a `play` prop tied to the
+      // preloader's onComplete — one more cross-component signal that had
+      // to fire correctly, and on real mobile devices it sometimes didn't,
+      // leaving the hero permanently invisible. Auto-playing here has no
+      // such dependency.
+      const tl = gsap.timeline({
+        defaults: { ease: "power4.out" },
+        delay: 0.15,
+      });
+
+      tl.fromTo(
+        ".hero-line",
+        { yPercent: 110 },
+        { yPercent: 0, duration: 1.2, stagger: 0.12 },
+      )
+        .fromTo(
+          ".hero-fade",
+          { opacity: 0, y: 26 },
+          { opacity: 1, y: 0, duration: 0.9, stagger: 0.08 },
+          "-=0.7",
+        )
+        .fromTo(
+          ".hero-badge",
+          { scale: 0, rotate: -40 },
+          { scale: 1, rotate: 0, duration: 0.8, ease: "back.out(1.6)" },
+          "-=0.6",
+        );
+
+      // Ghost strip drifts forever — full words stay readable as they roll
+      // through, instead of one oversized word clipping to "DEVE".
+      gsap.to(".hero-ghost-track", {
+        xPercent: -50,
+        ease: "none",
+        duration: 28,
+        repeat: -1,
+      });
+
+      // Scroll parallax on top of the entrance: ghost strip sinks, content
+      // drifts — depth cue as the hero releases into the page.
+      gsap.to(".hero-ghost", {
+        yPercent: 40,
+        ease: "none",
+        scrollTrigger: {
+          trigger: sectionRef.current,
+          start: "top top",
+          end: "bottom top",
+          scrub: 0.8,
+        },
+      });
+      gsap.to(".hero-inner", {
+        yPercent: -8,
+        ease: "none",
+        scrollTrigger: {
+          trigger: sectionRef.current,
+          start: "top top",
+          end: "bottom top",
+          scrub: 0.8,
+        },
+      });
+    },
+    { scope: sectionRef },
+  );
+
+  return (
+    <section
+      id="about"
+      ref={sectionRef}
+      className="relative min-h-screen flex flex-col justify-center px-5 sm:px-6 md:px-8 py-24 sm:py-28 overflow-hidden"
+    >
+      {/* Ghost outline strip — massive, behind everything, loops forever
+          and parallax-sinks on scroll so full words stay readable */}
+      <div
+        className="hero-ghost absolute bottom-[4%] left-0 w-full overflow-hidden pointer-events-none select-none"
+        aria-hidden="true"
+      >
+        <div className="hero-ghost-track flex w-max whitespace-nowrap">
+          {[0, 1].map((copy) => (
+            <span
+              key={copy}
+              className="text-outline block font-[family-name:var(--font-syne)] font-extrabold text-[16vw] leading-none tracking-tighter pr-10"
+            >
+              DEVELOPER — ENGINEER — CREATOR —&nbsp;
+            </span>
+          ))}
+        </div>
+      </div>
+
+      {/* Spinning circular badge */}
+      <div className="hero-badge absolute top-24 right-3 sm:top-28 sm:right-10 md:right-16 w-24 h-24 sm:w-32 sm:h-32 pointer-events-none select-none">
+        <div className="absolute inset-0 animate-[spinSlow_16s_linear_infinite]">
+          <svg viewBox="0 0 100 100" className="w-full h-full">
+            <defs>
+              <path
+                id="badge-circle"
+                d="M50,50 m-38,0 a38,38 0 1,1 76,0 a38,38 0 1,1 -76,0"
+              />
+            </defs>
+            <text
+              style={{
+                fontSize: "10px",
+                fill: "var(--accent-volt)",
+                letterSpacing: "2.4px",
+                fontFamily: "var(--font-body)",
+                textTransform: "uppercase",
+              }}
+            >
+              <textPath href="#badge-circle">
+                Select projects • Based in NYC •
+              </textPath>
+            </text>
+          </svg>
+        </div>
+        <span className="absolute inset-0 flex items-center justify-center text-[var(--accent-volt)] text-xl">
+          ↓
+        </span>
+      </div>
+
+      <div className="hero-inner max-w-4xl mx-auto w-full relative z-10">
+        <div className="overflow-hidden mb-3">
+          <span className="hero-line inline-flex items-center gap-3 font-mono text-xs sm:text-sm text-[var(--accent-volt)] tracking-widest uppercase font-semibold">
+            <span className="w-8 h-px bg-[var(--accent-volt)]" />
+            Software Developer
+          </span>
+        </div>
+
+        {/* clamp() keeps the longest line ("Mohamed") narrower than the
+            max-w-4xl column at every viewport — fixed sizes clipped the
+            final letters behind the reveal masks. */}
+        <h1 className="font-[family-name:var(--font-syne)] font-extrabold text-[clamp(2.4rem,11.2vw,6.75rem)] leading-[0.95] tracking-tighter text-[var(--text-contrast)]">
+          <span className="overflow-hidden block">
+            <span className="hero-line block">Mohamed</span>
+          </span>
+          <span className="overflow-hidden block">
+            <span className="hero-line block">
+              Nagy<span className="text-[var(--accent-volt)]">.</span>
+            </span>
+          </span>
+        </h1>
+
+        <div className="overflow-hidden mt-4 sm:mt-6">
+          <p className="hero-line font-[family-name:var(--font-syne)] font-bold text-xl sm:text-2xl md:text-3xl text-[var(--accent-cyan)] tracking-tight">
+            {SITE.tagline}
+          </p>
+        </div>
+
+        <div className="hero-fade mt-8 max-w-xl space-y-4 text-sm sm:text-base leading-relaxed text-[var(--text)]">
+          {BIO_PARAGRAPHS.map((p, i) => (
+            <p key={i}>{p}</p>
+          ))}
+        </div>
+
+        <ul className="hero-fade mt-6 flex flex-wrap gap-2 max-w-xl font-mono text-[11px] sm:text-xs">
+          {TECH_STACK.map((tech) => (
+            <li
+              key={tech}
+              className="px-3 py-2 rounded-full bg-[var(--card-bg)] border border-[var(--border-color)] text-[var(--text)]"
+            >
+              {tech}
+            </li>
+          ))}
+        </ul>
+
+        <div className="hero-fade mt-8">
+          <a
+            href={SITE.resumeUrl}
+            download
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-3 rounded-full bg-[var(--accent-volt)] text-[var(--accent-volt-ink)] px-6 py-3.5 font-mono text-xs font-bold uppercase tracking-widest hover:scale-105 transition-transform duration-200"
+          >
+            Download Resume
+            <span aria-hidden="true">↓</span>
+          </a>
+        </div>
+      </div>
+
+      {/* Scroll cue */}
+      <div className="hero-fade absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 pointer-events-none">
+        <span className="font-mono text-[10px] uppercase tracking-[0.3em] text-[var(--text)] opacity-70">
+          Scroll
+        </span>
+        <span className="w-px h-10 bg-gradient-to-b from-[var(--accent-volt)] to-transparent animate-pulse" />
+      </div>
+    </section>
+  );
+}
+</file>
+
+<file path="app/components/PersonalTelemetrySection.tsx">
+"use client";
+
+import { useEffect, useRef, useState } from "react";
+import gsap from "gsap";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
+import { useGSAP } from "@gsap/react";
+import Image from "next/image";
+import { CONDITION_LABEL, orbGradient, WeatherIcon } from "./WeatherVisuals";
+import type { WeatherData } from "../api/weather/route";
+import { FINE_POINTER_QUERY } from "./SmoothScroll";
+
+if (typeof window !== "undefined") {
+  gsap.registerPlugin(ScrollTrigger);
+}
+
+/* ------------------------------------------------------------------ */
+/* Data hooks                                                          */
+/* ------------------------------------------------------------------ */
+
+interface NowPlayingData {
+  isPlaying: boolean;
+  title?: string;
+  artist?: string;
+  albumArt?: string;
+  url?: string;
+}
+
+const SPOTIFY_POLL_MS = 8000;
+const SPOTIFY_HIDDEN_POLL_MS = 25000;
+const WEATHER_POLL_MS = 5 * 60 * 1000;
+// This section mounts immediately with the rest of the page (nothing here
+// is gated on scroll position), so its very first fetch would otherwise
+// fire the instant the page loads — right when fonts, images, and the
+// preloader's own JS are already competing for a mobile connection's
+// bandwidth and the main thread. This widget has a placeholder state for
+// exactly this reason; a beat of delay here is free. requestIdleCallback
+// isn't used — Safari (all of iOS) has never implemented it.
+const INITIAL_FETCH_DELAY_MS = 1200;
+
+function useNowPlaying(): NowPlayingData {
+  const [data, setData] = useState<NowPlayingData>({ isPlaying: false });
+
+  useEffect(() => {
+    let cancelled = false;
+    let timeoutId: number;
+
+    const poll = async () => {
+      try {
+        const res = await fetch("/api/now-playing", { cache: "no-store" });
+        const next: NowPlayingData = await res.json();
+        if (!cancelled) setData(next);
+      } catch {
+        if (!cancelled) setData({ isPlaying: false });
+      }
+      if (!cancelled) {
+        timeoutId = window.setTimeout(
+          poll,
+          document.hidden ? SPOTIFY_HIDDEN_POLL_MS : SPOTIFY_POLL_MS,
+        );
+      }
+    };
+
+    timeoutId = window.setTimeout(poll, INITIAL_FETCH_DELAY_MS);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timeoutId);
+    };
+  }, []);
+
+  return data;
+}
+
+function useWeather(): WeatherData | null {
+  const [weather, setWeather] = useState<WeatherData | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    let timeoutId: number;
+
+    const poll = async () => {
+      try {
+        const res = await fetch("/api/weather", { cache: "no-store" });
+        if (res.ok) {
+          const next: WeatherData = await res.json();
+          if (!cancelled) setWeather(next);
+        }
+      } catch {
+        // Keep the last reading — stale beats blank.
+      }
+      if (!cancelled) timeoutId = window.setTimeout(poll, WEATHER_POLL_MS);
+    };
+
+    timeoutId = window.setTimeout(poll, INITIAL_FETCH_DELAY_MS);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timeoutId);
+    };
+  }, []);
+
+  return weather;
+}
+
+function useNycTime(): string | null {
+  const [time, setTime] = useState<string | null>(null);
+
+  useEffect(() => {
+    const update = () =>
+      setTime(
+        new Intl.DateTimeFormat("en-US", {
+          timeZone: "America/New_York",
+          hour: "numeric",
+          minute: "2-digit",
+          hour12: true,
+        }).format(new Date()),
+      );
+    update();
+    const id = window.setInterval(update, 30000);
+    return () => window.clearInterval(id);
+  }, []);
+
+  return time;
+}
+
+/* ------------------------------------------------------------------ */
+/* Hardware chrome pieces                                              */
+/* ------------------------------------------------------------------ */
+
+// Phillips-head screw — one per tile corner, like a mounted case panel.
+function Screw({ className }: { className: string }) {
+  return (
+    <svg
+      viewBox="0 0 10 10"
+      className={`absolute w-2.5 h-2.5 opacity-25 ${className}`}
+      aria-hidden="true"
+    >
+      <circle
+        cx="5"
+        cy="5"
+        r="4"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1"
+      />
+      <path
+        d="M5 2.2v5.6M2.2 5h5.6"
+        stroke="currentColor"
+        strokeWidth="1"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+type TileTone = "volt" | "cyan";
+
+const TONE_COLOR: Record<TileTone, string> = {
+  volt: "var(--accent-volt)",
+  cyan: "var(--accent-cyan)",
+};
+
+// Shared tile shell: glass body, screwed corners, port-label header strip
+// with a live LED, serial tag, PCB trace, and a mouse-tracked spotlight.
+function Tile({
+  port,
+  serial,
+  tone,
+  className = "",
+  children,
+}: {
+  port: string;
+  serial: string;
+  tone: TileTone;
+  className?: string;
+  children: React.ReactNode;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  const accent = TONE_COLOR[tone];
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    const el = ref.current;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    el.style.setProperty("--mx", `${e.clientX - rect.left}px`);
+    el.style.setProperty("--my", `${e.clientY - rect.top}px`);
+  };
+
+  return (
+    <div
+      ref={ref}
+      onMouseMove={handleMouseMove}
+      className={`bento-tile bento-tile--${tone} telemetry-reveal group relative flex flex-col overflow-hidden rounded-2xl text-[var(--text)] ${className}`}
+    >
+      {/* Mouse-tracked spotlight */}
+      <div
+        className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"
+        style={{
+          background: `radial-gradient(340px circle at var(--mx, 50%) var(--my, 50%), color-mix(in srgb, ${accent} 9%, transparent), transparent 70%)`,
+        }}
+      />
+
+      {/* Corner screws */}
+      <Screw className="top-2 left-2" />
+      <Screw className="top-2 right-2" />
+      <Screw className="bottom-2 left-2" />
+      <Screw className="bottom-2 right-2" />
+
+      {/* Port-label header strip */}
+      <div className="relative z-10 flex items-center justify-between px-5 sm:px-6 pt-4 font-mono text-[9px] sm:text-[10px] tracking-[0.25em] uppercase">
+        <span className="flex items-center gap-2" style={{ color: accent }}>
+          <span
+            className="w-1.5 h-1.5 rounded-full animate-pulse shrink-0"
+            style={{
+              backgroundColor: accent,
+              boxShadow: `0 0 8px ${accent}`,
+            }}
+          />
+          {port}
+        </span>
+        <span className="opacity-40">{serial}</span>
+      </div>
+
+      <div className="relative z-10 flex-1 flex flex-col justify-center px-5 sm:px-6 py-5">
+        {children}
+      </div>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Countries data                                                      */
+/* ------------------------------------------------------------------ */
+
+const COUNTRIES = [
+  { code: "us", name: "United States" },
+  { code: "eg", name: "Egypt" },
+  { code: "mx", name: "Mexico" },
+  { code: "do", name: "Dominican Republic" },
+];
+
+const LEARNING = {
+  title: "Three.js / WebGL",
+  description: "Pushing browser-based visual fidelity further",
+};
+
+/* ------------------------------------------------------------------ */
+/* Section                                                             */
+/* ------------------------------------------------------------------ */
+
+export default function PersonalTelemetrySection() {
+  const scopeRef = useRef<HTMLDivElement>(null);
+  const nowPlaying = useNowPlaying();
+  const weather = useWeather();
+  const nycTime = useNycTime();
+
+  useGSAP(
+    () => {
+      // Modules "slot into the board": rise + scale with a slight overshoot.
+      // Desktop only — on touch the tiles are visible from first paint
+      // instead of waiting at opacity 0 for a ScrollTrigger that real
+      // phones repeatedly failed to fire on time.
+      const mm = gsap.matchMedia();
+      mm.add(FINE_POINTER_QUERY, () => {
+        gsap.fromTo(
+          ".telemetry-reveal",
+          { opacity: 0, y: 50, scale: 0.94 },
+          {
+            opacity: 1,
+            y: 0,
+            scale: 1,
+            duration: 0.9,
+            stagger: 0.1,
+            ease: "back.out(1.4)",
+            scrollTrigger: {
+              trigger: scopeRef.current,
+              start: "top 78%",
+            },
+          },
+        );
+      });
+    },
+    { scope: scopeRef },
+  );
+
+  return (
+    <section
+      ref={scopeRef}
+      className="relative py-20 sm:py-28 px-5 sm:px-6 md:px-8"
+    >
+      <div className="max-w-6xl mx-auto">
+        <div className="telemetry-reveal flex items-end justify-between gap-4 mb-12 sm:mb-16">
+          <h2 className="font-[family-name:var(--font-syne)] font-extrabold text-4xl sm:text-6xl md:text-7xl tracking-tighter text-[var(--text-contrast)] leading-none">
+            Off The
+            <br />
+            <span className="text-outline-volt">Clock</span>
+          </h2>
+          <span className="hidden sm:flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.3em] text-[var(--text)] opacity-60 pb-2">
+            <span className="w-1.5 h-1.5 rounded-full bg-[var(--accent-volt)] animate-pulse" />
+            Live Telemetry // SYS.BOARD
+          </span>
+        </div>
+
+        {/* Asymmetric Bento board: 7/5 split, then 5/7 — modules of unequal
+            weight instead of a uniform card grid */}
+        <div className="grid grid-cols-1 min-[900px]:grid-cols-12 gap-4 sm:gap-5">
+          {/* AUDIO_OUT — Spotify */}
+          <Tile
+            port="Port_01 // Audio_Out"
+            serial="SN MN-A01"
+            tone="volt"
+            className="min-[900px]:col-span-7 min-h-[210px] sm:min-h-[240px]"
+          >
+            {nowPlaying.isPlaying ? (
+              <a
+                href={nowPlaying.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-4 sm:gap-6 group/track"
+              >
+                {nowPlaying.albumArt && (
+                  <Image
+                    src={nowPlaying.albumArt}
+                    alt=""
+                    width={72}
+                    height={72}
+                    className="rounded-xl border border-[var(--border-color)] shrink-0 w-14 h-14 sm:w-[72px] sm:h-[72px]"
+                  />
+                )}
+                <div className="min-w-0">
+                  <span className="flex items-center gap-2 font-mono text-[10px] sm:text-xs uppercase tracking-widest text-[var(--accent-volt)] mb-2">
+                    <span className="flex items-end gap-[2px] h-3 shrink-0">
+                      <span className="eq-bar w-[2.5px] h-full rounded-full bg-[var(--accent-volt)] [animation-delay:0ms]" />
+                      <span className="eq-bar w-[2.5px] h-full rounded-full bg-[var(--accent-volt)] [animation-delay:150ms]" />
+                      <span className="eq-bar w-[2.5px] h-full rounded-full bg-[var(--accent-volt)] [animation-delay:300ms]" />
+                    </span>
+                    Now Playing
+                  </span>
+                  <span className="block font-[family-name:var(--font-syne)] font-extrabold text-xl sm:text-3xl text-[var(--text-contrast)] leading-tight truncate group-hover/track:text-[var(--accent-volt)] transition-colors duration-300">
+                    {nowPlaying.title}
+                  </span>
+                  <span className="block font-mono text-[11px] sm:text-sm opacity-60 truncate mt-1">
+                    {nowPlaying.artist} ↗
+                  </span>
+                </div>
+              </a>
+            ) : (
+              <div>
+                <span
+                  className="block font-[family-name:var(--font-syne)] font-extrabold text-3xl sm:text-5xl leading-none uppercase"
+                  style={{
+                    color: "transparent",
+                    WebkitTextStroke: "1.5px rgba(247,247,245,0.35)",
+                  }}
+                >
+                  No Signal
+                </span>
+                <span className="flex items-center gap-2 font-mono text-[10px] sm:text-xs uppercase tracking-widest opacity-50 mt-3">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[var(--text)] opacity-50" />
+                  Audio_Out: Idle — Mo is offline on Spotify
+                </span>
+              </div>
+            )}
+          </Tile>
+
+          {/* ATMOS — NYC weather */}
+          <Tile
+            port="Sensor_02 // Atmos"
+            serial="SN MN-W02"
+            tone="cyan"
+            className="min-[900px]:col-span-5 min-h-[210px] sm:min-h-[240px]"
+          >
+            {weather ? (
+              <div className="flex flex-col gap-4">
+                <div className="flex items-center gap-4">
+                  <div
+                    className="relative w-16 h-16 sm:w-20 sm:h-20 shrink-0"
+                    role="img"
+                    aria-label={CONDITION_LABEL[weather.condition]}
+                  >
+                    <div
+                      className="absolute inset-0 rounded-full blur-xl opacity-70"
+                      style={{
+                        background: orbGradient(
+                          weather.condition,
+                          weather.isDay,
+                        ),
+                      }}
+                    />
+                    <div
+                      className="relative w-full h-full rounded-full p-3"
+                      style={{
+                        background: orbGradient(
+                          weather.condition,
+                          weather.isDay,
+                        ),
+                      }}
+                    >
+                      <WeatherIcon
+                        condition={weather.condition}
+                        isDay={weather.isDay}
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <span className="block font-[family-name:var(--font-syne)] font-extrabold text-4xl sm:text-5xl text-[var(--text-contrast)] leading-none tabular-nums">
+                      {weather.tempF}°
+                    </span>
+                    <span className="block font-mono text-[10px] sm:text-xs opacity-60 mt-1">
+                      {CONDITION_LABEL[weather.condition]} · Feels{" "}
+                      {weather.feelsLikeF}°
+                    </span>
+                  </div>
+                </div>
+                {/* Sensor readout chips */}
+                <div className="flex flex-wrap gap-1.5 font-mono text-[9px] sm:text-[10px] uppercase tracking-wider">
+                  {[
+                    `NYC ${nycTime ?? "--:--"} EST`,
+                    `Wind ${weather.windMph} MPH`,
+                    `Hum ${weather.humidity}%`,
+                  ].map((chip) => (
+                    <span
+                      key={chip}
+                      className="px-2 py-1 rounded border border-[var(--border-color)] tabular-nums"
+                    >
+                      {chip}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <span className="font-mono text-[11px] sm:text-xs uppercase tracking-widest opacity-50 animate-pulse">
+                Syncing atmospheric sensors…
+              </span>
+            )}
+          </Tile>
+
+          {/* GEO — countries visited */}
+          <Tile
+            port="Module_03 // Geo"
+            serial="SN MN-G03"
+            tone="cyan"
+            className="min-[900px]:col-span-5 min-h-[190px]"
+          >
+            <div className="flex items-center gap-5 sm:gap-6">
+              <span className="font-[family-name:var(--font-syne)] font-extrabold text-5xl sm:text-6xl leading-none text-[var(--accent-cyan)] tabular-nums">
+                04
+              </span>
+              <div className="min-w-0">
+                <span className="block font-mono text-[10px] sm:text-xs uppercase tracking-widest text-[var(--text-contrast)] mb-2.5">
+                  Countries Visited
+                </span>
+                <div className="flex -space-x-2.5">
+                  {COUNTRIES.map((country) => (
+                    <div
+                      key={country.code}
+                      className="relative w-9 h-9 sm:w-11 sm:h-11 rounded-full overflow-hidden border-2 border-[var(--card-bg)] hover:border-[var(--accent-cyan)] hover:scale-110 hover:z-10 transition-all duration-300"
+                      title={country.name}
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element -- tiny fixed external SVG from a static CDN */}
+                      <img
+                        src={`https://flagcdn.com/${country.code}.svg`}
+                        alt={country.name}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  ))}
+                </div>
+                <span className="block font-mono text-[9px] sm:text-[10px] uppercase tracking-wider opacity-50 mt-2">
+                  US · EG · MX · DO
+                </span>
+              </div>
+            </div>
+          </Tile>
+
+          {/* FIRMWARE — currently learning */}
+          <Tile
+            port="Slot_04 // Firmware"
+            serial="SN MN-F04"
+            tone="volt"
+            className="min-[900px]:col-span-7 min-h-[190px]"
+          >
+            <div>
+              <span className="block font-mono text-[10px] sm:text-xs uppercase tracking-widest opacity-60 mb-2">
+                Currently Learning
+              </span>
+              <span
+                className="block font-[family-name:var(--font-syne)] font-extrabold text-2xl sm:text-4xl uppercase leading-none"
+                style={{
+                  color: "transparent",
+                  WebkitTextStroke: "1.5px rgba(214,255,63,0.6)",
+                }}
+              >
+                {LEARNING.title}
+              </span>
+              <span className="block font-mono text-[10px] sm:text-xs opacity-60 mt-2 mb-4">
+                {LEARNING.description}
+              </span>
+              {/* Indeterminate sweep — "update in progress," not a fake % */}
+              <div className="h-1 w-full max-w-sm rounded-full bg-[var(--border-color)] overflow-hidden">
+                <div className="h-full w-1/3 rounded-full bg-[var(--accent-volt)] animate-[learningProgress_2.2s_ease-in-out_infinite]" />
+              </div>
+              <span className="block font-mono text-[9px] uppercase tracking-[0.25em] text-[var(--accent-volt)] opacity-70 mt-2">
+                Firmware update in progress…
+              </span>
+            </div>
+          </Tile>
+        </div>
+      </div>
+    </section>
+  );
+}
+</file>
+
+<file path="app/globals.css">
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* =========================================
+   NEON-ON-NEAR-BLACK SHOWCASE THEME
+   Single fixed palette — no light/dark toggle.
+   Volt lime + electric cyan color-blocking,
+   ultraviolet reserved for ambient depth.
+   ========================================= */
+
+:root {
+  --bg: #050507;
+  --text: #9a9aa5;
+  --text-contrast: #f7f7f5;
+  --card-bg: #0d0d10;
+  --border-color: rgba(255, 255, 255, 0.08);
+
+  --accent-volt: #d6ff3f; /* acid lime — primary accent */
+  --accent-volt-ink: #0a0e02; /* near-black text for on-volt surfaces */
+  --accent-cyan: #33e8ff; /* electric cyan — secondary accent */
+  --accent-cyan-ink: #021317; /* near-black text for on-cyan surfaces */
+  --accent-violet: #8b5cf6; /* ultraviolet — background depth only */
+
+  --badge-bg: #121217; /* terminal header / inset chrome */
+  --hover-glow: rgba(214, 255, 63, 0.06);
+
+  --font-display: var(--font-syne), sans-serif;
+  --font-body: var(--font-space-grotesk), sans-serif;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  background-color: var(--bg);
+  scrollbar-width: thin;
+  scrollbar-color: var(--accent-volt) var(--bg);
+  /* The tilted marquee bands are 110vw wide, so the page always has
+     horizontal overflow to clip. body's overflow-x:hidden below handles
+     desktop, but iOS lets horizontal panning/rubber-banding sneak past it
+     — which reads as the whole app being loosely draggable side to side.
+     `clip` forbids horizontal scrolling entirely WITHOUT creating a
+     scroll container (overflow-x:hidden here would break position:sticky
+     for the experience deck), and overscroll-behavior-x kills any
+     leftover horizontal rubber-band chaining. */
+  overflow-x: clip;
+  overscroll-behavior-x: none;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg);
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: var(--accent-volt);
+  background-clip: padding-box;
+  border: 2px solid var(--bg);
+  border-radius: 999px;
+}
+
+body {
+  font-family: var(--font-body);
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.6;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  cursor: none;
+}
+
+@media (hover: none), (pointer: coarse) {
+  body {
+    cursor: auto;
+  }
+}
+
+h1,
+h2,
+h3,
+h4 {
+  font-family: var(--font-display);
+}
+
+/* Experience deck on touch devices: native position:sticky (top offsets
+   are inline per card). Compositor-driven, zero per-frame JS — the
+   ScrollTrigger pins that replace it on desktop exist only because
+   sticky can't live inside ScrollSmoother's transformed wrapper. */
+@media (hover: none), (pointer: coarse) {
+  .exp-card-wrap {
+    position: sticky;
+  }
+}
+
+/* Outlined ghost typography — transparent fill, hairline stroke */
+.text-outline {
+  -webkit-text-stroke: 1.5px rgba(247, 247, 245, 0.16);
+  color: transparent;
+}
+
+.text-outline-volt {
+  -webkit-text-stroke: 1.5px rgba(214, 255, 63, 0.35);
+  color: transparent;
+}
+
+/* Film grain — SVG turbulence tile, overlaid at low opacity site-wide so
+   the near-black canvas reads as texture instead of dead space */
+.grain {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.55'/%3E%3C/svg%3E");
+  background-size: 180px 180px;
+}
+
+/* ---- Backdrop 3D shape animations (transform-only, compositor-friendly) ---- */
+
+@keyframes spinCube {
+  from {
+    transform: rotateX(0deg) rotateY(0deg);
+  }
+  to {
+    transform: rotateX(360deg) rotateY(360deg);
+  }
+}
+
+@keyframes ringSpin {
+  from {
+    transform: rotateX(72deg) rotateZ(0deg);
+  }
+  to {
+    transform: rotateX(72deg) rotateZ(360deg);
+  }
+}
+
+@keyframes ringSpinB {
+  from {
+    transform: rotateX(-64deg) rotateY(18deg) rotateZ(0deg);
+  }
+  to {
+    transform: rotateX(-64deg) rotateY(18deg) rotateZ(-360deg);
+  }
+}
+
+@keyframes floatY {
+  0%,
+  100% {
+    transform: translateY(-14px);
+  }
+  50% {
+    transform: translateY(14px);
+  }
+}
+
+@keyframes spinSlow {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ==========================================================================
+   OFF THE CLOCK TELEMETRY — Bento "system board" tiles + micro loops.
+   ========================================================================== */
+
+/* Hardware-inspired glass module: layered sheen over a translucent body,
+   inner top highlight like a machined edge, deep drop shadow. Hover lifts
+   the module and lights its accent rail. */
+.bento-tile {
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background-image: linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.055),
+      transparent 42%
+    ),
+    linear-gradient(to bottom, rgba(13, 13, 16, 0.92), rgba(13, 13, 16, 0.72));
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 16px 50px rgba(0, 0, 0, 0.5);
+  transition:
+    border-color 0.35s ease,
+    box-shadow 0.35s ease,
+    transform 0.35s ease;
+}
+
+.bento-tile:hover {
+  transform: translateY(-4px);
+}
+
+.bento-tile--volt:hover {
+  border-color: rgba(214, 255, 63, 0.45);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    0 20px 60px rgba(0, 0, 0, 0.55),
+    0 0 44px rgba(214, 255, 63, 0.14);
+}
+
+.bento-tile--cyan:hover {
+  border-color: rgba(51, 232, 255, 0.45);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    0 20px 60px rgba(0, 0, 0, 0.55),
+    0 0 44px rgba(51, 232, 255, 0.14);
+}
+
+/* Conic-glow ring rotation (flag badges) + weather sun spin share this */
+@keyframes rotateGlow {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Spotify equalizer bars — CSS loop so it can't get orphaned across
+   remounts the way a JS-driven infinite tween can */
+.eq-bar {
+  transform-origin: bottom;
+  animation: eqBounce 0.9s ease-in-out infinite;
+}
+
+@keyframes eqBounce {
+  0%,
+  100% {
+    transform: scaleY(0.3);
+  }
+  50% {
+    transform: scaleY(1);
+  }
+}
+
+/* Weather icon micro-loops — purely decorative motion per condition */
+.weather-sun-spin {
+  animation: rotateGlow 20s linear infinite;
+}
+
+.weather-cloud-drift {
+  animation: weatherCloudDrift 6s ease-in-out infinite;
+}
+@keyframes weatherCloudDrift {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  50% {
+    transform: translateX(1.5px);
+  }
+}
+
+.weather-star {
+  animation: weatherTwinkle 2.4s ease-in-out infinite;
+}
+.weather-star-2 {
+  animation-delay: 1.1s;
+}
+@keyframes weatherTwinkle {
+  0%,
+  100% {
+    opacity: 0.25;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.weather-drop {
+  animation: weatherFall 1s linear infinite;
+  opacity: 0;
+}
+.weather-drop-2 {
+  animation-delay: 0.33s;
+}
+.weather-drop-3 {
+  animation-delay: 0.66s;
+}
+@keyframes weatherFall {
+  0% {
+    opacity: 0;
+    transform: translateY(-3px);
+  }
+  20% {
+    opacity: 1;
+  }
+  80% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(3px);
+  }
+}
+
+.weather-snow {
+  animation: weatherSnowFall 3s ease-in-out infinite;
+}
+.weather-snow-2 {
+  animation-delay: 1s;
+}
+.weather-snow-3 {
+  animation-delay: 2s;
+}
+@keyframes weatherSnowFall {
+  0% {
+    opacity: 0;
+    transform: translate(0, -2px);
+  }
+  20% {
+    opacity: 1;
+  }
+  50% {
+    transform: translate(1.5px, 2px);
+  }
+  80% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(0, 5px);
+  }
+}
+
+.weather-bolt {
+  animation: weatherFlicker 2.6s ease-in-out infinite;
+}
+@keyframes weatherFlicker {
+  0%,
+  38%,
+  42%,
+  100% {
+    opacity: 0.15;
+  }
+  40% {
+    opacity: 1;
+  }
+  70%,
+  74% {
+    opacity: 1;
+  }
+  72% {
+    opacity: 0.15;
+  }
+}
+
+.weather-fog {
+  animation: weatherFogDrift 5s ease-in-out infinite;
+}
+@keyframes weatherFogDrift {
+  0%,
+  100% {
+    transform: translateX(-1.5px);
+    opacity: 0.7;
+  }
+  50% {
+    transform: translateX(1.5px);
+    opacity: 1;
+  }
+}
+
+/* CurrentlyLearning's indeterminate progress sweep */
+@keyframes learningProgress {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(300%);
+  }
+}
+</file>
+
+<file path="app/components/ExperienceSection.tsx">
+"use client";
+
+import { useRef } from "react";
+import gsap from "gsap";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
+import { useGSAP } from "@gsap/react";
+import { EXPERIENCES } from "../data/content";
+import { FINE_POINTER_QUERY } from "./SmoothScroll";
+
+if (typeof window !== "undefined") {
+  gsap.registerPlugin(ScrollTrigger);
+}
+
+// Three color-blocked looks cycling down the stack: solid volt, dark with a
+// cyan frame, solid cyan. Solid cards carry near-black ink for contrast.
+const CARD_LOOKS = [
+  {
+    bg: "var(--accent-volt)",
+    ink: "var(--accent-volt-ink)",
+    sub: "rgba(10, 14, 2, 0.72)",
+    pillBorder: "rgba(10, 14, 2, 0.3)",
+    chipBg: "rgba(10, 14, 2, 0.9)",
+    chipInk: "var(--accent-volt)",
+    rotate: "-0.6deg",
+    numberClass: "text-[var(--accent-volt-ink)] opacity-[0.12]",
+  },
+  {
+    bg: "var(--card-bg)",
+    ink: "var(--text-contrast)",
+    sub: "var(--text)",
+    pillBorder: "rgba(255, 255, 255, 0.16)",
+    chipBg: "var(--accent-cyan)",
+    chipInk: "var(--accent-cyan-ink)",
+    rotate: "0.6deg",
+    numberClass: "text-outline opacity-60",
+    border: "1px solid rgba(51, 232, 255, 0.4)",
+  },
+  {
+    bg: "var(--accent-cyan)",
+    ink: "var(--accent-cyan-ink)",
+    sub: "rgba(2, 19, 23, 0.72)",
+    pillBorder: "rgba(2, 19, 23, 0.3)",
+    chipBg: "rgba(2, 19, 23, 0.9)",
+    chipInk: "var(--accent-cyan)",
+    rotate: "-0.4deg",
+    numberClass: "text-[var(--accent-cyan-ink)] opacity-[0.12]",
+  },
+];
+
+export default function ExperienceSection() {
+  const sectionRef = useRef<HTMLDivElement>(null);
+
+  useGSAP(
+    () => {
+      // Everything scroll-gated lives behind the fine-pointer query. On
+      // touch devices content is simply visible — no opacity-0 waiting on
+      // a ScrollTrigger to fire. Repeated real-device reports proved that
+      // on phones those reveals could stay un-fired for many seconds
+      // (leaving whole sections blank), and a reveal animation is never
+      // worth a blank page. Desktop keeps the full choreography.
+      const mm = gsap.matchMedia();
+      mm.add(FINE_POINTER_QUERY, () => {
+        gsap.utils.toArray<HTMLElement>(".exp-card").forEach((card) => {
+          gsap.fromTo(
+            card,
+            { opacity: 0, y: 60 },
+            {
+              opacity: 1,
+              y: 0,
+              duration: 0.9,
+              ease: "power3.out",
+              scrollTrigger: { trigger: card, start: "top 85%" },
+            },
+          );
+        });
+
+        // Stacked-deck pin — desktop (fine pointer) only, mirroring exactly
+        // where ScrollSmoother is active: position:sticky misbehaves inside
+        // the smoother's transformed content wrapper, so pins stand in for
+        // it there. Touch devices skip the smoother entirely and use native
+        // position:sticky instead (globals.css) — compositor-driven, so the
+        // deck can't lag or flicker mid-scroll the way JS pinning does.
+        const wraps = gsap.utils.toArray<HTMLElement>(".exp-card-wrap");
+        const lastOffset = 84 + (wraps.length - 1) * 18;
+        wraps.forEach((wrap, i) => {
+          ScrollTrigger.create({
+            trigger: wrap,
+            start: `top ${84 + i * 18}px`,
+            endTrigger: wraps[wraps.length - 1],
+            end: `top ${lastOffset}px`,
+            pin: true,
+            pinSpacing: false,
+          });
+        });
+      });
+    },
+    { scope: sectionRef },
+  );
+
+  return (
+    <section
+      id="experience"
+      ref={sectionRef}
+      className="relative py-20 sm:py-28 md:py-32 px-5 sm:px-6 md:px-8"
+    >
+      <div className="max-w-6xl mx-auto">
+        <div className="flex items-end justify-between gap-4 mb-12 sm:mb-16">
+          <h2 className="font-[family-name:var(--font-syne)] font-extrabold text-4xl sm:text-6xl md:text-7xl tracking-tighter text-[var(--text-contrast)] leading-none">
+            Where I&rsquo;ve
+            <br />
+            <span className="text-outline-volt">Worked</span>
+          </h2>
+          <span className="hidden sm:block font-mono text-[10px] uppercase tracking-[0.3em] text-[var(--text)] opacity-60 pb-2">
+            2018 — Present
+          </span>
+        </div>
+
+        {/* Sticky stack: each card pins near the top and the next one slides
+            up over it, edges peeking in a deck. */}
+        <div className="relative">
+          {EXPERIENCES.map((exp, i) => {
+            const look = CARD_LOOKS[i % CARD_LOOKS.length];
+
+            return (
+              <div
+                key={exp.id}
+                // Padding, NOT margin: ScrollTrigger's pin-spacers swallow
+                // margins on pinned elements (pinSpacing: false), which let
+                // the deck overflow the section's bottom padding and butt
+                // against the marquee below. Padding sits inside the pinned
+                // box, so the spacing survives pinning.
+                className="exp-card-wrap pb-8 sm:pb-12"
+                style={{ top: `${84 + i * 18}px` }}
+              >
+                <article
+                  className="exp-card relative overflow-hidden rounded-3xl p-6 sm:p-10 md:p-14 shadow-[0_30px_80px_rgba(0,0,0,0.55)]"
+                  style={{
+                    backgroundColor: look.bg,
+                    color: look.ink,
+                    border: look.border,
+                    transform: `rotate(${look.rotate})`,
+                  }}
+                >
+                  {/* Giant index number */}
+                  <span
+                    className={`absolute -top-4 sm:-top-8 right-4 sm:right-8 font-[family-name:var(--font-syne)] font-extrabold text-[8rem] sm:text-[13rem] leading-none tracking-tighter pointer-events-none select-none ${look.numberClass}`}
+                    aria-hidden="true"
+                  >
+                    0{i + 1}
+                  </span>
+
+                  <div className="relative z-10 grid md:grid-cols-[1fr_1.3fr] gap-6 md:gap-12">
+                    <div>
+                      <span
+                        className="inline-block font-mono text-[10px] sm:text-xs font-bold uppercase tracking-widest px-3 py-1.5 rounded-full"
+                        style={{
+                          backgroundColor: look.chipBg,
+                          color: look.chipInk,
+                        }}
+                      >
+                        {exp.range}
+                      </span>
+                      <h3 className="mt-5 font-[family-name:var(--font-syne)] font-extrabold text-3xl sm:text-4xl md:text-5xl leading-[1.02] tracking-tight">
+                        {exp.role}
+                      </h3>
+                      <a
+                        href={exp.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="mt-3 inline-block font-mono text-xs sm:text-sm uppercase tracking-widest underline underline-offset-4 decoration-2 hover:opacity-70 transition-opacity"
+                        style={{ color: look.sub }}
+                      >
+                        {exp.company}
+                      </a>
+                      <p
+                        className="mt-6 text-sm sm:text-base leading-relaxed max-w-sm"
+                        style={{ color: look.sub }}
+                      >
+                        {exp.summary}
+                      </p>
+                    </div>
+
+                    <div className="flex flex-col justify-between gap-6">
+                      <ul className="space-y-3 text-[13px] sm:text-sm leading-relaxed">
+                        {exp.details.map((d, idx) => (
+                          <li key={idx} className="flex gap-3">
+                            <span className="font-mono font-bold shrink-0">
+                              →
+                            </span>
+                            <span style={{ color: look.sub }}>{d}</span>
+                          </li>
+                        ))}
+                      </ul>
+                      <div className="flex flex-wrap gap-1.5">
+                        {exp.skills.map((s) => (
+                          <span
+                            key={s}
+                            className="font-mono text-[9px] sm:text-[10px] uppercase tracking-wider px-2.5 py-1 rounded-full border"
+                            style={{ borderColor: look.pillBorder }}
+                          >
+                            {s}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </article>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </section>
+  );
+}
+</file>
+
+<file path="app/components/Marquee.tsx">
+"use client";
+
+import { useRef } from "react";
+import gsap from "gsap";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
+import { useGSAP } from "@gsap/react";
+import { FINE_POINTER_QUERY } from "./SmoothScroll";
+
+if (typeof window !== "undefined") {
+  gsap.registerPlugin(ScrollTrigger);
+}
+
+type MarqueeProps = {
+  items: string[];
+  tone?: "volt" | "cyan";
+  duration?: number;
+  direction?: "left" | "right";
+  /** Degrees — tilts the whole band so it cuts diagonally across the page */
+  tilt?: number;
+  /** Extra classes for the outer container (e.g. contextual margins) */
+  className?: string;
+};
+
+export default function Marquee({
+  items,
+  tone = "volt",
+  duration = 22,
+  direction = "left",
+  tilt = 0,
+  className = "",
+}: MarqueeProps) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const bandRef = useRef<HTMLDivElement>(null);
+  const trackRef = useRef<HTMLDivElement>(null);
+  const tweenRef = useRef<gsap.core.Tween | null>(null);
+
+  useGSAP(
+    () => {
+      const tween = gsap.fromTo(
+        trackRef.current,
+        { xPercent: direction === "left" ? 0 : -50 },
+        {
+          xPercent: direction === "left" ? -50 : 0,
+          duration,
+          ease: "none",
+          repeat: -1,
+        },
+      );
+      tweenRef.current = tween;
+
+      // Punch-in entrance: the band swings up from below with extra tilt,
+      // settling into its resting angle. Desktop only — on touch the band
+      // must never start at opacity 0 waiting on a ScrollTrigger that real
+      // phones repeatedly failed to fire on time; its inline rotate(tilt)
+      // keeps the resting angle without the tween.
+      const mm = gsap.matchMedia();
+      mm.add(FINE_POINTER_QUERY, () => {
+        gsap.fromTo(
+          bandRef.current,
+          { y: 90, rotate: tilt + 6, opacity: 0 },
+          {
+            y: 0,
+            rotate: tilt,
+            opacity: 1,
+            duration: 1.1,
+            ease: "power4.out",
+            scrollTrigger: { trigger: containerRef.current, start: "top 92%" },
+          },
+        );
+      });
+
+      // Scroll-velocity feedback: fast scrolling speeds the loop up and
+      // skews the type in the scroll direction; a per-frame decay relaxes
+      // both back to rest once scrolling stops.
+      const st = ScrollTrigger.create({
+        onUpdate(self) {
+          const v = self.getVelocity();
+          gsap.set(trackRef.current, {
+            skewX: gsap.utils.clamp(-12, 12, v / 160),
+          });
+          tween.timeScale(gsap.utils.clamp(1, 5, 1 + Math.abs(v) / 700));
+        },
+      });
+
+      const decay = () => {
+        const current = Number(gsap.getProperty(trackRef.current, "skewX")) || 0;
+        // At rest there's nothing to relax — skip the per-frame writes so
+        // an idle page (3 marquee tickers) costs nothing.
+        if (Math.abs(current) < 0.05 && Math.abs(tween.timeScale() - 1) < 0.01)
+          return;
+        gsap.set(trackRef.current, { skewX: current * 0.92 });
+        tween.timeScale(gsap.utils.interpolate(tween.timeScale(), 1, 0.05));
+      };
+      gsap.ticker.add(decay);
+
+      return () => {
+        gsap.ticker.remove(decay);
+        st.kill();
+      };
+    },
+    { scope: containerRef, dependencies: [direction, duration, tilt] },
+  );
+
+  const pause = () => tweenRef.current?.pause();
+  const resume = () => tweenRef.current?.resume();
+  const togglePlay = () => {
+    const tween = tweenRef.current;
+    if (!tween) return;
+    if (tween.paused()) tween.resume();
+    else tween.pause();
+  };
+
+  const bg = tone === "volt" ? "var(--accent-volt)" : "var(--accent-cyan)";
+  const ink =
+    tone === "volt" ? "var(--accent-volt-ink)" : "var(--accent-cyan-ink)";
+
+  const doubled = [...items, ...items, ...items, ...items];
+
+  return (
+    // Outer wrapper reserves vertical room so the tilted band's corners
+    // don't clip against neighboring sections.
+    <div
+      ref={containerRef}
+      className={`relative z-20 py-8 sm:py-10 overflow-visible ${className}`}
+    >
+      <div
+        ref={bandRef}
+        onMouseEnter={pause}
+        onMouseLeave={resume}
+        onTouchStart={togglePlay}
+        className="relative w-[110vw] ml-[-5vw] overflow-hidden select-none py-4 sm:py-6 shadow-[0_18px_50px_rgba(0,0,0,0.45)]"
+        style={{ backgroundColor: bg, transform: `rotate(${tilt}deg)` }}
+      >
+        <div ref={trackRef} className="flex whitespace-nowrap w-max">
+          {doubled.map((item, i) => (
+            <span
+              key={i}
+              className="flex items-center gap-4 sm:gap-6 px-4 sm:px-6 font-[family-name:var(--font-syne)] font-extrabold text-2xl sm:text-4xl md:text-5xl tracking-tight uppercase"
+              style={
+                // Every other word renders as a hollow outline of the ink
+                // color — the alternation gives the band typographic depth
+                // instead of one flat repeated texture.
+                i % 2 === 0
+                  ? { color: ink }
+                  : {
+                      color: "transparent",
+                      WebkitTextStroke: `1.5px ${ink}`,
+                    }
+              }
+            >
+              {item}
+              <span aria-hidden="true" style={{ color: ink }}>
+                ✦
+              </span>
+            </span>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+</file>
+
+<file path="app/components/ProjectsSection.tsx">
+"use client";
+
+import { useRef } from "react";
+import Image from "next/image";
+import gsap from "gsap";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
+import { useGSAP } from "@gsap/react";
+import { PROJECTS } from "../data/content";
+
+if (typeof window !== "undefined") {
+  gsap.registerPlugin(ScrollTrigger);
+}
+
+const SLIDE_TONES = [
+  { accent: "var(--accent-volt)", ink: "var(--accent-volt-ink)" },
+  { accent: "var(--accent-cyan)", ink: "var(--accent-cyan-ink)" },
+];
+
+export default function ProjectsSection() {
+  const sectionRef = useRef<HTMLDivElement>(null);
+  const trackRef = useRef<HTMLDivElement>(null);
+  const progressRef = useRef<HTMLDivElement>(null);
+
+  useGSAP(
+    () => {
+      // Desktop (≥900px): pin the section and drive the track horizontally
+      // from vertical scroll, with a progress bar synced to the same
+      // distance. Below 900px the track is a native scroll-snap carousel
+      // instead — an earlier revision ran this pin on phones too, and the
+      // full-viewport track translating sideways during iOS momentum
+      // scroll is exactly what read as "the whole app slides left/right."
+      // Scroll-jacked horizontal motion is a mouse-wheel idiom; on touch,
+      // swiping the row is the platform-native gesture and composites on
+      // the GPU with zero JS per frame.
+      const mm = gsap.matchMedia();
+
+      mm.add("(min-width: 900px)", () => {
+        const track = trackRef.current;
+        const section = sectionRef.current;
+        if (!track || !section) return;
+
+        const getScrollAmount = () =>
+          Math.max(track.scrollWidth - window.innerWidth, 0);
+
+        const tween = gsap.to(track, {
+          x: () => -getScrollAmount(),
+          ease: "none",
+          scrollTrigger: {
+            trigger: section,
+            start: "top top",
+            end: () => `+=${getScrollAmount()}`,
+            scrub: 1,
+            pin: true,
+            invalidateOnRefresh: true,
+          },
+        });
+
+        const progress = gsap.fromTo(
+          progressRef.current,
+          { scaleX: 0 },
+          {
+            scaleX: 1,
+            ease: "none",
+            scrollTrigger: {
+              trigger: section,
+              start: "top top",
+              end: () => `+=${getScrollAmount()}`,
+              scrub: 1,
+              invalidateOnRefresh: true,
+            },
+          },
+        );
+
+        return () => {
+          tween.scrollTrigger?.kill();
+          tween.kill();
+          progress.scrollTrigger?.kill();
+          progress.kill();
+        };
+      });
+    },
+    { scope: sectionRef },
+  );
+
+  return (
+    <section
+      id="projects"
+      ref={sectionRef}
+      className="relative py-20 sm:py-28 min-[900px]:py-0 min-[900px]:min-h-screen min-[900px]:flex min-[900px]:flex-col min-[900px]:justify-center overflow-hidden"
+    >
+      <div className="px-5 sm:px-6 md:px-8 min-[900px]:px-10 mb-16 sm:mb-24 min-[900px]:mb-32 flex items-end justify-between gap-6 max-w-6xl min-[900px]:max-w-none mx-auto min-[900px]:mx-0 w-full">
+        <h2 className="font-[family-name:var(--font-syne)] font-extrabold text-4xl sm:text-6xl md:text-7xl tracking-tighter text-[var(--text-contrast)] leading-none">
+          Selected
+          <br />
+          <span className="text-outline-volt">Works</span>
+        </h2>
+        <span className="hidden sm:flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.3em] text-[var(--text)] opacity-60 pb-2">
+          Scroll
+          <span aria-hidden="true">→</span>
+        </span>
+      </div>
+
+      {/* Below 900px: native scroll-snap swipe carousel. overscroll-x-contain
+          keeps a swipe past either end from chaining into horizontal drag on
+          the page itself. At ≥900px the same element becomes the pinned,
+          scroll-jacked track. */}
+      <div
+        ref={trackRef}
+        className="flex items-start overflow-x-auto snap-x snap-mandatory overscroll-x-contain min-[900px]:overflow-visible min-[900px]:snap-none min-[900px]:overscroll-x-auto pb-6 min-[900px]:pb-0 px-5 sm:px-6 min-[900px]:px-10 gap-10 min-[900px]:gap-24"
+      >
+        {PROJECTS.map((project, i) => {
+          const tone = SLIDE_TONES[i % SLIDE_TONES.length];
+          const tiltEven = i % 2 === 0;
+
+          return (
+            <article
+              key={project.id}
+              className="project-slide relative shrink-0 snap-center w-[88vw] sm:w-[72vw] min-[900px]:w-[64vw] max-w-[960px]"
+            >
+              {/* Ghost slide index — z-20 floats the hollow numeral OVER the
+                  image corner (outline-only, so nothing underneath is
+                  actually blocked) instead of burying it behind the frame */}
+              <span
+                className="absolute -top-12 sm:-top-20 min-[900px]:-top-28 -left-2 z-20 font-[family-name:var(--font-syne)] font-extrabold text-[6rem] sm:text-[10rem] min-[900px]:text-[13rem] leading-none tracking-tighter pointer-events-none select-none"
+                style={{
+                  color: "transparent",
+                  WebkitTextStroke: `2px ${tone.accent}`,
+                  opacity: 0.55,
+                }}
+                aria-hidden="true"
+              >
+                0{i + 1}
+              </span>
+
+              <div className="relative z-10 grid min-[900px]:grid-cols-[1.15fr_1fr] gap-6 min-[900px]:gap-12 items-start">
+                {/* Tilted screenshot frame */}
+                <a
+                  href={project.liveUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={`group relative block aspect-[16/10] rounded-2xl overflow-hidden border-2 transition-transform duration-500 ease-out will-change-transform ${
+                    tiltEven
+                      ? "rotate-[-2.5deg] hover:rotate-0"
+                      : "rotate-[2.5deg] hover:rotate-0"
+                  } hover:scale-[1.02]`}
+                  style={{
+                    borderColor: tone.accent,
+                    boxShadow: "0 24px 70px rgba(0,0,0,0.5)",
+                  }}
+                >
+                  {project.status && (
+                    <span
+                      className="absolute top-4 left-4 z-10 text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded"
+                      style={{ backgroundColor: tone.accent, color: tone.ink }}
+                    >
+                      {project.status}
+                    </span>
+                  )}
+                  <Image
+                    src={project.image}
+                    alt={project.title}
+                    fill
+                    sizes="(min-width: 900px) 40vw, 88vw"
+                    className="object-cover object-center grayscale-[50%] opacity-90 group-hover:grayscale-0 group-hover:opacity-100 group-hover:scale-105 transition-all duration-700 ease-out"
+                  />
+                  <div
+                    className="absolute inset-0 pointer-events-none mix-blend-color opacity-25 group-hover:opacity-0 transition-opacity duration-500"
+                    style={{ backgroundColor: tone.accent }}
+                  />
+                </a>
+
+                {/* Slide copy */}
+                <div className="flex flex-col gap-3 sm:gap-4 self-center">
+                  <span
+                    className="font-mono text-[10px] sm:text-xs uppercase tracking-[0.25em]"
+                    style={{ color: tone.accent }}
+                  >
+                    {project.subtitle}
+                  </span>
+                  <h3 className="font-[family-name:var(--font-syne)] font-extrabold text-2xl sm:text-4xl min-[900px]:text-5xl tracking-tight text-[var(--text-contrast)] leading-[1.05]">
+                    {project.title}
+                  </h3>
+                  {/* Clamped below the pinned breakpoint: the whole card
+                      stack shares one height (the tallest card), and this
+                      section is pinned full-bleed on every device now — an
+                      unclamped description can push that shared height past
+                      a short phone's viewport and clip the button below. */}
+                  <p className="text-xs sm:text-sm min-[900px]:text-base text-[var(--text)] leading-relaxed max-w-md line-clamp-3 min-[900px]:line-clamp-none">
+                    {project.description}
+                  </p>
+                  <ul className="flex flex-wrap gap-1.5 font-mono text-[9px] sm:text-[10px] uppercase tracking-wider text-[var(--text)]">
+                    {project.tech.map((t) => (
+                      <li
+                        key={t}
+                        className="px-2.5 py-1 rounded-full border border-[var(--border-color)]"
+                      >
+                        {t}
+                      </li>
+                    ))}
+                  </ul>
+                  <a
+                    href={project.liveUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-2 inline-flex w-max items-center gap-2 rounded-full px-5 py-3 font-mono text-[11px] font-bold uppercase tracking-widest transition-transform duration-200 hover:scale-105 hover:-rotate-1"
+                    style={{ backgroundColor: tone.accent, color: tone.ink }}
+                  >
+                    Launch App
+                    <span aria-hidden="true">↗</span>
+                  </a>
+                </div>
+              </div>
+            </article>
+          );
+        })}
+      </div>
+
+      {/* Horizontal progress bar — desktop pinned mode only; the mobile
+          carousel communicates position natively via the next card peeking
+          in from the edge */}
+      <div className="hidden min-[900px]:block absolute bottom-10 left-10 right-10 h-[3px] rounded-full bg-white/10 overflow-hidden">
+        <div
+          ref={progressRef}
+          className="h-full w-full origin-left bg-[var(--accent-volt)]"
+          style={{ transform: "scaleX(0)" }}
+        />
+      </div>
+    </section>
+  );
+}
+</file>
+
+<file path="app/page.tsx">
+"use client";
+
+import { useEffect, useState } from "react";
+import Preloader from "./components/Preloader";
+import CustomCursor from "./components/CustomCursor";
+import Backdrop3D from "./components/Backdrop3D";
+import Navbar from "./components/Navbar";
+import SmoothScroll from "./components/SmoothScroll";
+import HeroSection from "./components/HeroSection";
+import Marquee from "./components/Marquee";
+import ExperienceSection from "./components/ExperienceSection";
+import ProjectsSection from "./components/ProjectsSection";
+import ContactSection from "./components/ContactSection";
+import PersonalTelemetrySection from "./components/PersonalTelemetrySection";
+import FooterSection from "./components/FooterSection";
+import { TECH_STACK } from "./data/content";
+
+export default function Home() {
+  const [isLoaded, setIsLoaded] = useState(false);
+
+  // Safety net: the preloader's own GSAP timeline normally flips this via
+  // onComplete, but a slow/busy real device is exactly the case where a
+  // timeline can stall — and with nothing else to release it, that used to
+  // mean the page stayed permanently hidden behind the curtain with
+  // scrolling dead. This guarantees the reveal fires no matter what.
+  useEffect(() => {
+    const timer = window.setTimeout(() => setIsLoaded(true), 6000);
+    return () => window.clearTimeout(timer);
+  }, []);
+
+  return (
+    <div className="min-h-screen bg-[var(--bg)] text-[var(--text)]">
+      <CustomCursor />
+
+      {/* Site-wide film grain — above content, below the cursor */}
+      <div className="grain pointer-events-none fixed inset-0 z-[100] opacity-[0.05]" />
+
+      {!isLoaded && (
+        <Preloader
+          onComplete={() => {
+            window.scrollTo(0, 0);
+            setIsLoaded(true);
+          }}
+        />
+      )}
+
+      {/* The page mounts immediately UNDER the preloader (z-999), so slow
+          devices pay the layout/hydration cost while the counter runs —
+          the curtain then reveals a finished page instead of a blank
+          frame. The hero plays its own entrance immediately (see
+          HeroSection), so it's already settled by the time the curtain
+          lifts without needing a cross-component signal to release it. */}
+
+      {/* Fixed 3D depth layer behind everything. Rendered outside the
+          ScrollSmoother wrapper below: #smooth-content is moved via a
+          CSS transform, which would otherwise become the containing
+          block for these `fixed` layers and break them. */}
+      <Backdrop3D />
+      <Navbar />
+
+      {/* ScrollSmoother's required DOM shape — only the actual
+          scrollable page lives inside #smooth-content. */}
+      <div id="smooth-wrapper">
+        <div id="smooth-content">
+          <main className="relative z-10">
+            <HeroSection />
+            <Marquee items={TECH_STACK} tone="volt" duration={20} tilt={-2} />
+            <ExperienceSection />
+            {/* Desktop-only top clearance (className, NOT a wrapper div:
+                ScrollTrigger's pin-spacer around #projects re-parents
+                main's children, and inserting new siblings there makes
+                React's insertBefore throw): Projects below is min-h-screen
+                with vertically centered content, so its heading sits well
+                into the section — without this the band reads as glued to
+                the experience deck while floating far above "Selected
+                Works". Mobile rhythm is already symmetric. */}
+            <Marquee
+              items={["TAKING SELECT PROJECTS"]}
+              tone="cyan"
+              duration={24}
+              direction="right"
+              tilt={2}
+              className="min-[900px]:mt-16"
+            />
+            <ProjectsSection />
+            <ContactSection />
+            {/* Lives OUTSIDE ContactSection on purpose: that section is
+                overflow-hidden (its starburst/orbs need containing), which
+                was clipping this tilted band's corners. Marquee itself now
+                carries a z-20 stacking context so it always paints on top
+                of neighboring sections. */}
+            <Marquee
+              items={["SELECT PROJECTS ONLY"]}
+              tone="cyan"
+              duration={26}
+              tilt={-2.5}
+            />
+            {/* Bonus beat after the core funnel — live personal telemetry */}
+            <PersonalTelemetrySection />
+            <FooterSection />
+          </main>
+        </div>
+      </div>
+      <SmoothScroll locked={!isLoaded} />
+    </div>
+  );
+}
+</file>
+
+<file path="app/components/SmoothScroll.tsx">
+"use client";
+
+import { useEffect, useRef } from "react";
+import gsap from "gsap";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
+import { ScrollSmoother } from "gsap/ScrollSmoother";
+
+if (typeof window !== "undefined") {
+  gsap.registerPlugin(ScrollTrigger, ScrollSmoother);
+
+  // Mobile Safari/Chrome fire resize events as the address bar collapses
+  // and expands during scroll — ScrollTrigger recalculates (and re-pins)
+  // on every one by default. That mid-scroll churn is what made pinned
+  // sections and reveal triggers unstable on phones: positions kept
+  // getting recomputed against a viewport that was still settling, so
+  // content stayed effectively undiscoverable until the browser chrome
+  // finally stopped moving near the bottom of the page. This was
+  // previously only set on ScrollSmoother's own config, which never runs
+  // on touch devices — the one place that actually needed it had nothing.
+  ScrollTrigger.config({ ignoreMobileResize: true });
+}
+
+// Shared device split: smoothing (and the ScrollTrigger pins that depend
+// on it) only run on mouse-driven devices. Touch devices keep fully
+// native scrolling — their compositor scroll is already smooth, and
+// JS-driven smoothing there is what made pinned sections lag and
+// flicker, while normalizeScroll's touch hijacking silently killed the
+// projects row's native horizontal swipe.
+export const FINE_POINTER_QUERY = "(hover: hover) and (pointer: fine)";
+
+export default function SmoothScroll({
+  locked = false,
+}: {
+  /** Freezes scrolling while the preloader covers the mounted page. */
+  locked?: boolean;
+}) {
+  const smootherRef = useRef<ScrollSmoother | null>(null);
+  const isFineRef = useRef(false);
+
+  useEffect(() => {
+    isFineRef.current = window.matchMedia(FINE_POINTER_QUERY).matches;
+    if (!isFineRef.current) return;
+
+    const smoother = ScrollSmoother.create({
+      wrapper: "#smooth-wrapper",
+      content: "#smooth-content",
+      smooth: 1.2,
+      ignoreMobileResize: true,
+    });
+    smootherRef.current = smoother;
+
+    return () => {
+      smootherRef.current = null;
+      smoother.kill();
+    };
+  }, []);
+
+  useEffect(() => {
+    // Desktop: pause/resume the smoother's own render loop — its wrapper
+    // is already position:fixed+overflow:hidden, so nothing scrolls while
+    // paused regardless. Touch devices have no smoother to pause; they
+    // rely solely on the preloader's own touch-action:none. An earlier
+    // version also hard-locked document.documentElement's CSS overflow
+    // here as a second line of defense — that's exactly the kind of state
+    // that, if its release ever fails to fire on a real device for any
+    // reason, leaves scrolling permanently dead with no way to recover.
+    // Not worth it for a rare cosmetic edge case.
+    smootherRef.current?.paused(locked);
+
+    if (!locked) {
+      // Every section's ScrollTrigger is created the instant it mounts —
+      // which, now that the page renders behind the preloader, is before
+      // fonts/layout have necessarily settled. Re-measure everything
+      // against the final layout right as scrolling unlocks; otherwise
+      // trigger start/end points stay pinned to whatever was on screen at
+      // that first paint and every animation reads "late" by however far
+      // the real layout drifted — content stays invisible at its stale
+      // (wrong) trigger position until something finally corrects it.
+      //
+      // A previous version gated this ENTIRELY behind document.fonts.ready
+      // to also catch font-swap reflow — but on a real, possibly-throttled
+      // mobile connection that promise can take several seconds to settle,
+      // and scrolling is already unlocked well before then. The result:
+      // sections stayed blank while scrolling through them, only
+      // reappearing once fonts finally loaded and the delayed refresh
+      // retroactively fired their reveals — which is exactly what a
+      // screen recording of the bug showed happening.
+      //
+      // Fix: refresh immediately so the common case is correct from frame
+      // one, then exactly two more passes tied to real, semantically
+      // meaningful events — document.fonts.ready and window's load event
+      // (fonts/images/subresources all finished) — rather than a handful of
+      // arbitrary timers. Each refresh() forces a synchronous layout read
+      // across every trigger on the page; on the weaker CPUs this bug
+      // actually shows up on, firing that five-plus times in a few seconds
+      // was itself real, avoidable jank stacked on top of the slow load
+      // the user was already fighting.
+      const refresh = () => ScrollTrigger.refresh();
+      requestAnimationFrame(refresh);
+      document.fonts?.ready?.then(refresh).catch(() => {});
+      window.addEventListener("load", refresh);
+
+      return () => {
+        window.removeEventListener("load", refresh);
+      };
+    }
+  }, [locked]);
+
+  return null;
+}
+</file>
+
+</files>

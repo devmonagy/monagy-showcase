@@ -61,10 +61,17 @@ export default function Backdrop3D() {
   const gridLayerRef = useRef<HTMLDivElement>(null);
   const sparkleCanvasRef = useRef<HTMLCanvasElement>(null);
 
-  // Scroll-reactive sparkle engine. The canvas shares the grid's parallax
-  // wrapper, so sparkles inherit the exact same transform and stay glued to
-  // real dot positions with zero per-frame alignment math. The rAF loop only
-  // runs while sparkles are alive — an idle page costs nothing.
+  // Scroll-reactive sparkle engine. The canvas is deliberately NOT inside
+  // the parallax-transformed grid wrapper: it's a plain viewport-fixed
+  // layer, and sparkles live in raw screen coordinates. An earlier version
+  // parented it inside the tweened layer and derived spawn positions from
+  // the transform state — every way of reading that state back proved
+  // fragile, and each miss showed up as glints silently drifting off-screen
+  // the deeper the page was scrolled. Screen space has no transform to get
+  // wrong. Alignment with the grid dots is done per-spawn instead, by
+  // snapping against the grid layer's live bounding rect (see spawn()).
+  // The rAF loop only runs while sparkles are alive — an idle page costs
+  // nothing.
   useEffect(() => {
     const canvas = sparkleCanvasRef.current;
     const layer = gridLayerRef.current;
@@ -84,13 +91,19 @@ export default function Backdrop3D() {
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
     let width = 0;
     let height = 0;
+    // The fluid root scale (globals.css) grows every rem-based element on
+    // 1920px+ viewports; glints sized in raw px would shrink relative to
+    // everything around them, so they ride the same scale.
+    let fluidScale = 1;
     const resize = () => {
-      // offsetWidth/Height: layout size, unaffected by the parallax transform
-      width = layer.offsetWidth;
-      height = layer.offsetHeight;
+      width = canvas.offsetWidth;
+      height = canvas.offsetHeight;
       canvas.width = width * dpr;
       canvas.height = height * dpr;
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      fluidScale =
+        parseFloat(getComputedStyle(document.documentElement).fontSize) / 16 ||
+        1;
     };
     resize();
     window.addEventListener("resize", resize);
@@ -108,25 +121,25 @@ export default function Backdrop3D() {
         // Quick flare-in, long fade-out — reads as a glint, not a blink
         const alpha = t < 0.25 ? t / 0.25 : 1 - (t - 0.25) / 0.75;
 
-        // Peak alphas kept low on purpose — against the near-black canvas a
-        // background glint should sit just above the grid's own 0.09, never
-        // competing with foreground text for attention.
+        // Peak alphas still restrained against the near-black canvas — a
+        // background glint shouldn't outshine foreground text — but bright
+        // enough to actually read as a glint from anywhere on the page.
         const glow = ctx.createRadialGradient(s.x, s.y, 0, s.x, s.y, s.radius * 4);
-        glow.addColorStop(0, `${s.color}${0.18 * alpha})`);
+        glow.addColorStop(0, `${s.color}${0.32 * alpha})`);
         glow.addColorStop(1, `${s.color}0)`);
         ctx.fillStyle = glow;
         ctx.beginPath();
         ctx.arc(s.x, s.y, s.radius * 4, 0, Math.PI * 2);
         ctx.fill();
 
-        ctx.fillStyle = `${s.color}${0.4 * alpha})`;
+        ctx.fillStyle = `${s.color}${0.7 * alpha})`;
         ctx.beginPath();
         ctx.arc(s.x, s.y, s.radius, 0, Math.PI * 2);
         ctx.fill();
 
         if (s.line) {
-          const len = 8 + 24 * t;
-          ctx.strokeStyle = `${s.color}${0.15 * alpha})`;
+          const len = (8 + 24 * t) * fluidScale;
+          ctx.strokeStyle = `${s.color}${0.28 * alpha})`;
           ctx.lineWidth = 1;
           ctx.beginPath();
           ctx.moveTo(s.x, s.y - len);
@@ -144,22 +157,28 @@ export default function Backdrop3D() {
     };
 
     const spawn = (count: number) => {
-      // Spawn only inside the slice of this oversized layer that's actually
-      // on screen: the layer extends 20% past the viewport on every side and
-      // is translated by the parallax tween (read back as px via "y").
-      const parallaxY = Number(gsap.getProperty(layer, "y")) || 0;
-      const viewLeft = (width - window.innerWidth) / 2;
-      const viewTop = (height - window.innerHeight) / 2 - parallaxY;
+      // Sparkles spawn anywhere in the viewport — the canvas IS the
+      // viewport, so no visibility math can go wrong. They still need to
+      // land on grid dots, which live inside the parallax-translated layer:
+      // its bounding rect gives the dot lattice's current screen offset, so
+      // snapping happens directly in screen space. The rect reflects
+      // whatever transform is actually painted this frame — nothing to read
+      // back, nothing to get out of sync.
+      const rect = layer.getBoundingClientRect();
 
       for (let i = 0; i < count && sparkles.length < 20; i++) {
-        const rawX = viewLeft + Math.random() * window.innerWidth;
-        const rawY = viewTop + Math.random() * window.innerHeight;
+        const rawX = Math.random() * width;
+        const rawY = Math.random() * height;
         const x =
-          Math.round((rawX - GRID_DOT_OFFSET) / GRID_STEP) * GRID_STEP +
-          GRID_DOT_OFFSET;
+          Math.round((rawX - rect.left - GRID_DOT_OFFSET) / GRID_STEP) *
+            GRID_STEP +
+          GRID_DOT_OFFSET +
+          rect.left;
         const y =
-          Math.round((rawY - GRID_DOT_OFFSET) / GRID_STEP) * GRID_STEP +
-          GRID_DOT_OFFSET;
+          Math.round((rawY - rect.top - GRID_DOT_OFFSET) / GRID_STEP) *
+            GRID_STEP +
+          GRID_DOT_OFFSET +
+          rect.top;
         // One glint per dot at a time — stacked draws on the same point
         // compound their alphas into exactly the hot flash we're avoiding.
         if (sparkles.some((s) => s.x === x && s.y === y)) continue;
@@ -168,7 +187,7 @@ export default function Backdrop3D() {
           y,
           life: 0,
           maxLife: 40 + Math.random() * 35,
-          radius: 1 + Math.random() * 0.8,
+          radius: (1 + Math.random() * 0.8) * fluidScale,
           color:
             SPARKLE_COLORS[Math.floor(Math.random() * SPARKLE_COLORS.length)],
           line: Math.random() < 0.18,
@@ -182,22 +201,38 @@ export default function Backdrop3D() {
 
     // Fractional spawn budget keyed to scroll velocity: slow scrolling
     // trickles out single glints, a hard flick bursts a few at once.
+    // Velocity comes from raw window scroll events, NOT from a
+    // ScrollTrigger's getVelocity(): native scroll is the one signal
+    // that's identical whether or not ScrollSmoother is smoothing the
+    // page (the smoother consumes native scroll as its own input), so
+    // desktop behaves exactly like the native-scrolling phone path.
+    // Reading velocity through GSAP proved unreliable on the smoothed,
+    // heavily-pinned desktop page — glints stopped past the Projects
+    // pin — while phones, which never run the smoother, worked to the
+    // footer the whole time.
     let budget = 0;
-    const trigger = ScrollTrigger.create({
-      onUpdate(self) {
-        const velocity = Math.abs(self.getVelocity());
-        if (velocity < 60) return;
-        budget += Math.min(1.5, velocity / 1600);
-        const whole = Math.floor(budget);
-        if (whole > 0) {
-          budget -= whole;
-          spawn(whole);
-        }
-      },
-    });
+    let lastY = window.scrollY;
+    let lastT = performance.now();
+    const onScroll = () => {
+      const now = performance.now();
+      const dt = now - lastT;
+      if (dt <= 0) return;
+      const dy = window.scrollY - lastY;
+      lastY = window.scrollY;
+      lastT = now;
+      const velocity = Math.abs(dy / dt) * 1000; // px/second
+      if (velocity < 60) return;
+      budget += Math.min(1.5, velocity / 1600);
+      const whole = Math.floor(budget);
+      if (whole > 0) {
+        budget -= whole;
+        spawn(whole);
+      }
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
 
     return () => {
-      trigger.kill();
+      window.removeEventListener("scroll", onScroll);
       cancelAnimationFrame(rafId);
       window.removeEventListener("resize", resize);
     };
@@ -243,9 +278,7 @@ export default function Backdrop3D() {
       <div className="ambient-orb bd-far absolute top-[38%] right-[-12%] w-[40vw] h-[40vw] max-w-[35rem] max-h-[35rem] rounded-full bg-[var(--accent-cyan)] opacity-[0.07] blur-[130px]" />
       <div className="ambient-orb bd-far absolute bottom-[-14%] left-[22%] w-[42vw] h-[42vw] max-w-[37.5rem] max-h-[37.5rem] rounded-full bg-[var(--accent-volt)] opacity-[0.06] blur-[140px]" />
 
-      {/* Fine dot grid + scroll-sparkle canvas — far layer texture so black
-          never reads as empty. One shared wrapper so the sparkles ride the
-          same parallax transform as the dots they light up. */}
+      {/* Fine dot grid — far layer texture so black never reads as empty. */}
       <div ref={gridLayerRef} className="bd-far absolute inset-[-20%]">
         <div
           className="absolute inset-0 opacity-[0.09]"
@@ -255,11 +288,17 @@ export default function Backdrop3D() {
             backgroundSize: `${GRID_STEP}px ${GRID_STEP}px`,
           }}
         />
-        <canvas
-          ref={sparkleCanvasRef}
-          className="absolute inset-0 w-full h-full"
-        />
       </div>
+
+      {/* Scroll-sparkle canvas — viewport-fixed, NOT inside the parallax
+          wrapper above. Sparkles are positioned in screen space and snapped
+          to the grid layer's live rect at spawn; keeping the canvas out of
+          any transformed ancestor is what guarantees they can never drift
+          off-screen at depth (see the sparkle engine effect). */}
+      <canvas
+        ref={sparkleCanvasRef}
+        className="absolute inset-0 w-full h-full"
+      />
 
       {/* Perspective grid floor — anchored low, fades upward */}
       <div
