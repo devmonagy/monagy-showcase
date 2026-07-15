@@ -6,6 +6,7 @@ import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { useGSAP } from "@gsap/react";
 import { PROJECTS } from "../data/content";
+import MagneticLink from "./MagneticLink";
 
 if (typeof window !== "undefined") {
   gsap.registerPlugin(ScrollTrigger);
@@ -33,8 +34,17 @@ export default function ProjectsSection() {
       const section = sectionRef.current;
       if (!track || !section) return;
 
-      const getScrollAmount = () =>
-        Math.max(track.scrollWidth - window.innerWidth, 0);
+      // scrollWidth deliberately gets the track's own padding-left added
+      // back: trailing inline padding of an overflowing container isn't
+      // part of its scrollable area, so the width-minus-viewport distance
+      // alone ends the run with the last card flush against the browser
+      // edge — while the first card starts a comfortable px-10 from it.
+      // Reading the live computed padding keeps every breakpoint's value
+      // (px-5/6/10) and stays correct through invalidateOnRefresh.
+      const getScrollAmount = () => {
+        const pad = parseFloat(getComputedStyle(track).paddingLeft) || 0;
+        return Math.max(track.scrollWidth - window.innerWidth + pad, 0);
+      };
 
       const tween = gsap.to(track, {
         x: () => -getScrollAmount(),
@@ -48,6 +58,36 @@ export default function ProjectsSection() {
           invalidateOnRefresh: true,
         },
       });
+
+      // Per-slide media parallax riding the pin tween via containerAnimation:
+      // each image pans xPercent -12 → 12 as its own slide traverses the
+      // viewport, opposite to the track's travel. The pan lives on a wrapper
+      // (never the <Image> — its transition-all would re-ease every scrub
+      // write), pre-scaled 1.25 so a 12% shift stays inside the 12.5%
+      // overhang and the frame edge never shows. Skipped under
+      // prefers-reduced-motion; the pin itself is untouched either way.
+      if (!window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+        gsap.utils.toArray<HTMLElement>(".proj-img-parallax").forEach(
+          (media) => {
+            gsap.fromTo(
+              media,
+              { xPercent: -12, scale: 1.25 },
+              {
+                xPercent: 12,
+                scale: 1.25,
+                ease: "none",
+                scrollTrigger: {
+                  trigger: media,
+                  containerAnimation: tween,
+                  start: "left right",
+                  end: "right left",
+                  scrub: true,
+                },
+              },
+            );
+          },
+        );
+      }
 
       const progress = gsap.fromTo(
         progressRef.current,
@@ -87,7 +127,7 @@ export default function ProjectsSection() {
           <br />
           <span className="text-outline-volt">Works</span>
         </h2>
-        <span className="hidden sm:flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.3em] text-[var(--text)] opacity-60 pb-2">
+        <span className="hidden sm:flex items-center gap-2 font-mono text-[0.625rem] uppercase tracking-[0.3em] text-[var(--text)] opacity-60 pb-2">
           Scroll
           <span aria-hidden="true">→</span>
         </span>
@@ -139,19 +179,24 @@ export default function ProjectsSection() {
                 >
                   {project.status && (
                     <span
-                      className="absolute top-4 left-4 z-10 text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded"
+                      className="absolute top-4 left-4 z-10 text-[0.625rem] font-bold uppercase tracking-widest px-2.5 py-1 rounded"
                       style={{ backgroundColor: tone.accent, color: tone.ink }}
                     >
                       {project.status}
                     </span>
                   )}
-                  <Image
-                    src={project.image}
-                    alt={project.title}
-                    fill
-                    sizes="(min-width: 900px) 40vw, 88vw"
-                    className="object-cover object-center grayscale-[50%] opacity-90 group-hover:grayscale-0 group-hover:opacity-100 group-hover:scale-105 transition-all duration-700 ease-out"
-                  />
+                  {/* GSAP pans this wrapper (see the parallax block above);
+                      the Image keeps its CSS hover treatment on a separate
+                      element so the two transform systems never meet. */}
+                  <div className="proj-img-parallax absolute inset-0 will-change-transform">
+                    <Image
+                      src={project.image}
+                      alt={project.title}
+                      fill
+                      sizes="(min-width: 900px) 40vw, 88vw"
+                      className="object-cover object-center grayscale-[50%] opacity-90 group-hover:grayscale-0 group-hover:opacity-100 group-hover:scale-105 transition-all duration-700 ease-out"
+                    />
+                  </div>
                   <div
                     className="absolute inset-0 pointer-events-none mix-blend-color opacity-25 group-hover:opacity-0 transition-opacity duration-500"
                     style={{ backgroundColor: tone.accent }}
@@ -161,7 +206,7 @@ export default function ProjectsSection() {
                 {/* Slide copy */}
                 <div className="flex flex-col gap-3 sm:gap-4 self-center">
                   <span
-                    className="font-mono text-[10px] sm:text-xs uppercase tracking-[0.25em]"
+                    className="font-mono text-[0.625rem] sm:text-xs uppercase tracking-[0.25em]"
                     style={{ color: tone.accent }}
                   >
                     {project.subtitle}
@@ -177,7 +222,7 @@ export default function ProjectsSection() {
                   <p className="text-xs sm:text-sm min-[900px]:text-base text-[var(--text)] leading-relaxed max-w-md line-clamp-3 min-[900px]:line-clamp-none">
                     {project.description}
                   </p>
-                  <ul className="flex flex-wrap gap-1.5 font-mono text-[9px] sm:text-[10px] uppercase tracking-wider text-[var(--text)]">
+                  <ul className="flex flex-wrap gap-1.5 font-mono text-[0.5625rem] sm:text-[0.625rem] uppercase tracking-wider text-[var(--text)]">
                     {project.tech.map((t) => (
                       <li
                         key={t}
@@ -187,16 +232,17 @@ export default function ProjectsSection() {
                       </li>
                     ))}
                   </ul>
-                  <a
+                  <MagneticLink
                     href={project.liveUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="mt-2 inline-flex w-max items-center gap-2 rounded-full px-5 py-3 font-mono text-[11px] font-bold uppercase tracking-widest transition-transform duration-200 hover:scale-105 hover:-rotate-1"
+                    hoverRotate={-1}
+                    className="mt-2 inline-flex w-max items-center gap-2 rounded-full px-5 py-3 font-mono text-[0.6875rem] font-bold uppercase tracking-widest"
                     style={{ backgroundColor: tone.accent, color: tone.ink }}
                   >
                     Launch App
                     <span aria-hidden="true">↗</span>
-                  </a>
+                  </MagneticLink>
                 </div>
               </div>
             </article>

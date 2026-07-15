@@ -147,7 +147,7 @@ export default function ContactSection() {
         </a>
 
         {/* Meta strip: availability + socials */}
-        <div className="contact-reveal mt-10 sm:mt-14 flex flex-wrap items-center justify-center gap-x-8 gap-y-3 font-mono text-[10px] sm:text-xs uppercase tracking-widest text-[var(--text)]">
+        <div className="contact-reveal mt-10 sm:mt-14 flex flex-wrap items-center justify-center gap-x-8 gap-y-3 font-mono text-[0.625rem] sm:text-xs uppercase tracking-widest text-[var(--text)]">
           <span className="flex items-center gap-2">
             <span className="w-1.5 h-1.5 rounded-full bg-[var(--accent-volt)] animate-pulse" />
             NYC · Select Freelance

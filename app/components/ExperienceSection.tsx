@@ -104,7 +104,7 @@ export default function ExperienceSection() {
             <br />
             <span className="text-outline-volt">Worked</span>
           </h2>
-          <span className="hidden sm:block font-mono text-[10px] uppercase tracking-[0.3em] text-[var(--text)] opacity-60 pb-2">
+          <span className="hidden sm:block font-mono text-[0.625rem] uppercase tracking-[0.3em] text-[var(--text)] opacity-60 pb-2">
             2018 — Present
           </span>
         </div>
@@ -146,7 +146,7 @@ export default function ExperienceSection() {
                   <div className="relative z-10 grid md:grid-cols-[1fr_1.3fr] gap-6 md:gap-12">
                     <div>
                       <span
-                        className="inline-block font-mono text-[10px] sm:text-xs font-bold uppercase tracking-widest px-3 py-1.5 rounded-full"
+                        className="inline-block font-mono text-[0.625rem] sm:text-xs font-bold uppercase tracking-widest px-3 py-1.5 rounded-full"
                         style={{
                           backgroundColor: look.chipBg,
                           color: look.chipInk,
@@ -175,7 +175,7 @@ export default function ExperienceSection() {
                     </div>
 
                     <div className="flex flex-col justify-between gap-6">
-                      <ul className="space-y-3 text-[13px] sm:text-sm leading-relaxed">
+                      <ul className="space-y-3 text-[0.8125rem] sm:text-sm leading-relaxed">
                         {exp.details.map((d, idx) => (
                           <li key={idx} className="flex gap-3">
                             <span className="font-mono font-bold shrink-0">
@@ -189,7 +189,7 @@ export default function ExperienceSection() {
                         {exp.skills.map((s) => (
                           <span
                             key={s}
-                            className="font-mono text-[9px] sm:text-[10px] uppercase tracking-wider px-2.5 py-1 rounded-full border"
+                            className="font-mono text-[0.5625rem] sm:text-[0.625rem] uppercase tracking-wider px-2.5 py-1 rounded-full border"
                             style={{ borderColor: look.pillBorder }}
                           >
                             {s}
