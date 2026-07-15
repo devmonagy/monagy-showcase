@@ -639,7 +639,7 @@ export default function PersonalTelemetrySection() {
             <br />
             <span className="text-outline-volt">Clock</span>
           </h2>
-          <span className="hidden sm:flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.3em] text-[var(--text)] opacity-60 pb-2">
+          <span className="hidden sm:flex items-center gap-2 font-mono text-[0.625rem] uppercase tracking-[0.3em] text-[var(--text)] opacity-60 pb-2">
             <span className="w-1.5 h-1.5 rounded-full bg-[var(--accent-volt)] animate-pulse" />
             Live feeds
           </span>
@@ -656,7 +656,7 @@ export default function PersonalTelemetrySection() {
           {/* NOW PLAYING — Spotify */}
           <div className="min-[900px]:col-span-7">
             <span
-              className="telemetry-reveal flex items-center gap-2 font-mono text-[10px] sm:text-xs uppercase tracking-[0.25em]"
+              className="telemetry-reveal flex items-center gap-2 font-mono text-[0.625rem] sm:text-xs uppercase tracking-[0.25em]"
               style={{ color: "var(--accent-volt)" }}
             >
               <span
@@ -740,7 +740,7 @@ export default function PersonalTelemetrySection() {
                             </span>
                           </div>
                         </div>
-                        <span className="block font-mono text-[11px] sm:text-sm opacity-60 truncate mt-1">
+                        <span className="block font-mono text-[0.6875rem] sm:text-sm opacity-60 truncate mt-1">
                           {nowPlaying.artist} ↗
                         </span>
                       </div>
@@ -750,7 +750,7 @@ export default function PersonalTelemetrySection() {
                       <span className="text-outline block font-[family-name:var(--font-syne)] font-extrabold text-3xl sm:text-5xl uppercase leading-none">
                         Off Air
                       </span>
-                      <span className="block font-mono text-[10px] sm:text-xs uppercase tracking-widest opacity-50 mt-3">
+                      <span className="block font-mono text-[0.625rem] sm:text-xs uppercase tracking-widest opacity-50 mt-3">
                         Mo isn&apos;t playing anything right now
                       </span>
                     </div>
@@ -763,7 +763,7 @@ export default function PersonalTelemetrySection() {
           {/* NYC RIGHT NOW — live weather */}
           <div className="min-[900px]:col-span-5">
             <span
-              className="telemetry-reveal flex items-center gap-2 font-mono text-[10px] sm:text-xs uppercase tracking-[0.25em]"
+              className="telemetry-reveal flex items-center gap-2 font-mono text-[0.625rem] sm:text-xs uppercase tracking-[0.25em]"
               style={{ color: "var(--accent-cyan)" }}
             >
               <span
@@ -826,18 +826,18 @@ export default function PersonalTelemetrySection() {
                         <span className="block font-[family-name:var(--font-syne)] font-extrabold text-5xl sm:text-7xl leading-none tabular-nums text-[var(--text-contrast)]">
                           {weather.tempF}°
                         </span>
-                        <span className="block font-mono text-[11px] sm:text-sm opacity-60 mt-2">
+                        <span className="block font-mono text-[0.6875rem] sm:text-sm opacity-60 mt-2">
                           {CONDITION_LABEL[weather.condition]} · Feels{" "}
                           {weather.feelsLikeF}°
                         </span>
-                        <span className="block font-mono text-[10px] sm:text-xs uppercase tracking-wider opacity-40 mt-1">
+                        <span className="block font-mono text-[0.625rem] sm:text-xs uppercase tracking-wider opacity-40 mt-1">
                           {nycTime ?? "--:--"} in NYC · Wind {weather.windMph}{" "}
                           mph · Hum {weather.humidity}%
                         </span>
                       </div>
                     </div>
                   ) : (
-                    <span className="block font-mono text-[11px] sm:text-xs uppercase tracking-widest opacity-50 animate-pulse">
+                    <span className="block font-mono text-[0.6875rem] sm:text-xs uppercase tracking-widest opacity-50 animate-pulse">
                       Reading the NYC sky…
                     </span>
                   )}
@@ -849,7 +849,7 @@ export default function PersonalTelemetrySection() {
           {/* COUNTRIES VISITED — a small rotating globe with flag pins */}
           <div className="min-[900px]:col-span-7">
             <span
-              className="telemetry-reveal flex items-center gap-2 font-mono text-[10px] sm:text-xs uppercase tracking-[0.25em]"
+              className="telemetry-reveal flex items-center gap-2 font-mono text-[0.625rem] sm:text-xs uppercase tracking-[0.25em]"
               style={{ color: "var(--accent-cyan)" }}
             >
               <span
@@ -940,7 +940,7 @@ export default function PersonalTelemetrySection() {
                       <span className="block font-[family-name:var(--font-syne)] font-extrabold text-6xl sm:text-7xl leading-none text-[var(--accent-cyan)] tabular-nums">
                         04
                       </span>
-                      <div className="h-5 mt-2 font-mono text-[10px] sm:text-xs uppercase tracking-wider">
+                      <div className="h-5 mt-2 font-mono text-[0.625rem] sm:text-xs uppercase tracking-wider">
                         {hoveredCountry ? (
                           <span style={{ color: "var(--accent-cyan)" }}>
                             {hoveredCountry.name} — {hoveredCountry.coords}
@@ -959,7 +959,7 @@ export default function PersonalTelemetrySection() {
           {/* CURRENTLY LEARNING */}
           <div className="min-[900px]:col-span-5">
             <span
-              className="telemetry-reveal flex items-center gap-2 font-mono text-[10px] sm:text-xs uppercase tracking-[0.25em]"
+              className="telemetry-reveal flex items-center gap-2 font-mono text-[0.625rem] sm:text-xs uppercase tracking-[0.25em]"
               style={{ color: "var(--accent-volt)" }}
             >
               <span
@@ -995,14 +995,14 @@ export default function PersonalTelemetrySection() {
                   >
                     {LEARNING.title}
                   </span>
-                  <p className="font-mono text-[11px] sm:text-sm opacity-60 mt-3 mb-5 max-w-sm">
+                  <p className="font-mono text-[0.6875rem] sm:text-sm opacity-60 mt-3 mb-5 max-w-sm">
                     {LEARNING.description}
                   </p>
 
                   <div className="h-1 w-full max-w-sm rounded-full bg-[var(--border-color)] overflow-hidden">
                     <div className="h-full w-1/3 rounded-full bg-[var(--accent-volt)] animate-[learningProgress_2.2s_ease-in-out_infinite]" />
                   </div>
-                  <span className="block font-mono text-[9px] uppercase tracking-[0.25em] text-[var(--accent-volt)] opacity-70 mt-2">
+                  <span className="block font-mono text-[0.5625rem] uppercase tracking-[0.25em] text-[var(--accent-volt)] opacity-70 mt-2">
                     Skill install in progress…
                   </span>
                 </div>

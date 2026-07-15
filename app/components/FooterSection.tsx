@@ -5,7 +5,7 @@ import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { useGSAP } from "@gsap/react";
 import { NAV_LINKS, SOCIALS } from "../data/content";
-import { FINE_POINTER_QUERY } from "./SmoothScroll";
+import { FINE_POINTER_QUERY, scrollToSection } from "./SmoothScroll";
 
 if (typeof window !== "undefined") {
   gsap.registerPlugin(ScrollTrigger);
@@ -45,7 +45,7 @@ export default function FooterSection() {
       <div className="max-w-6xl mx-auto flex flex-col gap-14">
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-10">
           <div className="footer-reveal flex flex-col gap-3">
-            <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-[var(--accent-volt)]">
+            <span className="font-mono text-[0.625rem] uppercase tracking-[0.2em] text-[var(--accent-volt)]">
               Navigate
             </span>
             <ul className="flex flex-col gap-2 font-[family-name:var(--font-syne)] font-bold text-lg text-[var(--text-contrast)]">
@@ -53,6 +53,10 @@ export default function FooterSection() {
                 <li key={link.href}>
                   <a
                     href={link.href}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      scrollToSection(link.href);
+                    }}
                     className="hover:text-[var(--accent-volt)] transition-colors duration-200"
                   >
                     {link.label}
@@ -63,10 +67,10 @@ export default function FooterSection() {
           </div>
 
           <div className="footer-reveal flex flex-col gap-3">
-            <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-[var(--text)] opacity-60">
+            <span className="font-mono text-[0.625rem] uppercase tracking-[0.2em] text-[var(--text)] opacity-60">
               Stack
             </span>
-            <div className="flex flex-wrap gap-2 font-mono text-[11px] text-[var(--text)]">
+            <div className="flex flex-wrap gap-2 font-mono text-[0.6875rem] text-[var(--text)]">
               {["React", "Next.js", "TypeScript", "Tailwind CSS", "GSAP"].map(
                 (tech) => (
                   <span
@@ -81,7 +85,7 @@ export default function FooterSection() {
           </div>
 
           <div className="footer-reveal flex flex-col gap-3 sm:items-end">
-            <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-[var(--text)] opacity-60">
+            <span className="font-mono text-[0.625rem] uppercase tracking-[0.2em] text-[var(--text)] opacity-60">
               Elsewhere
             </span>
             <div className="flex flex-col gap-2 font-mono text-xs sm:items-end">
@@ -112,7 +116,7 @@ export default function FooterSection() {
           </span>
         </div>
 
-        <div className="footer-reveal flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-t border-[var(--border-color)] pt-8 font-mono text-[10px] tracking-wider text-[var(--text)] opacity-70">
+        <div className="footer-reveal flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-t border-[var(--border-color)] pt-8 font-mono text-[0.625rem] tracking-wider text-[var(--text)] opacity-70">
           <span>© {new Date().getFullYear()} Mohamed Nagy — All Rights Reserved</span>
           <span className="flex items-center gap-2">
             <span className="w-1.5 h-1.5 rounded-full bg-[var(--accent-volt)] animate-pulse" />

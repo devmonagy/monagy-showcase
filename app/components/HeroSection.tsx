@@ -5,6 +5,7 @@ import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { useGSAP } from "@gsap/react";
 import { BIO_PARAGRAPHS, SITE, TECH_STACK } from "../data/content";
+import MagneticLink from "./MagneticLink";
 
 if (typeof window !== "undefined") {
   gsap.registerPlugin(ScrollTrigger);
@@ -176,7 +177,7 @@ export default function HeroSection() {
           ))}
         </div>
 
-        <ul className="hero-fade mt-6 flex flex-wrap gap-2 max-w-xl font-mono text-[11px] sm:text-xs">
+        <ul className="hero-fade mt-6 flex flex-wrap gap-2 max-w-xl font-mono text-[0.6875rem] sm:text-xs">
           {TECH_STACK.map((tech) => (
             <li
               key={tech}
@@ -188,22 +189,22 @@ export default function HeroSection() {
         </ul>
 
         <div className="hero-fade mt-8">
-          <a
+          <MagneticLink
             href={SITE.resumeUrl}
             download
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-3 rounded-full bg-[var(--accent-volt)] text-[var(--accent-volt-ink)] px-6 py-3.5 font-mono text-xs font-bold uppercase tracking-widest hover:scale-105 transition-transform duration-200"
+            className="inline-flex items-center gap-3 rounded-full bg-[var(--accent-volt)] text-[var(--accent-volt-ink)] px-6 py-3.5 font-mono text-xs font-bold uppercase tracking-widest"
           >
             Download Resume
             <span aria-hidden="true">↓</span>
-          </a>
+          </MagneticLink>
         </div>
       </div>
 
       {/* Scroll cue */}
       <div className="hero-fade absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 pointer-events-none">
-        <span className="font-mono text-[10px] uppercase tracking-[0.3em] text-[var(--text)] opacity-70">
+        <span className="font-mono text-[0.625rem] uppercase tracking-[0.3em] text-[var(--text)] opacity-70">
           Scroll
         </span>
         <span className="w-px h-10 bg-gradient-to-b from-[var(--accent-volt)] to-transparent animate-pulse" />

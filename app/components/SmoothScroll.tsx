@@ -28,6 +28,45 @@ if (typeof window !== "undefined") {
 // projects row's native horizontal swipe.
 export const FINE_POINTER_QUERY = "(hover: hover) and (pointer: fine)";
 
+// Single in-page navigation path for every nav surface (navbar, footer).
+// Native hash jumps are wrong here twice over: inside ScrollSmoother's
+// transformed wrapper they teleport with no smoothing, and pin-spacers
+// shift sections' document positions so the jump doesn't even land where
+// the section pins. On desktop this tweens the smoother's own scrollTop
+// (the GSAP-documented anchor-nav pattern) rather than calling
+// smoother.scrollTo(..., true): on page-length upward jumps — footer
+// back to a top section — scrollTo teleported the native scroll while
+// the smoothed transform froze at the old position, exactly the
+// "doesn't smooth scroll up" bug. A fixed-duration tween of scrollTop
+// IS the scroll, so the visual can never decouple from it, and
+// overwrite:"auto" lets a second click cleanly take over mid-flight.
+// smoother.offset() measures the live, pin-aware layout. Touch devices
+// have no smoother — they fall back to native smooth scrolling, which
+// is what their scroll pipeline uses everywhere else.
+export function scrollToSection(href: string) {
+  const smoother = ScrollSmoother.get();
+  if (smoother) {
+    const top =
+      href === "#top"
+        ? 0
+        : gsap.utils.clamp(
+            0,
+            ScrollTrigger.maxScroll(window),
+            smoother.offset(href, "top top"),
+          );
+    gsap.to(smoother, {
+      scrollTop: top,
+      duration: 1.1,
+      ease: "power3.inOut",
+      overwrite: "auto",
+    });
+  } else if (href === "#top") {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  } else {
+    document.querySelector(href)?.scrollIntoView({ behavior: "smooth" });
+  }
+}
+
 export default function SmoothScroll({
   locked = false,
 }: {

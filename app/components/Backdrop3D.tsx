@@ -88,7 +88,6 @@ export default function Backdrop3D() {
     // without paying for resolution the glow can't render anyway. Drawing
     // math below stays in logical (CSS) pixels — only the backing store and
     // context transform scale with DPR, via ctx.setTransform.
-    const dpr = Math.min(window.devicePixelRatio || 1, 2);
     let width = 0;
     let height = 0;
     // The fluid root scale (globals.css) grows every rem-based element on
@@ -96,6 +95,10 @@ export default function Backdrop3D() {
     // everything around them, so they ride the same scale.
     let fluidScale = 1;
     const resize = () => {
+      // Re-read DPR on every resize, not once at mount — dragging the window
+      // between monitors with different pixel densities fires resize with a
+      // new devicePixelRatio, and a stale ratio renders soft or wasteful.
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
       width = canvas.offsetWidth;
       height = canvas.offsetHeight;
       canvas.width = width * dpr;
@@ -336,12 +339,14 @@ export default function Backdrop3D() {
         </div>
       </div>
 
-      {/* Orbit rings — dashed borders make the spin visible. Near layer. */}
+      {/* Orbit rings — dashed borders make the spin visible. Near layer.
+          Sized in rem (like the cube above) so they ride the fluid root
+          scale on 1920px+ instead of staying pinned to fixed pixels. */}
       <div className="bd-near absolute top-[52%] left-[-6%] sm:left-[2%]">
-        <div className="w-[300px] h-[300px] sm:w-[420px] sm:h-[420px] rounded-full border border-dashed border-[var(--accent-cyan)] opacity-20 animate-[ringSpin_22s_linear_infinite]" />
+        <div className="w-[18.75rem] h-[18.75rem] sm:w-[26.25rem] sm:h-[26.25rem] rounded-full border border-dashed border-[var(--accent-cyan)] opacity-20 animate-[ringSpin_22s_linear_infinite]" />
       </div>
       <div className="bd-near absolute bottom-[6%] right-[2%] sm:right-[8%]">
-        <div className="w-[200px] h-[200px] sm:w-[280px] sm:h-[280px] rounded-full border border-dashed border-[var(--accent-violet)] opacity-25 animate-[ringSpinB_18s_linear_infinite]" />
+        <div className="w-[12.5rem] h-[12.5rem] sm:w-[17.5rem] sm:h-[17.5rem] rounded-full border border-dashed border-[var(--accent-violet)] opacity-25 animate-[ringSpinB_18s_linear_infinite]" />
       </div>
 
       {/* Floating accent shards — small near-layer geometry */}

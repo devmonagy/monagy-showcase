@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ScrollSmoother } from "gsap/ScrollSmoother";
 import { NAV_LINKS, SITE } from "../data/content";
+import MagneticLink from "./MagneticLink";
+import { scrollToSection } from "./SmoothScroll";
 
 export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
@@ -16,14 +17,7 @@ export default function Navbar() {
 
   const handleClick = (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
     e.preventDefault();
-    const smoother = ScrollSmoother.get();
-    if (smoother) {
-      smoother.scrollTo(href === "#top" ? 0 : href, true, "top top");
-    } else if (href === "#top") {
-      window.scrollTo({ top: 0, behavior: "smooth" });
-    } else {
-      document.querySelector(href)?.scrollIntoView({ behavior: "smooth" });
-    }
+    scrollToSection(href);
   };
 
   return (
@@ -57,15 +51,15 @@ export default function Navbar() {
           ))}
         </ul>
 
-        <a
+        <MagneticLink
           href={SITE.resumeUrl}
           download
           target="_blank"
           rel="noopener noreferrer"
-          className="hidden sm:inline-flex items-center gap-2 rounded-full bg-[var(--accent-volt)] text-[var(--accent-volt-ink)] px-4 py-2 font-mono text-[0.6875rem] font-bold uppercase tracking-widest hover:scale-105 transition-transform duration-200"
+          className="hidden sm:inline-flex items-center gap-2 rounded-full bg-[var(--accent-volt)] text-[var(--accent-volt-ink)] px-4 py-2 font-mono text-[0.6875rem] font-bold uppercase tracking-widest"
         >
           Resume
-        </a>
+        </MagneticLink>
       </nav>
     </header>
   );

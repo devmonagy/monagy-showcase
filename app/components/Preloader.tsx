@@ -189,16 +189,16 @@ export default function Preloader({
       <div className="hidden sm:block absolute bottom-[14%] left-[8%] w-16 h-16 rounded-full border border-dashed border-[var(--accent-cyan)] opacity-25 pointer-events-none animate-[ringSpin_14s_linear_infinite]" />
 
       {/* Corner HUD tags */}
-      <span className="absolute top-6 left-6 sm:top-8 sm:left-8 font-mono text-[9px] sm:text-[10px] uppercase tracking-[0.3em] text-[var(--text)] opacity-50">
+      <span className="absolute top-6 left-6 sm:top-8 sm:left-8 font-mono text-[0.5625rem] sm:text-[0.625rem] uppercase tracking-[0.3em] text-[var(--text)] opacity-50">
         MN.SYS
       </span>
-      <span className="absolute top-6 right-6 sm:top-8 sm:right-8 font-mono text-[9px] sm:text-[10px] uppercase tracking-[0.3em] text-[var(--text)] opacity-50">
+      <span className="absolute top-6 right-6 sm:top-8 sm:right-8 font-mono text-[0.5625rem] sm:text-[0.625rem] uppercase tracking-[0.3em] text-[var(--text)] opacity-50">
         NYC // Boot
       </span>
 
       {/* Center stage */}
       <div className="absolute inset-0 flex flex-col items-center justify-center gap-5 sm:gap-7 px-6">
-        <span className="flex items-center gap-2 font-mono text-[10px] sm:text-xs uppercase tracking-[0.35em] text-[var(--accent-volt)]">
+        <span className="flex items-center gap-2 font-mono text-[0.625rem] sm:text-xs uppercase tracking-[0.35em] text-[var(--accent-volt)]">
           <span
             className="w-1.5 h-1.5 rounded-full bg-[var(--accent-volt)] animate-pulse shrink-0"
             style={{ boxShadow: "0 0 8px var(--accent-volt)" }}
@@ -261,7 +261,7 @@ export default function Preloader({
 
         <span
           ref={statusRef}
-          className="font-mono text-[10px] sm:text-xs uppercase tracking-[0.3em] text-[var(--text)] opacity-60"
+          className="font-mono text-[0.625rem] sm:text-xs uppercase tracking-[0.3em] text-[var(--text)] opacity-60"
         >
           Initializing…
         </span>
@@ -278,7 +278,7 @@ export default function Preloader({
         </div>
       </div>
 
-      <span className="absolute bottom-8 sm:bottom-10 left-1/2 -translate-x-1/2 font-mono text-[10px] uppercase tracking-[0.4em] text-[var(--accent-volt)]">
+      <span className="absolute bottom-8 sm:bottom-10 left-1/2 -translate-x-1/2 font-mono text-[0.625rem] uppercase tracking-[0.4em] text-[var(--accent-volt)]">
         Mohamed Nagy — Portfolio
       </span>
 
