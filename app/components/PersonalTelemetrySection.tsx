@@ -565,7 +565,13 @@ export default function PersonalTelemetrySection() {
           const p = projectUnit(c.lat, c.lon);
           const depth = (p.z + 1) / 2;
           const visible = p.z > -0.12;
-          el.style.transform = `translate(${p.x * pinRadius}px, ${p.y * pinRadius}px) scale(${0.55 + 0.55 * depth})`;
+          // Position only on the button (fixed 48/56px hit area, per the
+          // touch-target minimum) — the 3D depth scale goes on the flag
+          // image alone, so the perspective shrink-when-facing-away cue
+          // never shrinks the actual tappable region below spec.
+          el.style.transform = `translate(${p.x * pinRadius}px, ${p.y * pinRadius}px)`;
+          const flag = el.firstElementChild as HTMLElement | null;
+          if (flag) flag.style.transform = `scale(${0.55 + 0.55 * depth})`;
           el.style.opacity = visible ? String(0.35 + 0.65 * depth) : "0";
           el.style.pointerEvents = visible ? "auto" : "none";
           el.style.zIndex = String(10 + Math.round(depth * 20));
@@ -975,14 +981,22 @@ export default function PersonalTelemetrySection() {
                           onFocus={() => handlePinEnter(country)}
                           onBlur={handlePinLeave}
                           title={country.name}
-                          className="absolute left-1/2 top-1/2 w-6 h-6 sm:w-7 sm:h-7 -ml-3 -mt-3 sm:-ml-3.5 sm:-mt-3.5 rounded-full"
+                          // Hit area is 48px (56px desktop) — the WCAG/
+                          // Lighthouse touch-target minimum — while the
+                          // visible flag stays its original 24px (28px)
+                          // size, centered inside via flex. Sizing up the
+                          // visible flag itself to 48px would look
+                          // oversized against this small globe; growing
+                          // only the invisible tappable region keeps the
+                          // design and fixes the target-size flag.
+                          className="absolute left-1/2 top-1/2 flex items-center justify-center w-12 h-12 sm:w-14 sm:h-14 -ml-6 -mt-6 sm:-ml-7 sm:-mt-7 rounded-full"
                         >
                           {/* eslint-disable-next-line @next/next/no-img-element -- tiny fixed external SVG from a static CDN */}
                           <img
                             src={`https://flagcdn.com/${country.code}.svg`}
                             alt={country.name}
                             draggable={false}
-                            className="w-full h-full rounded-full object-cover border-2 border-[var(--card-bg)] shadow-[0_6px_16px_rgba(0,0,0,0.6)]"
+                            className="w-6 h-6 sm:w-7 sm:h-7 rounded-full object-cover border-2 border-[var(--card-bg)] shadow-[0_6px_16px_rgba(0,0,0,0.6)]"
                           />
                         </button>
                       ))}

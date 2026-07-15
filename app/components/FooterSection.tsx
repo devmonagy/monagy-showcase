@@ -136,7 +136,13 @@ export default function FooterSection() {
             child that fits inside it centers exactly. (A w-screen breakout
             was 5px off-center — 100vw includes the scrollbar.) Sizes are
             clamped so the mark always fits the container at every width. */}
-        <div className="footer-reveal select-none pointer-events-none flex justify-center leading-[0.8]">
+        {/* Purely decorative — echoes the navbar logo a screen reader
+            already announced; aria-hidden rather than relying on low
+            contrast to be effectively skipped. */}
+        <div
+          aria-hidden="true"
+          className="footer-reveal select-none pointer-events-none flex justify-center leading-[0.8]"
+        >
           <span className="font-[family-name:var(--font-syne)] font-extrabold tracking-tighter text-[clamp(6rem,24vw,30rem)] leading-[0.8]">
             <span className="text-outline-volt">MN</span>
             <span className="text-[var(--accent-volt)]">.</span>

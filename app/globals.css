@@ -113,14 +113,22 @@ h4 {
   }
 }
 
-/* Outlined ghost typography — transparent fill, hairline stroke */
+/* Outlined ghost typography — transparent fill, hairline stroke.
+   Lighthouse's contrast audit samples the actual painted stroke pixels
+   even though `color` itself is transparent, and flags real headline
+   words that use this (e.g. "Worked"/"Works"/"Clock"/"Off Air") — the
+   original 0.16/0.35 alphas landed under the 3:1 large-text AA
+   threshold. These alphas clear it with margin (~3.5:1/~4:1) while
+   staying visibly hollow, not solid. Purely decorative uses (giant
+   background ghost numbers, the footer's duplicate wordmark) are
+   `aria-hidden` instead of relying on low contrast to be "skipped". */
 .text-outline {
-  -webkit-text-stroke: 1.5px rgba(247, 247, 245, 0.16);
+  -webkit-text-stroke: 1.5px rgba(247, 247, 245, 0.42);
   color: transparent;
 }
 
 .text-outline-volt {
-  -webkit-text-stroke: 1.5px rgba(214, 255, 63, 0.35);
+  -webkit-text-stroke: 1.5px rgba(214, 255, 63, 0.45);
   color: transparent;
 }
 
