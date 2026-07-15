@@ -5,7 +5,7 @@ import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { useGSAP } from "@gsap/react";
 import Image from "next/image";
-import { CONDITION_LABEL, orbGradient } from "./WeatherVisuals";
+import { CONDITION_LABEL, orbGradient, WeatherIcon } from "./WeatherVisuals";
 import type { WeatherData } from "../api/weather/route";
 import { FINE_POINTER_QUERY } from "./SmoothScroll";
 
@@ -430,6 +430,16 @@ export default function PersonalTelemetrySection() {
       const second = track?.children[1] as HTMLElement | undefined;
       if (!wrap || !track || !copy || !second) return;
 
+      // Kill any tween still targeting this exact node from the previous
+      // title before touching it again. A previous version only relied on
+      // the old run's returned cleanup (tl.kill()) plus this same
+      // gsap.set(track, {x:0}) — that left a race across the GSAP-context
+      // teardown between titles where a killed mid-scroll transform (e.g.
+      // translateX(-1400px)) survived into the next title's "no marquee
+      // needed" branch, permanently scrolling a short title off-screen.
+      // Explicitly killing tweens on this node first, before resetting it,
+      // closes that race.
+      gsap.killTweensOf(track);
       gsap.set(track, { x: 0 });
       second.style.display = ""; // reveal so we can measure its position
 
@@ -779,7 +789,11 @@ export default function PersonalTelemetrySection() {
                 >
                   {weather ? (
                     <div className="flex items-center gap-6">
-                      <div className="relative w-20 h-20 sm:w-28 sm:h-28 shrink-0">
+                      <div
+                        className="relative w-20 h-20 sm:w-28 sm:h-28 shrink-0"
+                        role="img"
+                        aria-label={CONDITION_LABEL[weather.condition]}
+                      >
                         <div
                           className="otc-orb-ring absolute inset-0 rounded-full border border-dashed opacity-40"
                           style={{ borderColor: "var(--accent-cyan)" }}
@@ -794,14 +808,19 @@ export default function PersonalTelemetrySection() {
                           }}
                         />
                         <div
-                          className="otc-orb-core absolute inset-3 sm:inset-4 rounded-full"
+                          className="otc-orb-core absolute inset-3 sm:inset-4 rounded-full p-3 sm:p-4"
                           style={{
                             background: orbGradient(
                               weather.condition,
                               weather.isDay,
                             ),
                           }}
-                        />
+                        >
+                          <WeatherIcon
+                            condition={weather.condition}
+                            isDay={weather.isDay}
+                          />
+                        </div>
                       </div>
                       <div className="min-w-0">
                         <span className="block font-[family-name:var(--font-syne)] font-extrabold text-5xl sm:text-7xl leading-none tabular-nums text-[var(--text-contrast)]">
