@@ -61,13 +61,26 @@ export default function MagneticLink({
       // enter so dragging the window between monitors stays correct.
       let maxPull = MAX_PULL;
 
+      // Cache the layout box once per hover session instead of calling
+      // getBoundingClientRect() on every mousemove. GSAP only ever writes
+      // this element's `transform` (translate/scale/rotate), which never
+      // invalidates layout, but a *forced* reflow doesn't care whose write
+      // dirtied it — any other component's layout-affecting DOM write in
+      // the same frame (ScrollTrigger, the cursor, etc.) makes the next
+      // getBoundingClientRect() call synchronously recompute the whole
+      // page's layout. Reading the rect once at rest (before any pull is
+      // applied) and reusing it for the session turns a per-mousemove cost
+      // into a per-hover one.
+      let rect: DOMRect | null = null;
+
       const onMove = (e: MouseEvent) => {
-        const rect = el.getBoundingClientRect();
+        if (!rect) return;
         const clampPull = gsap.utils.clamp(-maxPull, maxPull);
         xTo(clampPull((e.clientX - (rect.left + rect.width / 2)) * PULL_STRENGTH));
         yTo(clampPull((e.clientY - (rect.top + rect.height / 2)) * PULL_STRENGTH));
       };
       const onEnter = () => {
+        rect = el.getBoundingClientRect();
         maxPull =
           MAX_PULL *
           (parseFloat(getComputedStyle(document.documentElement).fontSize) /
@@ -81,6 +94,7 @@ export default function MagneticLink({
         });
       };
       const onLeave = () => {
+        rect = null;
         xTo(0);
         yTo(0);
         gsap.to(el, {

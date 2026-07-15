@@ -25,6 +25,13 @@ interface NowPlayingData {
   url?: string;
 }
 
+// Unicode's Script=Arabic property (not a hand-rolled code-point range)
+// catches the actual Arabic script — covers the case Syne's Latin-only
+// glyph set can't render, which otherwise falls back to the browser's
+// generic system Arabic face and looks out of place next to the rest of
+// the site's custom type.
+const ARABIC_SCRIPT_RE = /\p{Script=Arabic}/u;
+
 const SPOTIFY_POLL_MS = 8000;
 const SPOTIFY_HIDDEN_POLL_MS = 25000;
 const WEATHER_POLL_MS = 5 * 60 * 1000;
@@ -258,6 +265,24 @@ export default function PersonalTelemetrySection() {
   const nowPlaying = useNowPlaying();
   const weather = useWeather();
   const nycTime = useNycTime();
+
+  // Title and artist are checked independently — a track can have an
+  // Arabic title with a Latin-script artist name, or vice versa.
+  const titleIsArabic = ARABIC_SCRIPT_RE.test(nowPlaying.title ?? "");
+  const artistIsArabic = ARABIC_SCRIPT_RE.test(nowPlaying.artist ?? "");
+  // sans-serif at the end matters: Reem Kufi Fun is a Kufic display face
+  // built for plain headline text and doesn't cover Arabic diacritics
+  // (tashkeel) or every hamza form. Without an explicit fallback here, a
+  // missing glyph falls through to next/font's own baked-in substitute —
+  // a Latin metrics-matched font with zero Arabic coverage — and past
+  // that, some browsers render the truly-unmapped glyph as a colored
+  // "tofu" placeholder box instead of real text. Falling through to
+  // plain sans-serif instead lets the OS's own native Arabic font (which
+  // has full diacritic coverage) render those marks in the theme's
+  // currentColor like everything else.
+  const titleFontClass = titleIsArabic
+    ? "font-[family-name:var(--font-arabic-display),sans-serif] font-bold"
+    : "font-[family-name:var(--font-syne)] font-extrabold";
 
   const isPlayingRef = useRef(nowPlaying.isPlaying);
   useEffect(() => {
@@ -634,12 +659,24 @@ export default function PersonalTelemetrySection() {
 
       <div className="relative z-10 max-w-6xl mx-auto">
         <div className="telemetry-reveal flex items-end justify-between gap-4 mb-14 sm:mb-24">
-          <h2 className="otc-title font-[family-name:var(--font-syne)] font-extrabold text-4xl sm:text-6xl md:text-7xl tracking-tighter text-[var(--text-contrast)] leading-none">
-            Off The
-            <br />
-            <span className="text-outline-volt">Clock</span>
-          </h2>
-          <span className="hidden sm:flex items-center gap-2 font-mono text-[0.625rem] uppercase tracking-[0.3em] text-[var(--text)] opacity-60 pb-2">
+          <div className="relative">
+            <h2 className="font-[family-name:var(--font-syne)] font-extrabold text-4xl sm:text-6xl md:text-7xl tracking-tighter text-[var(--text-contrast)] leading-none">
+              Off The
+              <br />
+              <span className="text-outline-volt">Clock</span>
+            </h2>
+            {/* Shadow-only duplicate — see .otc-title-glow in globals.css */}
+            <div
+              aria-hidden="true"
+              className="otc-title-glow absolute inset-0 font-[family-name:var(--font-syne)] font-extrabold text-4xl sm:text-6xl md:text-7xl tracking-tighter leading-none pointer-events-none select-none"
+              style={{ color: "transparent" }}
+            >
+              Off The
+              <br />
+              Clock
+            </div>
+          </div>
+          <span className="hidden sm:flex items-center gap-2 font-mono text-[0.625rem] uppercase tracking-[0.3em] text-[var(--text)] opacity-80 pb-2">
             <span className="w-1.5 h-1.5 rounded-full bg-[var(--accent-volt)] animate-pulse" />
             Live feeds
           </span>
@@ -727,20 +764,29 @@ export default function PersonalTelemetrySection() {
                           <div ref={titleTrackRef} className="flex w-max whitespace-nowrap">
                             <span
                               ref={titleCopyRef}
-                              className="font-[family-name:var(--font-syne)] font-extrabold text-xl sm:text-3xl text-[var(--text-contrast)] leading-tight group-hover/track:text-[var(--accent-volt)] transition-colors duration-300"
+                              dir="auto"
+                              className={`${titleFontClass} text-xl sm:text-3xl text-[var(--text-contrast)] leading-tight group-hover/track:text-[var(--accent-volt)] transition-colors duration-300`}
                             >
                               {nowPlaying.title}
                             </span>
                             <span
                               aria-hidden="true"
-                              className="ml-12 font-[family-name:var(--font-syne)] font-extrabold text-xl sm:text-3xl text-[var(--text-contrast)] leading-tight group-hover/track:text-[var(--accent-volt)] transition-colors duration-300"
+                              dir="auto"
+                              className={`${titleFontClass} ml-12 text-xl sm:text-3xl text-[var(--text-contrast)] leading-tight group-hover/track:text-[var(--accent-volt)] transition-colors duration-300`}
                               style={{ display: "none" }}
                             >
                               {nowPlaying.title}
                             </span>
                           </div>
                         </div>
-                        <span className="block font-mono text-[0.6875rem] sm:text-sm opacity-60 truncate mt-1">
+                        <span
+                          dir="auto"
+                          className={`block text-[0.6875rem] sm:text-sm opacity-80 truncate mt-1 ${
+                            artistIsArabic
+                              ? "font-[family-name:var(--font-arabic-display),sans-serif]"
+                              : "font-mono"
+                          }`}
+                        >
                           {nowPlaying.artist} ↗
                         </span>
                       </div>
@@ -750,7 +796,7 @@ export default function PersonalTelemetrySection() {
                       <span className="text-outline block font-[family-name:var(--font-syne)] font-extrabold text-3xl sm:text-5xl uppercase leading-none">
                         Off Air
                       </span>
-                      <span className="block font-mono text-[0.625rem] sm:text-xs uppercase tracking-widest opacity-50 mt-3">
+                      <span className="block font-mono text-[0.625rem] sm:text-xs uppercase tracking-widest opacity-80 mt-3">
                         Mo isn&apos;t playing anything right now
                       </span>
                     </div>
@@ -816,6 +862,12 @@ export default function PersonalTelemetrySection() {
                             ),
                           }}
                         >
+                          {/* Compositor-safe stand-in for the old filter:
+                              brightness pulse — see .otc-orb-highlight */}
+                          <div
+                            aria-hidden="true"
+                            className="otc-orb-highlight absolute inset-0 rounded-full pointer-events-none"
+                          />
                           <WeatherIcon
                             condition={weather.condition}
                             isDay={weather.isDay}
@@ -826,18 +878,18 @@ export default function PersonalTelemetrySection() {
                         <span className="block font-[family-name:var(--font-syne)] font-extrabold text-5xl sm:text-7xl leading-none tabular-nums text-[var(--text-contrast)]">
                           {weather.tempF}°
                         </span>
-                        <span className="block font-mono text-[0.6875rem] sm:text-sm opacity-60 mt-2">
+                        <span className="block font-mono text-[0.6875rem] sm:text-sm opacity-80 mt-2">
                           {CONDITION_LABEL[weather.condition]} · Feels{" "}
                           {weather.feelsLikeF}°
                         </span>
-                        <span className="block font-mono text-[0.625rem] sm:text-xs uppercase tracking-wider opacity-40 mt-1">
+                        <span className="block font-mono text-[0.625rem] sm:text-xs uppercase tracking-wider opacity-80 mt-1">
                           {nycTime ?? "--:--"} in NYC · Wind {weather.windMph}{" "}
                           mph · Hum {weather.humidity}%
                         </span>
                       </div>
                     </div>
                   ) : (
-                    <span className="block font-mono text-[0.6875rem] sm:text-xs uppercase tracking-widest opacity-50 animate-pulse">
+                    <span className="block font-mono text-[0.6875rem] sm:text-xs uppercase tracking-widest opacity-80 animate-pulse">
                       Reading the NYC sky…
                     </span>
                   )}
@@ -946,7 +998,7 @@ export default function PersonalTelemetrySection() {
                             {hoveredCountry.name} — {hoveredCountry.coords}
                           </span>
                         ) : (
-                          <span className="opacity-40">Drag the globe · hover a flag</span>
+                          <span className="opacity-80">Drag the globe · hover a flag</span>
                         )}
                       </div>
                     </div>
@@ -995,7 +1047,7 @@ export default function PersonalTelemetrySection() {
                   >
                     {LEARNING.title}
                   </span>
-                  <p className="font-mono text-[0.6875rem] sm:text-sm opacity-60 mt-3 mb-5 max-w-sm">
+                  <p className="font-mono text-[0.6875rem] sm:text-sm opacity-80 mt-3 mb-5 max-w-sm">
                     {LEARNING.description}
                   </p>
 

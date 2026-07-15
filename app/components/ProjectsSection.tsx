@@ -127,7 +127,7 @@ export default function ProjectsSection() {
           <br />
           <span className="text-outline-volt">Works</span>
         </h2>
-        <span className="hidden sm:flex items-center gap-2 font-mono text-[0.625rem] uppercase tracking-[0.3em] text-[var(--text)] opacity-60 pb-2">
+        <span className="hidden sm:flex items-center gap-2 font-mono text-[0.625rem] uppercase tracking-[0.3em] text-[var(--text)] opacity-80 pb-2">
           Scroll
           <span aria-hidden="true">→</span>
         </span>
@@ -237,6 +237,7 @@ export default function ProjectsSection() {
                     target="_blank"
                     rel="noopener noreferrer"
                     hoverRotate={-1}
+                    aria-label={`Launch ${project.title}`}
                     className="mt-2 inline-flex w-max items-center gap-2 rounded-full px-5 py-3 font-mono text-[0.6875rem] font-bold uppercase tracking-widest"
                     style={{ backgroundColor: tone.accent, color: tone.ink }}
                   >

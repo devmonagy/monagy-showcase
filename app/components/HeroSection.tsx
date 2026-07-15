@@ -177,16 +177,47 @@ export default function HeroSection() {
           ))}
         </div>
 
-        <ul className="hero-fade mt-6 flex flex-wrap gap-2 max-w-xl font-mono text-[0.6875rem] sm:text-xs">
-          {TECH_STACK.map((tech) => (
-            <li
-              key={tech}
-              className="px-3 py-2 rounded-full bg-[var(--card-bg)] border border-[var(--border-color)] text-[var(--text)]"
-            >
-              {tech}
-            </li>
-          ))}
-        </ul>
+        {/* Single hero-fade wrapper keeps this one entry in the entrance
+            stagger regardless of which layout below is showing. Mobile/
+            tablet wraps the full list naturally; desktop (min-[900px])
+            forces the frontend/backend split from TECH_STACK's own order
+            into an explicit 4-on-top, 3-on-bottom grid instead of leaving
+            it to whatever the container's width happens to wrap. */}
+        <div className="hero-fade mt-6 max-w-xl font-mono text-[0.6875rem] sm:text-xs">
+          <ul className="flex flex-wrap gap-2 min-[900px]:hidden">
+            {TECH_STACK.map((tech) => (
+              <li
+                key={tech}
+                className="px-3 py-2 rounded-full bg-[var(--card-bg)] border border-[var(--border-color)] text-[var(--text)]"
+              >
+                {tech}
+              </li>
+            ))}
+          </ul>
+
+          <div className="hidden min-[900px]:flex min-[900px]:flex-col gap-2">
+            <ul className="flex gap-2">
+              {TECH_STACK.slice(0, 4).map((tech) => (
+                <li
+                  key={tech}
+                  className="px-3 py-2 rounded-full bg-[var(--card-bg)] border border-[var(--border-color)] text-[var(--text)]"
+                >
+                  {tech}
+                </li>
+              ))}
+            </ul>
+            <ul className="flex gap-2">
+              {TECH_STACK.slice(4).map((tech) => (
+                <li
+                  key={tech}
+                  className="px-3 py-2 rounded-full bg-[var(--card-bg)] border border-[var(--border-color)] text-[var(--text)]"
+                >
+                  {tech}
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
 
         <div className="hero-fade mt-8">
           <MagneticLink
@@ -204,7 +235,7 @@ export default function HeroSection() {
 
       {/* Scroll cue */}
       <div className="hero-fade absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 pointer-events-none">
-        <span className="font-mono text-[0.625rem] uppercase tracking-[0.3em] text-[var(--text)] opacity-70">
+        <span className="font-mono text-[0.625rem] uppercase tracking-[0.3em] text-[var(--text)] opacity-80">
           Scroll
         </span>
         <span className="w-px h-10 bg-gradient-to-b from-[var(--accent-volt)] to-transparent animate-pulse" />

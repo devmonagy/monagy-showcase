@@ -10,13 +10,30 @@ export const BIO_PARAGRAPHS = [
   "I bridge visual design precision with strict production optimization, ensuring software layouts stay fully compliant with modern cross-browser standards and complete accessibility rules.",
 ];
 
+// Order is meaningful: frontend layer first (framework, language, animation,
+// styling), backend layer second (runtime, database, API layer). The hero's
+// desktop tag grid splits on this exact boundary — first 4 items on top,
+// remaining 3 below — so reordering this array reorders that grid too.
 export const TECH_STACK = [
   "React / Next.js",
   "TypeScript",
+  "GSAP",
+  "Tailwind CSS",
   "Node.js / Express",
   "MongoDB",
-  "Tailwind CSS",
   "RESTful APIs",
+];
+
+// Order is meaningful: core framework/language first, styling/motion layer
+// second. The footer's desktop tag grid splits on this exact boundary —
+// first 3 items on top, remaining 2 below — so reordering this array
+// reorders that grid too.
+export const FOOTER_STACK = [
+  "React",
+  "Next.js",
+  "TypeScript",
+  "Tailwind CSS",
+  "GSAP",
 ];
 
 export type Experience = {
@@ -150,6 +167,16 @@ export const PROJECTS: Project[] = [
     tech: ["WordPress", "PHP", "JavaScript", "HTML5", "CSS3", "Elementor"],
     image: "/assets/FusionRXDubai.webp",
     liveUrl: "https://fusionrxdubai.com/",
+  },
+  {
+    id: "shp-lawyers",
+    title: "SHP Lawyers",
+    subtitle: "WordPress Development",
+    description:
+      "A polished WordPress site for Stonberg, Hickman & Pavloff LLP, a defense litigation and insurance firm serving New York and New Jersey courts. Elementor-built pages deliver a clean, credible client-facing presence.",
+    tech: ["WordPress", "PHP", "JavaScript", "HTML5", "CSS3", "Elementor"],
+    image: "/assets/Shplawyers.webp",
+    liveUrl: "https://shplawyers.com",
   },
   {
     id: "v1-portfolio",

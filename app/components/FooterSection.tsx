@@ -4,7 +4,7 @@ import { useRef } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { useGSAP } from "@gsap/react";
-import { NAV_LINKS, SOCIALS } from "../data/content";
+import { FOOTER_STACK, NAV_LINKS, SOCIALS } from "../data/content";
 import { FINE_POINTER_QUERY, scrollToSection } from "./SmoothScroll";
 
 if (typeof window !== "undefined") {
@@ -67,25 +67,52 @@ export default function FooterSection() {
           </div>
 
           <div className="footer-reveal flex flex-col gap-3">
-            <span className="font-mono text-[0.625rem] uppercase tracking-[0.2em] text-[var(--text)] opacity-60">
+            <span className="font-mono text-[0.625rem] uppercase tracking-[0.2em] text-[var(--text)] opacity-80">
               Stack
             </span>
-            <div className="flex flex-wrap gap-2 font-mono text-[0.6875rem] text-[var(--text)]">
-              {["React", "Next.js", "TypeScript", "Tailwind CSS", "GSAP"].map(
-                (tech) => (
+            {/* Mobile/tablet wraps the full list naturally; desktop
+                (min-[900px]) forces FOOTER_STACK's own order into an
+                explicit 3-on-top, 2-on-bottom grid, same pattern as the
+                hero's tech tags. */}
+            <div className="font-mono text-[0.6875rem] text-[var(--text)]">
+              <div className="flex flex-wrap gap-2 min-[900px]:hidden">
+                {FOOTER_STACK.map((tech) => (
                   <span
                     key={tech}
                     className="px-2.5 py-1 rounded-full border border-[var(--border-color)]"
                   >
                     {tech}
                   </span>
-                ),
-              )}
+                ))}
+              </div>
+
+              <div className="hidden min-[900px]:flex min-[900px]:flex-col gap-2">
+                <div className="flex gap-2">
+                  {FOOTER_STACK.slice(0, 3).map((tech) => (
+                    <span
+                      key={tech}
+                      className="px-2.5 py-1 rounded-full border border-[var(--border-color)]"
+                    >
+                      {tech}
+                    </span>
+                  ))}
+                </div>
+                <div className="flex gap-2">
+                  {FOOTER_STACK.slice(3).map((tech) => (
+                    <span
+                      key={tech}
+                      className="px-2.5 py-1 rounded-full border border-[var(--border-color)]"
+                    >
+                      {tech}
+                    </span>
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
 
           <div className="footer-reveal flex flex-col gap-3 sm:items-end">
-            <span className="font-mono text-[0.625rem] uppercase tracking-[0.2em] text-[var(--text)] opacity-60">
+            <span className="font-mono text-[0.625rem] uppercase tracking-[0.2em] text-[var(--text)] opacity-80">
               Elsewhere
             </span>
             <div className="flex flex-col gap-2 font-mono text-xs sm:items-end">
@@ -116,7 +143,7 @@ export default function FooterSection() {
           </span>
         </div>
 
-        <div className="footer-reveal flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-t border-[var(--border-color)] pt-8 font-mono text-[0.625rem] tracking-wider text-[var(--text)] opacity-70">
+        <div className="footer-reveal flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-t border-[var(--border-color)] pt-8 font-mono text-[0.625rem] tracking-wider text-[var(--text)] opacity-80">
           <span>© {new Date().getFullYear()} Mohamed Nagy — All Rights Reserved</span>
           <span className="flex items-center gap-2">
             <span className="w-1.5 h-1.5 rounded-full bg-[var(--accent-volt)] animate-pulse" />
