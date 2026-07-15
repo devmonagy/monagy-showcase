@@ -124,21 +124,32 @@ export default function Backdrop3D() {
         // Quick flare-in, long fade-out — reads as a glint, not a blink
         const alpha = t < 0.25 ? t / 0.25 : 1 - (t - 0.25) / 0.75;
 
-        // Peak alphas still restrained against the near-black canvas — a
-        // background glint shouldn't outshine foreground text — but bright
-        // enough to actually read as a glint from anywhere on the page.
+        // The soft wide gradient alone was tuned by eye on one monitor and
+        // came out too subtle on others — a low-alpha tint blended over
+        // near-black gets crushed toward invisible by the weaker black
+        // level / gamma curve common on ordinary office-grade panels,
+        // even though it reads fine on a high-contrast display. shadowBlur
+        // adds a second, concentrated halo that's a genuine light bloom
+        // around the core rather than a gradient fade, so the glint stays
+        // visibly bright regardless of the panel it's rendered on. Reset
+        // after this shape so it can't bleed into the line stroke below.
+        ctx.shadowBlur = s.radius * 8;
+        ctx.shadowColor = `${s.color}${(0.85 * alpha).toFixed(2)})`;
+
         const glow = ctx.createRadialGradient(s.x, s.y, 0, s.x, s.y, s.radius * 4);
-        glow.addColorStop(0, `${s.color}${0.32 * alpha})`);
+        glow.addColorStop(0, `${s.color}${0.42 * alpha})`);
         glow.addColorStop(1, `${s.color}0)`);
         ctx.fillStyle = glow;
         ctx.beginPath();
         ctx.arc(s.x, s.y, s.radius * 4, 0, Math.PI * 2);
         ctx.fill();
 
-        ctx.fillStyle = `${s.color}${0.7 * alpha})`;
+        ctx.fillStyle = `${s.color}${0.92 * alpha})`;
         ctx.beginPath();
         ctx.arc(s.x, s.y, s.radius, 0, Math.PI * 2);
         ctx.fill();
+
+        ctx.shadowBlur = 0;
 
         if (s.line) {
           const len = (8 + 24 * t) * fluidScale;
@@ -190,7 +201,11 @@ export default function Backdrop3D() {
           y,
           life: 0,
           maxLife: 40 + Math.random() * 35,
-          radius: (1 + Math.random() * 0.8) * fluidScale,
+          // Slightly larger floor than before: a sub-1.5px dot anti-aliases
+          // into a faint smudge on standard (non-Retina) 1x-DPR monitors —
+          // very common on external desktop displays — even though it
+          // renders crisp on a high-density laptop panel.
+          radius: (1.3 + Math.random() * 0.9) * fluidScale,
           color:
             SPARKLE_COLORS[Math.floor(Math.random() * SPARKLE_COLORS.length)],
           line: Math.random() < 0.18,

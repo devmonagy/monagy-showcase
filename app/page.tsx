@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import dynamic from "next/dynamic";
 import Preloader from "./components/Preloader";
 import CustomCursor from "./components/CustomCursor";
 import Backdrop3D from "./components/Backdrop3D";
@@ -11,9 +12,23 @@ import Marquee from "./components/Marquee";
 import ExperienceSection from "./components/ExperienceSection";
 import ProjectsSection from "./components/ProjectsSection";
 import ContactSection from "./components/ContactSection";
-import PersonalTelemetrySection from "./components/PersonalTelemetrySection";
 import FooterSection from "./components/FooterSection";
 import { TECH_STACK } from "./data/content";
+
+// Code-split: this is the heaviest client bundle on the page (globe canvas
+// math, Spotify polling, weather fetch, learning marquee) and, per the
+// comment at its usage below, an explicitly lower-priority "bonus beat"
+// below the fold — nothing above it depends on its JS. Splitting it into
+// its own chunk keeps that weight off the critical path instead of
+// bundled into the initial script the browser must parse/execute before
+// hydration completes. ssr:false is correct here, not just faster: every
+// data point it renders (weather, now-playing, NYC time) is client-fetched
+// anyway, so there's no SEO-relevant markup to lose, and skipping SSR for
+// it avoids a placeholder-vs-fetched-data hydration mismatch entirely.
+const PersonalTelemetrySection = dynamic(
+  () => import("./components/PersonalTelemetrySection"),
+  { ssr: false },
+);
 
 export default function Home() {
   const [isLoaded, setIsLoaded] = useState(false);
@@ -75,7 +90,7 @@ export default function Home() {
                 the experience deck while floating far above "Selected
                 Works". Mobile rhythm is already symmetric. */}
             <Marquee
-              items={["TAKING SELECT PROJECTS"]}
+              items={["DESIGNED. CODED. SHIPPED."]}
               tone="cyan"
               duration={24}
               direction="right"

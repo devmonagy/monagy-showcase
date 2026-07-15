@@ -104,7 +104,7 @@ export default function ExperienceSection() {
             <br />
             <span className="text-outline-volt">Worked</span>
           </h2>
-          <span className="hidden sm:block font-mono text-[0.625rem] uppercase tracking-[0.3em] text-[var(--text)] opacity-60 pb-2">
+          <span className="hidden sm:block font-mono text-[0.625rem] uppercase tracking-[0.3em] text-[var(--text)] opacity-80 pb-2">
             2018 — Present
           </span>
         </div>

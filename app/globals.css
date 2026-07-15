@@ -196,17 +196,23 @@ h4 {
   }
 }
 
-/* Section title — slow ambient glow breathing behind the heading */
-.otc-title {
-  animation: otcTitlePulse 6s ease-in-out infinite;
+/* Section title — slow ambient glow breathing behind the heading.
+   Animating text-shadow directly forces a main-thread repaint every frame
+   (Lighthouse's "non-composited animations" audit flags this) — instead a
+   separate transparent-text duplicate carries a STATIC text-shadow, and
+   only ITS opacity animates, which the compositor can run for free. See
+   .otc-title-glow's usage in PersonalTelemetrySection.tsx. */
+.otc-title-glow {
+  text-shadow: 0 0 34px rgba(214, 255, 63, 0.22);
+  animation: otcTitleGlowPulse 6s ease-in-out infinite;
 }
-@keyframes otcTitlePulse {
+@keyframes otcTitleGlowPulse {
   0%,
   100% {
-    text-shadow: 0 0 0 transparent;
+    opacity: 0;
   }
   50% {
-    text-shadow: 0 0 34px rgba(214, 255, 63, 0.22);
+    opacity: 1;
   }
 }
 
@@ -237,7 +243,12 @@ h4 {
 }
 
 /* Weather orb — breathing core + slow rotating dashed ring. Pure CSS
-   loops: can't get orphaned across remounts the way JS tweens can. */
+   loops: can't get orphaned across remounts the way JS tweens can.
+   Scale alone (transform) is compositor-safe; the brightness pulse used
+   to ride the same keyframe as a `filter` change, which — like
+   text-shadow above — forces a repaint every frame. A plain white overlay
+   (.otc-orb-highlight) faking the brighten via opacity gets the same
+   "breathing brighter" read without ever leaving the compositor. */
 .otc-orb-core {
   animation: otcOrbBreathe 5.5s ease-in-out infinite;
 }
@@ -245,11 +256,23 @@ h4 {
   0%,
   100% {
     transform: scale(1);
-    filter: brightness(1);
   }
   50% {
     transform: scale(1.07);
-    filter: brightness(1.18);
+  }
+}
+
+.otc-orb-highlight {
+  background: #fff;
+  animation: otcOrbHighlightPulse 5.5s ease-in-out infinite;
+}
+@keyframes otcOrbHighlightPulse {
+  0%,
+  100% {
+    opacity: 0;
+  }
+  50% {
+    opacity: 0.18;
   }
 }
 
