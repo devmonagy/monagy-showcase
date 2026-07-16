@@ -7,6 +7,7 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { useGSAP } from "@gsap/react";
 import { PROJECTS } from "../data/content";
 import MagneticLink from "./MagneticLink";
+import DescriptionReveal from "./DescriptionReveal";
 
 if (typeof window !== "undefined") {
   gsap.registerPlugin(ScrollTrigger, useGSAP);
@@ -265,10 +266,16 @@ export default function ProjectsSection() {
                       push the Launch App button below the fold for the
                       entire pin). Text column at min-900 is still wide
                       enough per line that 3 lines reads as a complete
-                      thought, not a harsh truncation. */}
-                  <p className="text-xs sm:text-sm min-[900px]:text-base text-[var(--text)] leading-relaxed max-w-md line-clamp-3">
-                    {project.description}
-                  </p>
+                      thought, not a harsh truncation. DescriptionReveal
+                      is absolutely positioned for its trigger/popover, so
+                      it costs zero extra layout height on top of that
+                      budget — the "···" is a real clickable reveal
+                      instead of an inert browser ellipsis. */}
+                  <DescriptionReveal
+                    text={project.description}
+                    clampClassName="text-xs sm:text-sm min-[900px]:text-base text-[var(--text)] leading-relaxed max-w-md line-clamp-3"
+                    accent={tone.accent}
+                  />
                   <ul className="flex flex-wrap gap-1.5 font-mono text-[0.5625rem] sm:text-[0.625rem] uppercase tracking-wider text-[var(--text)]">
                     {project.tech.map((t) => (
                       <li
