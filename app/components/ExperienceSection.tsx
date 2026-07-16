@@ -8,7 +8,7 @@ import { EXPERIENCES } from "../data/content";
 import { FINE_POINTER_QUERY } from "./SmoothScroll";
 
 if (typeof window !== "undefined") {
-  gsap.registerPlugin(ScrollTrigger);
+  gsap.registerPlugin(ScrollTrigger, useGSAP);
 }
 
 // Three color-blocked looks cycling down the stack: solid volt, dark with a
@@ -52,7 +52,19 @@ export default function ExperienceSection() {
 
   useGSAP(
     () => {
+      // The fade/rise-in is non-essential decorative motion; the stacked
+      // pin below is the section's actual layout mechanism (its own
+      // touch fallback is native CSS position:sticky, no JS motion at
+      // all), so that one stays regardless of this preference.
+      const reduceMotion = window.matchMedia(
+        "(prefers-reduced-motion: reduce)",
+      ).matches;
+
       gsap.utils.toArray<HTMLElement>(".exp-card").forEach((card) => {
+        if (reduceMotion) {
+          gsap.set(card, { opacity: 1, y: 0 });
+          return;
+        }
         gsap.fromTo(
           card,
           { opacity: 0, y: 60 },

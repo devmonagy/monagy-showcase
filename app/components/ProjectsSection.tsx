@@ -9,7 +9,7 @@ import { PROJECTS } from "../data/content";
 import MagneticLink from "./MagneticLink";
 
 if (typeof window !== "undefined") {
-  gsap.registerPlugin(ScrollTrigger);
+  gsap.registerPlugin(ScrollTrigger, useGSAP);
 }
 
 const SLIDE_TONES = [

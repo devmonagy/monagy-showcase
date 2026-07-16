@@ -8,7 +8,7 @@ import { BIO_PARAGRAPHS, SITE, TECH_STACK } from "../data/content";
 import MagneticLink from "./MagneticLink";
 
 if (typeof window !== "undefined") {
-  gsap.registerPlugin(ScrollTrigger);
+  gsap.registerPlugin(ScrollTrigger, useGSAP);
 }
 
 export default function HeroSection() {
@@ -16,6 +16,18 @@ export default function HeroSection() {
 
   useGSAP(
     () => {
+      // Entrance slide/fade, the infinite ghost-strip drift, and the
+      // scroll-parallax depth cue are all non-essential motion — under
+      // reduced-motion, land every element in its resting state instantly
+      // instead of animating into it, and skip the perpetual drift/parallax
+      // entirely rather than just slowing it down.
+      if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+        gsap.set(".hero-line", { yPercent: 0 });
+        gsap.set(".hero-fade", { opacity: 1, y: 0 });
+        gsap.set(".hero-badge", { scale: 1, rotate: 0 });
+        return;
+      }
+
       // Plays immediately on mount, delay and all — the preloader covers
       // the page for ~2.85s (1.3s counter + 0.55s curtain + 0.9s slide),
       // comfortably longer than this ~2s timeline, so it's already fully

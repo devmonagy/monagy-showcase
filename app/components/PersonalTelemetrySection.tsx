@@ -10,7 +10,7 @@ import type { WeatherData } from "../api/weather/route";
 import { FINE_POINTER_QUERY } from "./SmoothScroll";
 
 if (typeof window !== "undefined") {
-  gsap.registerPlugin(ScrollTrigger);
+  gsap.registerPlugin(ScrollTrigger, useGSAP);
 }
 
 /* ------------------------------------------------------------------ */
@@ -304,18 +304,22 @@ export default function PersonalTelemetrySection() {
         "(prefers-reduced-motion: reduce)",
       ).matches;
 
-      gsap.fromTo(
-        ".telemetry-reveal",
-        { opacity: 0, y: 40 },
-        {
-          opacity: 1,
-          y: 0,
-          duration: 1,
-          stagger: 0.1,
-          ease: "power3.out",
-          scrollTrigger: { trigger: sectionRef.current, start: "top 78%" },
-        },
-      );
+      if (reduce) {
+        gsap.set(".telemetry-reveal", { opacity: 1, y: 0 });
+      } else {
+        gsap.fromTo(
+          ".telemetry-reveal",
+          { opacity: 0, y: 40 },
+          {
+            opacity: 1,
+            y: 0,
+            duration: 1,
+            stagger: 0.1,
+            ease: "power3.out",
+            scrollTrigger: { trigger: sectionRef.current, start: "top 78%" },
+          },
+        );
+      }
 
       // Desktop only — on touch the island bodies are visible from first
       // paint instead of waiting at opacity 0 for a ScrollTrigger that

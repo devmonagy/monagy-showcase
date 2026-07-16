@@ -8,7 +8,7 @@ import { FOOTER_STACK, NAV_LINKS, SOCIALS } from "../data/content";
 import { FINE_POINTER_QUERY, scrollToSection } from "./SmoothScroll";
 
 if (typeof window !== "undefined") {
-  gsap.registerPlugin(ScrollTrigger);
+  gsap.registerPlugin(ScrollTrigger, useGSAP);
 }
 
 export default function FooterSection() {
@@ -20,6 +20,11 @@ export default function FooterSection() {
       // paint rather than gated on a ScrollTrigger firing.
       const mm = gsap.matchMedia();
       mm.add(FINE_POINTER_QUERY, () => {
+        if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+          gsap.set(".footer-reveal", { opacity: 1, y: 0 });
+          return;
+        }
+
         gsap.fromTo(
           ".footer-reveal",
           { opacity: 0, y: 30 },

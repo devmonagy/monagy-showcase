@@ -7,7 +7,7 @@ import { useGSAP } from "@gsap/react";
 import { FINE_POINTER_QUERY } from "./SmoothScroll";
 
 if (typeof window !== "undefined") {
-  gsap.registerPlugin(ScrollTrigger);
+  gsap.registerPlugin(ScrollTrigger, useGSAP);
 }
 
 type MarqueeProps = {
@@ -36,6 +36,22 @@ export default function Marquee({
 
   useGSAP(
     () => {
+      // The infinite scroll, its scroll-velocity speedup/skew, and the
+      // punch-in entrance are all non-essential decorative motion — the
+      // most textbook case for prefers-reduced-motion on this whole site,
+      // given it's a literal repeat:-1 loop running forever. Land the band
+      // at its resting angle/position with no motion at all rather than
+      // just slowing the loop down. tweenRef.current stays null, which the
+      // pause/resume/togglePlay handlers below already handle safely via
+      // optional chaining.
+      if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+        gsap.set(trackRef.current, {
+          xPercent: direction === "left" ? 0 : -50,
+        });
+        gsap.set(bandRef.current, { y: 0, rotate: tilt, opacity: 1 });
+        return;
+      }
+
       const tween = gsap.fromTo(
         trackRef.current,
         { xPercent: direction === "left" ? 0 : -50 },

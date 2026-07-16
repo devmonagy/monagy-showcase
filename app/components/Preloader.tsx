@@ -4,6 +4,10 @@ import { useRef } from "react";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 
+if (typeof window !== "undefined") {
+  gsap.registerPlugin(useGSAP);
+}
+
 // Small wireframe cube — same construction as Backdrop3D's, scaled down as a
 // decorative boot-screen flourish. Hidden below sm: preserve-3d transforms
 // are cheap but not worth it on a screen this brief and this small.
