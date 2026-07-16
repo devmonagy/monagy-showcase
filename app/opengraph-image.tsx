@@ -18,7 +18,7 @@ export const alt = `${SITE.name} — Software Developer Portfolio`;
 const BAND_WORDS = ["DEVELOPER", "ENGINEER", "CREATOR"];
 
 // Font subsetting: each request must cover every glyph that weight renders.
-const SYNE_800_TEXT = "MOHAMEDNAGY.DEVELOPERENGINEERCREATOR";
+const SYNE_800_TEXT = "MN.MohamedNagy.DEVELOPERENGINEERCREATOR";
 const SYNE_700_TEXT = SITE.tagline;
 const MONO_TEXT =
   "MN.SYS NYC // PORTFOLIO · SELECT FREELANCE SOFTWARE DEVELOPER monagy.com";
@@ -290,7 +290,7 @@ export default async function OpengraphImage() {
                 color: BRAND.textContrast,
               }}
             >
-              MOHAMED
+              Mohamed
             </div>
             <div
               style={{
@@ -310,7 +310,7 @@ export default async function OpengraphImage() {
                   ring it overlaps (Syne's kerned diagonal pairs overlap even
                   with generous letter-spacing). Separate elements with a 9px
                   gap keep every ring intact. */}
-              {"NAGY".split("").map((ch, i) => (
+              {"Nagy".split("").map((ch, i) => (
                 <div
                   key={i}
                   style={{
