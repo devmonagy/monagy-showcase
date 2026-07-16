@@ -91,7 +91,7 @@ export default function Preloader({
             const step = [...STATUS_STEPS].reverse().find((s) => v >= s.at);
             if (step) statusRef.current.textContent = step.label;
           }
-          if (segmentsRef.current) {
+          if (segmentsRef.current && segmentsRef.current.children.length > 0) {
             const lit = Math.round((v / 100) * SEGMENT_COUNT);
             Array.from(segmentsRef.current.children).forEach((el, i) => {
               const seg = el as HTMLElement;
