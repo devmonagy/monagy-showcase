@@ -99,7 +99,18 @@ export default function HeroSection() {
     <section
       id="about"
       ref={sectionRef}
-      className="relative min-h-screen flex flex-col justify-center px-5 sm:px-6 md:px-8 py-24 sm:py-28 overflow-hidden"
+      // py: sm:py-12 (not the original sm:py-28) below min-[1800px] — the
+      // hero-inner content column caps at max-w-4xl well under 1024px, so
+      // its own height stays ~945px flat across the entire 1024-1366px+
+      // range regardless of width; combined with the original py-28 padding
+      // that pushed total section height ~177-225px past common laptop
+      // viewport heights (1366x768, 1024x768, 1280x720), leaving the
+      // Download Resume button, tech tags, "Scroll" cue, and the bottom of
+      // the ghost marquee below the fold. min-[1800px] restores the
+      // original roomy padding once the viewport is unambiguously a
+      // desktop monitor — not min-[1920px]: see ProjectsSection's mb-32
+      // comment for why that exact threshold is unsafe across browsers.
+      className="relative min-h-screen flex flex-col justify-center px-5 sm:px-6 md:px-8 py-24 sm:py-8 min-[1800px]:py-28 overflow-hidden"
     >
       {/* Ghost outline strip — massive, behind everything, loops forever
           and parallax-sinks on scroll so full words stay readable */}
@@ -183,13 +194,13 @@ export default function HeroSection() {
           </span>
         </h1>
 
-        <div className="overflow-hidden mt-4 sm:mt-6">
+        <div className="overflow-hidden mt-4 sm:mt-3 min-[1800px]:mt-6">
           <p className="hero-line font-[family-name:var(--font-syne)] font-bold text-xl sm:text-2xl md:text-3xl text-[var(--accent-cyan)] tracking-tight">
             {SITE.tagline}
           </p>
         </div>
 
-        <div className="hero-fade mt-8 max-w-xl space-y-4 text-sm sm:text-base leading-relaxed text-[var(--text)]">
+        <div className="hero-fade mt-8 sm:mt-5 min-[1800px]:mt-8 max-w-xl space-y-4 sm:space-y-2 min-[1800px]:space-y-4 text-sm sm:text-base leading-relaxed sm:leading-normal min-[1800px]:leading-relaxed text-[var(--text)]">
           {BIO_PARAGRAPHS.map((p, i) => (
             <p key={i}>{p}</p>
           ))}
@@ -201,7 +212,7 @@ export default function HeroSection() {
             forces the frontend/backend split from TECH_STACK's own order
             into an explicit 4-on-top, 3-on-bottom grid instead of leaving
             it to whatever the container's width happens to wrap. */}
-        <div className="hero-fade mt-6 max-w-xl font-mono text-[0.6875rem] sm:text-xs">
+        <div className="hero-fade mt-6 sm:mt-2 min-[1800px]:mt-6 max-w-xl font-mono text-[0.6875rem] sm:text-xs">
           <ul className="flex flex-wrap gap-2 min-[900px]:hidden">
             {TECH_STACK.map((tech) => (
               <li
@@ -237,7 +248,7 @@ export default function HeroSection() {
           </div>
         </div>
 
-        <div className="hero-fade mt-8">
+        <div className="hero-fade mt-8 sm:mt-3 min-[1800px]:mt-8">
           <MagneticLink
             href={SITE.resumeUrl}
             download
