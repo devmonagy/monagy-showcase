@@ -190,13 +190,23 @@ export default function DescriptionReveal({
         }}
         aria-hidden="true"
       />
+      {/* text-xs/sm/base + !leading-relaxed here deliberately mirror the
+          paragraph's own classes exactly (including the !important — see
+          ProjectsSection's clampClassName comment for why plain
+          leading-relaxed silently loses to text-base's bundled 1.5
+          line-height at 900px+). The button is the paragraph's sibling,
+          not its child, so it inherits nothing from it — without matching
+          font-size/line-height, this rendered in the default inherited
+          (larger, tighter-leading) box further up the tree, which
+          visually sat lower than the paragraph's own last-line baseline
+          despite both being bottom:0 in the same wrapper. */}
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
         aria-controls={panelId}
         aria-label={open ? "Hide full description" : "Read full description"}
-        className="group absolute bottom-0 right-0 font-mono font-bold tracking-widest cursor-pointer"
+        className="group absolute bottom-0 right-0 text-xs sm:text-sm min-[900px]:text-base !leading-relaxed font-mono font-bold tracking-widest cursor-pointer"
         style={{ color: accent }}
       >
         <span className="underline decoration-dotted underline-offset-4 opacity-90 group-hover:opacity-100 transition-opacity">

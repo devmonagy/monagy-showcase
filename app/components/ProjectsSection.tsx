@@ -282,10 +282,27 @@ export default function ProjectsSection() {
                       trigger is the only truncation cue — 4.8 rather than
                       the exact 4.875 (3 x 1.625em) leaves a hair of margin
                       so a 4th line's ascenders/descenders can never peek
-                      through at the clip edge. */}
+                      through at the clip edge.
+
+                      !leading-relaxed (not plain leading-relaxed) because
+                      min-[900px]:text-base bundles its own paired
+                      line-height (1.5rem) the same way every Tailwind
+                      text-size utility does, and being a responsive/
+                      prefixed utility it's emitted after the unprefixed
+                      leading-relaxed rule — so at 900px+ it silently won
+                      the cascade and the real line-height was 1.5, not
+                      1.625. max-h-[4.8em] assumed 1.625 at every
+                      breakpoint; against the actual 1.5 it clipped a
+                      hair into a 4th line instead of stopping just under
+                      the 3rd, leaving slack under the last visible line
+                      that pushed DescriptionReveal's trigger dots visibly
+                      below the text's own baseline. Forcing
+                      leading-relaxed to actually win makes the ratio
+                      1.625 everywhere as intended, which is what the
+                      4.8em math needs to be correct. */}
                   <DescriptionReveal
                     text={project.description}
-                    clampClassName="text-xs sm:text-sm min-[900px]:text-base text-[var(--text)] leading-relaxed max-w-md overflow-hidden max-h-[4.8em]"
+                    clampClassName="text-xs sm:text-sm min-[900px]:text-base text-[var(--text)] !leading-relaxed max-w-md overflow-hidden max-h-[4.8em]"
                     accent={tone.accent}
                   />
                   <ul className="flex flex-wrap gap-1.5 font-mono text-[0.5625rem] sm:text-[0.625rem] uppercase tracking-wider text-[var(--text)]">
