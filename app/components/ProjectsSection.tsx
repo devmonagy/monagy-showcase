@@ -119,9 +119,28 @@ export default function ProjectsSection() {
     <section
       id="projects"
       ref={sectionRef}
-      className="relative min-h-screen flex flex-col justify-center overflow-hidden"
+      // pt clears the fixed navbar (h-16/h-20, i.e. 64/80px) with a small
+      // buffer; pb clears the progress bar's own bottom-6/8/10 offset
+      // below. min-h-screen + justify-center alone centers against the
+      // *full* viewport with zero awareness of either fixed element,
+      // which is what let the heading render underneath the navbar and
+      // the button overlap the progress bar on shorter laptop viewports
+      // (1366x768, 1024x768). Kept deliberately tight rather than
+      // matching Hero's roomier py-24/28: at 1366x768 this section's own
+      // content (heading + pinned card) already fills nearly the whole
+      // viewport height, so generous padding here pushes the section
+      // taller than 100vh — since it's pinned, that overflow renders
+      // below the fold for the entire pin duration, which is worse than
+      // the original bug. See the description line-clamp and heading
+      // margin below for the other half of the fix: bounding content
+      // height, not just padding around it.
+      className="relative min-h-screen flex flex-col justify-center overflow-hidden pt-20 sm:pt-24 pb-10 sm:pb-12 min-[900px]:pb-14"
     >
-      <div className="px-5 sm:px-6 md:px-8 min-[900px]:px-10 mb-16 sm:mb-24 min-[900px]:mb-32 flex items-end justify-between gap-6 max-w-content min-[900px]:max-w-none mx-auto min-[900px]:mx-0 w-full">
+      {/* mb-32 at min-900 (the old value) ate 128px of the tight budget
+          this section has to work with once the pin has to fit inside a
+          short laptop viewport (1366x768, 1024x768) — mb-10 keeps a
+          clear gap without costing as much height. */}
+      <div className="px-5 sm:px-6 md:px-8 min-[900px]:px-10 mb-16 sm:mb-24 min-[900px]:mb-8 flex items-end justify-between gap-6 max-w-content min-[900px]:max-w-none mx-auto min-[900px]:mx-0 w-full">
         <h2 className="font-[family-name:var(--font-syne)] font-extrabold text-4xl sm:text-6xl md:text-7xl tracking-tighter text-[var(--text-contrast)] leading-none">
           Selected
           <br />
@@ -162,12 +181,21 @@ export default function ProjectsSection() {
               </span>
 
               <div className="relative z-10 grid min-[900px]:grid-cols-[1.15fr_1fr] gap-6 min-[900px]:gap-12 items-start">
-                {/* Tilted screenshot frame */}
+                {/* Tilted screenshot frame. min-[900px]:max-h ties its
+                    height to the viewport rather than purely to the
+                    column's own vw-based width: at that breakpoint the
+                    grid is a fixed row inside a pinned, full-bleed
+                    section, so a wide-but-short viewport (1366x768,
+                    1024x768) could otherwise derive a height from
+                    aspect-[16/10] taller than the space actually
+                    available. object-cover on the image inside means the
+                    crop just gets a bit wider when this caps it — no
+                    distortion. */}
                 <a
                   href={project.liveUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className={`group relative block aspect-[16/10] rounded-2xl overflow-hidden border-2 transition-transform duration-500 ease-out will-change-transform ${
+                  className={`group relative block aspect-[16/10] min-[900px]:max-h-[46vh] rounded-2xl overflow-hidden border-2 transition-transform duration-500 ease-out will-change-transform ${
                     tiltEven
                       ? "rotate-[-2.5deg] hover:rotate-0"
                       : "rotate-[2.5deg] hover:rotate-0"
@@ -214,12 +242,19 @@ export default function ProjectsSection() {
                   <h3 className="font-[family-name:var(--font-syne)] font-extrabold text-2xl sm:text-4xl min-[900px]:text-5xl tracking-tight text-[var(--text-contrast)] leading-[1.05]">
                     {project.title}
                   </h3>
-                  {/* Clamped below the pinned breakpoint: the whole card
-                      stack shares one height (the tallest card), and this
-                      section is pinned full-bleed on every device now — an
-                      unclamped description can push that shared height past
-                      a short phone's viewport and clip the button below. */}
-                  <p className="text-xs sm:text-sm min-[900px]:text-base text-[var(--text)] leading-relaxed max-w-md line-clamp-3 min-[900px]:line-clamp-none">
+                  {/* Clamped to the same 3 lines at every breakpoint: the
+                      whole card stack shares one height (the tallest
+                      card), and this section is pinned full-bleed
+                      everywhere — an unclamped/looser-clamped description
+                      can push that shared height past the viewport
+                      (phone, or the case that was actually missed: a
+                      short laptop like 1366x768, 1024x768, or 1280x720,
+                      where extra lines here were enough on their own to
+                      push the Launch App button below the fold for the
+                      entire pin). Text column at min-900 is still wide
+                      enough per line that 3 lines reads as a complete
+                      thought, not a harsh truncation. */}
+                  <p className="text-xs sm:text-sm min-[900px]:text-base text-[var(--text)] leading-relaxed max-w-md line-clamp-3">
                     {project.description}
                   </p>
                   <ul className="flex flex-wrap gap-1.5 font-mono text-[0.5625rem] sm:text-[0.625rem] uppercase tracking-wider text-[var(--text)]">
