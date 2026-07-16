@@ -136,11 +136,23 @@ export default function ProjectsSection() {
       // height, not just padding around it.
       className="relative min-h-screen flex flex-col justify-center overflow-hidden pt-20 sm:pt-24 pb-10 sm:pb-12 min-[900px]:pb-14"
     >
-      {/* mb-32 at min-900 (the old value) ate 128px of the tight budget
-          this section has to work with once the pin has to fit inside a
-          short laptop viewport (1366x768, 1024x768) — mb-10 keeps a
-          clear gap without costing as much height. */}
-      <div className="px-5 sm:px-6 md:px-8 min-[900px]:px-10 mb-16 sm:mb-24 min-[900px]:mb-8 flex items-end justify-between gap-6 max-w-content min-[900px]:max-w-none mx-auto min-[900px]:mx-0 w-full">
+      {/* mb-32 at min-900 (the pre-fix value) ate 128px of the tight
+          budget this section has to work with once the pin has to fit
+          inside a short laptop viewport (1366x768, 1024x768) — mb-8
+          keeps a clear gap there without costing as much height. Once
+          the viewport is wide (and, in practice, tall) enough to be a
+          desktop monitor rather than a laptop, that budget pressure is
+          gone, so min-[1800px] restores the original, roomier mb-32 gap
+          instead of staying artificially tight. Deliberately NOT
+          min-[1920px]: a real 1920-wide monitor's viewport can measure
+          1920 in Chrome but ~1912 in Edge (scrollbar-gutter reservation
+          differs — the exact issue globals.css's fluid-scale breakpoint
+          had), so the *same monitor* would cross a 1920px threshold in
+          one browser and not the other, landing back on the same
+          inconsistent-spacing bug this file already fixed once. 1800px
+          gives enough clearance that both browsers land on the same
+          side of it on any real 1920+ display. */}
+      <div className="px-5 sm:px-6 md:px-8 min-[900px]:px-10 mb-16 sm:mb-24 min-[900px]:mb-8 min-[1800px]:mb-32 flex items-end justify-between gap-6 max-w-content min-[900px]:max-w-none mx-auto min-[900px]:mx-0 w-full">
         <h2 className="font-[family-name:var(--font-syne)] font-extrabold text-4xl sm:text-6xl md:text-7xl tracking-tighter text-[var(--text-contrast)] leading-none">
           Selected
           <br />
