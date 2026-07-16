@@ -37,7 +37,7 @@ const reemKufi = Reem_Kufi({
   display: "swap",
 });
 
-const SITE_TITLE = "Mohamed Nagy - Software Developer";
+const SITE_TITLE = "Mohamed Nagy | Software Developer";
 const SITE_DESCRIPTION =
   "Mohamed Nagy — Software Developer. A high-energy, color-blocked showcase of experience and projects.";
 
