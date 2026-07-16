@@ -119,8 +119,16 @@ export default function HeroSection() {
       // the marquee+badge and is otherwise identical in spirit to the
       // laptop-height tier from the earlier Projects/Hero fix (verified
       // down to ~717px there). min-height:900px is the original roomy
-      // spacing for genuinely spacious viewports (desktop monitors, tall
-      // mobile portrait).
+      // spacing — but gated behind sm: (width>=640) everywhere it
+      // appears below, unlike the other tiers: roomy assumes a wide
+      // desktop-style column where bio text and tags wrap efficiently.
+      // A narrow phone that happens to be very tall — 428x926 (iPhone
+      // 14/15 Pro Max), which crosses 900px height despite being only
+      // 428px wide — doesn't have that horizontal room, so the same
+      // spacing let both bio paragraphs and the tag list wrap into
+      // enough extra lines to overflow by 98px. sm: caps that device at
+      // the tight (620px) tier regardless of its height, which is what
+      // it actually needs.
       //
       // pt is split from pb and NOT part of the height-tier ladder: it's
       // pinned to the fixed navbar's own height (h-16/h-20, i.e. 64/80px)
@@ -134,7 +142,7 @@ export default function HeroSection() {
       // exactly fills the viewport), and py-3 alone left the "Software
       // Developer" label overlapping the navbar by ~41px at 812x375 —
       // confirmed by measuring both elements' rects, not by eye.
-      className="relative min-h-screen flex flex-col justify-center px-5 sm:px-6 md:px-8 pt-16 sm:pt-20 [@media(min-height:900px)]:pt-28 pb-1 [@media(min-height:400px)]:pb-2 [@media(min-height:620px)]:pb-8 [@media(min-height:900px)]:pb-28 overflow-hidden"
+      className="relative min-h-screen flex flex-col justify-center px-5 sm:px-6 md:px-8 pt-16 sm:pt-20 sm:[@media(min-height:900px)]:!pt-28 pb-1 [@media(min-height:400px)]:pb-2 [@media(min-height:620px)]:pb-8 sm:[@media(min-height:900px)]:!pb-28 overflow-hidden"
     >
       {/* Ghost outline strip — massive, behind everything, loops forever
           and parallax-sinks on scroll so full words stay readable.
@@ -232,7 +240,7 @@ export default function HeroSection() {
           </span>
         </h1>
 
-        <div className="overflow-hidden mt-2 [@media(min-height:620px)]:mt-3 [@media(min-height:900px)]:mt-6">
+        <div className="overflow-hidden mt-2 [@media(min-height:620px)]:mt-3 sm:[@media(min-height:900px)]:!mt-6">
           {/* max-height:399px drops to text-sm: at the default text-xl,
               the full tagline wraps to 2 lines on a narrow-and-extremely-
               short viewport (measured 56px at 480x220 — over a quarter of
@@ -253,7 +261,7 @@ export default function HeroSection() {
             hidden below 620px — one paragraph reads as a complete thought
             on its own; both together is what needs the marquee/badge's
             headroom back. */}
-        <div className="hidden [@media(min-height:400px)]:block hero-fade mt-2 [@media(min-height:620px)]:mt-5 [@media(min-height:900px)]:mt-8 max-w-xl space-y-2 [@media(min-height:900px)]:space-y-4 text-sm [@media(min-height:900px)]:text-base leading-tight [@media(min-height:620px)]:leading-normal [@media(min-height:900px)]:leading-relaxed text-[var(--text)]">
+        <div className="hidden [@media(min-height:400px)]:block hero-fade mt-2 [@media(min-height:620px)]:mt-5 sm:[@media(min-height:900px)]:!mt-8 max-w-xl space-y-2 sm:[@media(min-height:900px)]:!space-y-4 text-sm sm:[@media(min-height:900px)]:!text-base leading-tight [@media(min-height:620px)]:leading-normal sm:[@media(min-height:900px)]:!leading-relaxed text-[var(--text)]">
           {BIO_PARAGRAPHS.map((p, i) => (
             <p
               key={i}
@@ -273,7 +281,7 @@ export default function HeroSection() {
             into an explicit 4-on-top, 3-on-bottom grid instead of leaving
             it to whatever the container's width happens to wrap. Hidden
             below 400px height — see the section-level comment. */}
-        <div className="hidden [@media(min-height:400px)]:block hero-fade mt-1 [@media(min-height:620px)]:mt-2 [@media(min-height:900px)]:mt-6 max-w-xl font-mono text-[0.6875rem] sm:text-xs">
+        <div className="hidden [@media(min-height:400px)]:block hero-fade mt-1 [@media(min-height:620px)]:mt-2 sm:[@media(min-height:900px)]:!mt-6 max-w-xl font-mono text-[0.6875rem] sm:text-xs">
           <ul className="flex flex-wrap gap-2 min-[900px]:hidden">
             {TECH_STACK.map((tech) => (
               <li
@@ -309,7 +317,7 @@ export default function HeroSection() {
           </div>
         </div>
 
-        <div className="hero-fade mt-2 [@media(min-height:620px)]:mt-3 [@media(min-height:900px)]:mt-8">
+        <div className="hero-fade mt-2 [@media(min-height:620px)]:mt-3 sm:[@media(min-height:900px)]:!mt-8">
           <MagneticLink
             href={SITE.resumeUrl}
             download
@@ -326,12 +334,23 @@ export default function HeroSection() {
       {/* Scroll cue — hidden below 400px height, same reasoning as bio/tags
           above: at that height it's competing directly with content that
           matters more (name, tagline, CTA) for the same few remaining
-          pixels. */}
-      <div className="hidden [@media(min-height:400px)]:flex hero-fade absolute bottom-8 left-1/2 -translate-x-1/2 flex-col items-center gap-2 pointer-events-none">
+          pixels.
+
+          Below sm (mobile): in normal flow, right after the button,
+          instead of absolute+bottom-8. Independently pinning it near the
+          section's bottom edge while the button (in flow, vertically
+          centered along with the rest of hero-inner) grows toward that
+          same edge is exactly what let them collide — measured 32px of
+          overlap between "Scroll" and the button at 375x812. Flowing it
+          in after the button can never overlap, by construction, rather
+          than chasing another pixel offset that only holds at one
+          height. sm+ keeps the original absolute-centered-at-the-bottom
+          positioning — untouched, not reported as broken there. */}
+      <div className="hidden [@media(min-height:400px)]:flex relative mt-1 sm:mt-0 sm:absolute sm:bottom-8 sm:left-1/2 sm:-translate-x-1/2 hero-fade flex-col items-center gap-2 pointer-events-none">
         <span className="font-mono text-[0.625rem] uppercase tracking-[0.3em] text-[var(--text)] opacity-80">
           Scroll
         </span>
-        <span className="w-px h-10 bg-gradient-to-b from-[var(--accent-volt)] to-transparent animate-pulse" />
+        <span className="w-px h-6 sm:h-10 bg-gradient-to-b from-[var(--accent-volt)] to-transparent animate-pulse" />
       </div>
     </section>
   );
