@@ -99,23 +99,50 @@ export default function HeroSection() {
     <section
       id="about"
       ref={sectionRef}
-      // py: sm:py-12 (not the original sm:py-28) below min-[1800px] — the
-      // hero-inner content column caps at max-w-4xl well under 1024px, so
-      // its own height stays ~945px flat across the entire 1024-1366px+
-      // range regardless of width; combined with the original py-28 padding
-      // that pushed total section height ~177-225px past common laptop
-      // viewport heights (1366x768, 1024x768, 1280x720), leaving the
-      // Download Resume button, tech tags, "Scroll" cue, and the bottom of
-      // the ghost marquee below the fold. min-[1800px] restores the
-      // original roomy padding once the viewport is unambiguously a
-      // desktop monitor — not min-[1920px]: see ProjectsSection's mb-32
-      // comment for why that exact threshold is unsafe across browsers.
-      className="relative min-h-screen flex flex-col justify-center px-5 sm:px-6 md:px-8 py-24 sm:py-8 min-[1800px]:py-28 overflow-hidden"
+      // Spacing tiers are keyed to viewport HEIGHT (min-height media
+      // queries), not width — this section's overflow was never a width
+      // problem. A 1366x768 laptop and an 812x375 landscape phone hit the
+      // exact same failure mode (content taller than the viewport, so the
+      // button/tags/marquee/scroll-cue render below the fold) despite
+      // being nowhere near each other on width, and a 375x812 *portrait*
+      // phone overflowed too even though it's plenty wide — because the
+      // old fix only touched sm:-and-up, leaving mobile's base classes at
+      // their original roomy values. Four tiers, smallest assumed height
+      // first (mobile-first, but for height): base has no media query at
+      // all — it's what a genuinely tiny viewport (a windowed browser
+      // down around 220-320px tall) gets, and at that size there simply
+      // isn't room for the marquee, badge, bio, or tags without either
+      // hiding something or rendering it all illegibly — so this tier
+      // hides them (see the individual elements below) rather than
+      // pretending "everything, just smaller" was ever going to work.
+      // min-height:400px restores bio+tags. min-height:620px restores
+      // the marquee+badge and is otherwise identical in spirit to the
+      // laptop-height tier from the earlier Projects/Hero fix (verified
+      // down to ~717px there). min-height:900px is the original roomy
+      // spacing for genuinely spacious viewports (desktop monitors, tall
+      // mobile portrait).
+      //
+      // pt is split from pb and NOT part of the height-tier ladder: it's
+      // pinned to the fixed navbar's own height (h-16/h-20, i.e. 64/80px)
+      // at every tier, growing only at the roomy 900px+ end. Using a
+      // single symmetric py here — as the first pass of this fix did —
+      // "worked" at every height down to about 620px purely by luck:
+      // flex+justify-center adds its own slack above/below whenever
+      // content is shorter than the viewport, which incidentally pushed
+      // the label down clear of the navbar even with too little real
+      // padding. At true minimum height that slack is zero (content
+      // exactly fills the viewport), and py-3 alone left the "Software
+      // Developer" label overlapping the navbar by ~41px at 812x375 —
+      // confirmed by measuring both elements' rects, not by eye.
+      className="relative min-h-screen flex flex-col justify-center px-5 sm:px-6 md:px-8 pt-16 sm:pt-20 [@media(min-height:900px)]:pt-28 pb-1 [@media(min-height:400px)]:pb-2 [@media(min-height:620px)]:pb-8 [@media(min-height:900px)]:pb-28 overflow-hidden"
     >
       {/* Ghost outline strip — massive, behind everything, loops forever
-          and parallax-sinks on scroll so full words stay readable */}
+          and parallax-sinks on scroll so full words stay readable.
+          Hidden below 620px height: purely decorative, and at that
+          height it's the first thing that has to go to fit the content
+          that actually matters (name, tagline, CTA) inside the fold. */}
       <div
-        className="hero-ghost absolute bottom-[4%] left-0 w-full overflow-hidden pointer-events-none select-none"
+        className="hidden [@media(min-height:620px)]:block hero-ghost absolute bottom-[4%] left-0 w-full overflow-hidden pointer-events-none select-none"
         aria-hidden="true"
       >
         <div className="hero-ghost-track flex w-max whitespace-nowrap">
@@ -136,8 +163,10 @@ export default function HeroSection() {
           permanent size by request after that breakpoint was fixed to stop
           firing inconsistently across browsers on ordinary 1080p monitors.
           Mobile (below sm) never crossed that old breakpoint in the first
-          place, so it stays at the original w-24 size unchanged. */}
-      <div className="hero-badge absolute top-24 right-3 sm:top-28 sm:right-10 md:right-16 w-24 h-24 sm:w-[10rem] sm:h-[10rem] pointer-events-none select-none">
+          place, so it stays at the original w-24 size unchanged. Hidden
+          below 620px height for the same reason as the marquee above —
+          decorative, lowest priority when space is this tight. */}
+      <div className="hidden [@media(min-height:620px)]:block hero-badge absolute top-24 right-3 sm:top-28 sm:right-10 md:right-16 w-24 h-24 sm:w-[10rem] sm:h-[10rem] pointer-events-none select-none">
         <div className="absolute inset-0 animate-[spinSlow_16s_linear_infinite]">
           <svg viewBox="0 0 100 100" className="w-full h-full">
             <defs>
@@ -173,7 +202,7 @@ export default function HeroSection() {
       </div>
 
       <div className="hero-inner max-w-4xl mx-auto w-full relative z-10">
-        <div className="overflow-hidden mb-3">
+        <div className="overflow-hidden mb-0 [@media(min-height:620px)]:mb-3">
           <span className="hero-line inline-flex items-center gap-3 font-mono text-xs sm:text-sm text-[var(--accent-volt)] tracking-widest uppercase font-semibold">
             <span className="w-8 h-px bg-[var(--accent-volt)]" />
             Software Developer
@@ -182,8 +211,17 @@ export default function HeroSection() {
 
         {/* clamp() keeps the longest line ("Mohamed") narrower than the
             max-w-4xl column at every viewport — fixed sizes clipped the
-            final letters behind the reveal masks. */}
-        <h1 className="font-[family-name:var(--font-syne)] font-extrabold text-[clamp(2.4rem,11.2vw,6.75rem)] leading-[0.95] tracking-tighter text-[var(--text-contrast)]">
+            final letters behind the reveal masks. The 11.2vw term is
+            purely width-driven, so on a wide-but-short viewport it can
+            render at ~90px regardless of having very little height to
+            work with — the single biggest contributor left once the
+            navbar-clearance and section-padding fixes above still didn't
+            close the gap at 800x480/960x600/1024x600. max-height:619px
+            (matching the section's own compact/ultra-compact tiers, i.e.
+            everywhere shorter than the "full content" 620px tier) swaps
+            in a smaller clamp so the name stays legible without
+            dominating a tight budget. */}
+        <h1 className="font-[family-name:var(--font-syne)] font-extrabold text-[clamp(2.4rem,11.2vw,6.75rem)] [@media(max-height:619px)]:text-[clamp(1.75rem,7vw,3.5rem)] [@media(max-height:269px)]:!text-[clamp(1.25rem,5vw,2rem)] leading-[0.95] tracking-tighter text-[var(--text-contrast)]">
           <span className="overflow-hidden block">
             <span className="hero-line block">Mohamed</span>
           </span>
@@ -194,15 +232,37 @@ export default function HeroSection() {
           </span>
         </h1>
 
-        <div className="overflow-hidden mt-4 sm:mt-3 min-[1800px]:mt-6">
-          <p className="hero-line font-[family-name:var(--font-syne)] font-bold text-xl sm:text-2xl md:text-3xl text-[var(--accent-cyan)] tracking-tight">
+        <div className="overflow-hidden mt-2 [@media(min-height:620px)]:mt-3 [@media(min-height:900px)]:mt-6">
+          {/* max-height:399px drops to text-sm: at the default text-xl,
+              the full tagline wraps to 2 lines on a narrow-and-extremely-
+              short viewport (measured 56px at 480x220 — over a quarter of
+              the entire usable budget there for one line of text
+              wrapping to two), which single-line text-sm avoids
+              entirely. */}
+          <p className="hero-line font-[family-name:var(--font-syne)] font-bold text-xl sm:text-2xl md:text-3xl [@media(max-height:399px)]:!text-sm text-[var(--accent-cyan)] tracking-tight">
             {SITE.tagline}
           </p>
         </div>
 
-        <div className="hero-fade mt-8 sm:mt-5 min-[1800px]:mt-8 max-w-xl space-y-4 sm:space-y-2 min-[1800px]:space-y-4 text-sm sm:text-base leading-relaxed sm:leading-normal min-[1800px]:leading-relaxed text-[var(--text)]">
+        {/* Hidden below 400px height — see the section-level comment for
+            why. text-sm throughout (not sm:text-base) below 900px height:
+            the old width-based bump to text-base made body copy bigger
+            exactly on the wide-but-short viewports (800-1024px wide,
+            480-600px tall) this fix targets, which is the opposite of
+            what a tight height budget needs. Second paragraph additionally
+            hidden below 620px — one paragraph reads as a complete thought
+            on its own; both together is what needs the marquee/badge's
+            headroom back. */}
+        <div className="hidden [@media(min-height:400px)]:block hero-fade mt-2 [@media(min-height:620px)]:mt-5 [@media(min-height:900px)]:mt-8 max-w-xl space-y-2 [@media(min-height:900px)]:space-y-4 text-sm [@media(min-height:900px)]:text-base leading-tight [@media(min-height:620px)]:leading-normal [@media(min-height:900px)]:leading-relaxed text-[var(--text)]">
           {BIO_PARAGRAPHS.map((p, i) => (
-            <p key={i}>{p}</p>
+            <p
+              key={i}
+              className={
+                i === 0 ? undefined : "hidden [@media(min-height:620px)]:block"
+              }
+            >
+              {p}
+            </p>
           ))}
         </div>
 
@@ -211,8 +271,9 @@ export default function HeroSection() {
             tablet wraps the full list naturally; desktop (min-[900px])
             forces the frontend/backend split from TECH_STACK's own order
             into an explicit 4-on-top, 3-on-bottom grid instead of leaving
-            it to whatever the container's width happens to wrap. */}
-        <div className="hero-fade mt-6 sm:mt-2 min-[1800px]:mt-6 max-w-xl font-mono text-[0.6875rem] sm:text-xs">
+            it to whatever the container's width happens to wrap. Hidden
+            below 400px height — see the section-level comment. */}
+        <div className="hidden [@media(min-height:400px)]:block hero-fade mt-1 [@media(min-height:620px)]:mt-2 [@media(min-height:900px)]:mt-6 max-w-xl font-mono text-[0.6875rem] sm:text-xs">
           <ul className="flex flex-wrap gap-2 min-[900px]:hidden">
             {TECH_STACK.map((tech) => (
               <li
@@ -248,7 +309,7 @@ export default function HeroSection() {
           </div>
         </div>
 
-        <div className="hero-fade mt-8 sm:mt-3 min-[1800px]:mt-8">
+        <div className="hero-fade mt-2 [@media(min-height:620px)]:mt-3 [@media(min-height:900px)]:mt-8">
           <MagneticLink
             href={SITE.resumeUrl}
             download
@@ -262,8 +323,11 @@ export default function HeroSection() {
         </div>
       </div>
 
-      {/* Scroll cue */}
-      <div className="hero-fade absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 pointer-events-none">
+      {/* Scroll cue — hidden below 400px height, same reasoning as bio/tags
+          above: at that height it's competing directly with content that
+          matters more (name, tagline, CTA) for the same few remaining
+          pixels. */}
+      <div className="hidden [@media(min-height:400px)]:flex hero-fade absolute bottom-8 left-1/2 -translate-x-1/2 flex-col items-center gap-2 pointer-events-none">
         <span className="font-mono text-[0.625rem] uppercase tracking-[0.3em] text-[var(--text)] opacity-80">
           Scroll
         </span>
