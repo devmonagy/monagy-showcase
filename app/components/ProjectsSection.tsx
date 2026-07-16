@@ -299,10 +299,21 @@ export default function ProjectsSection() {
                       below the text's own baseline. Forcing
                       leading-relaxed to actually win makes the ratio
                       1.625 everywhere as intended, which is what the
-                      4.8em math needs to be correct. */}
+                      4.8em math needs to be correct.
+
+                      pr-10 reserves 40px the browser's own text-wrapping
+                      will never fill: DescriptionReveal positions its
+                      "···" trigger dynamically at the real last line's
+                      end (not a fixed container-edge position), but if a
+                      line happened to wrap right up to the box's true
+                      edge there'd be nowhere left to put the ~31px-wide
+                      trigger without it overlapping real text. This
+                      padding guarantees that space exists structurally,
+                      so the trigger only ever has to fill it, never
+                      fight for it. */}
                   <DescriptionReveal
                     text={project.description}
-                    clampClassName="text-xs sm:text-sm min-[900px]:text-base text-[var(--text)] !leading-relaxed max-w-md overflow-hidden max-h-[4.8em]"
+                    clampClassName="text-xs sm:text-sm min-[900px]:text-base text-[var(--text)] !leading-relaxed max-w-md overflow-hidden max-h-[4.8em] pr-10"
                     accent={tone.accent}
                   />
                   <ul className="flex flex-wrap gap-1.5 font-mono text-[0.5625rem] sm:text-[0.625rem] uppercase tracking-wider text-[var(--text)]">

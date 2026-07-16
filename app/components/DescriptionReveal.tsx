@@ -1,6 +1,13 @@
 "use client";
 
-import { useEffect, useId, useRef, useState } from "react";
+import {
+  useEffect,
+  useId,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type RefObject,
+} from "react";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 
@@ -65,6 +72,51 @@ function useScrambleReveal(active: boolean, text: string) {
   return display;
 }
 
+/**
+ * Finds where the paragraph's last fully-visible line of text actually
+ * ends, so the trigger can sit flush against the real last word instead
+ * of pinned to the container's right edge — which left an awkward gap
+ * whenever that line didn't happen to reach full width. Range.
+ * getClientRects() gives the true glyph geometry per wrapped line
+ * (unlike the paragraph's own box, which is one rect for the whole
+ * clipped block); filtering to rects entirely inside the clipped box
+ * excludes a line that's only partially peeking in at the very edge.
+ * Re-measures on resize (viewport width drives the wrap) and once
+ * webfonts finish loading (metrics can shift after the fallback font's
+ * initial paint).
+ */
+function useLastLineEnd(
+  paragraphRef: RefObject<HTMLParagraphElement | null>,
+  text: string,
+) {
+  const [metrics, setMetrics] = useState<{ end: number; width: number } | null>(
+    null,
+  );
+
+  useLayoutEffect(() => {
+    const measure = () => {
+      const p = paragraphRef.current;
+      const textNode = p?.firstChild;
+      if (!p || !textNode) return;
+      const pRect = p.getBoundingClientRect();
+      const range = document.createRange();
+      range.selectNodeContents(textNode);
+      const rects = Array.from(range.getClientRects());
+      const visible = rects.filter((r) => r.bottom <= pRect.bottom + 1);
+      const last = visible[visible.length - 1];
+      if (!last) return;
+      setMetrics({ end: last.right - pRect.left, width: pRect.width });
+    };
+
+    measure();
+    window.addEventListener("resize", measure);
+    document.fonts?.ready?.then(measure).catch(() => {});
+    return () => window.removeEventListener("resize", measure);
+  }, [paragraphRef, text]);
+
+  return metrics;
+}
+
 interface DescriptionRevealProps {
   text: string;
   clampClassName: string;
@@ -91,10 +143,23 @@ export default function DescriptionReveal({
 }: DescriptionRevealProps) {
   const [open, setOpen] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
+  const textRef = useRef<HTMLParagraphElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const scanRef = useRef<HTMLDivElement>(null);
   const panelId = useId();
   const scrambled = useScrambleReveal(open, text);
+  const lastLine = useLastLineEnd(textRef, text);
+  // +6px gap so the trigger doesn't crowd the last word. The Math.min is
+  // a defensive backstop, not the primary guard against overflow — the
+  // paragraph's own pr-10 (ProjectsSection) reserves 40px of width the
+  // browser's text-wrapping can never fill, so lastLine.end is already
+  // guaranteed to leave room for the ~31px-wide trigger. This just caps
+  // it a couple px inside that reserved zone in case that padding value
+  // and this trigger's rendered width (font, tracking, "···" itself)
+  // ever drift out of sync with each other.
+  const triggerLeft = lastLine
+    ? Math.min(lastLine.end + 6, lastLine.width - 36)
+    : null;
 
   useEffect(() => {
     if (!open) return;
@@ -178,18 +243,10 @@ export default function DescriptionReveal({
 
   return (
     <div ref={wrapperRef} className="relative">
-      <p className={clampClassName}>{text}</p>
+      <p ref={textRef} className={clampClassName}>
+        {text}
+      </p>
 
-      {/* Fade mask blends the clamped text's last line into the trigger
-          so "···" reads as its continuation, not a badge stuck on top. */}
-      <span
-        className="absolute bottom-0 right-0 h-[1.4em] w-14 pointer-events-none"
-        style={{
-          background:
-            "linear-gradient(to left, var(--bg) 45%, transparent)",
-        }}
-        aria-hidden="true"
-      />
       {/* text-xs/sm/base + !leading-relaxed here deliberately mirror the
           paragraph's own classes exactly (including the !important — see
           ProjectsSection's clampClassName comment for why plain
@@ -199,15 +256,25 @@ export default function DescriptionReveal({
           font-size/line-height, this rendered in the default inherited
           (larger, tighter-leading) box further up the tree, which
           visually sat lower than the paragraph's own last-line baseline
-          despite both being bottom:0 in the same wrapper. */}
+          despite both being bottom:0 in the same wrapper.
+
+          left (not right-0) is set from useLastLineEnd: the trigger sits
+          flush against the actual last word instead of pinned to the
+          container's edge, which used to leave a variable gap whenever
+          that line didn't reach full width. Falls back to right:0 for
+          the one frame before the client-side measurement resolves. */}
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
         aria-controls={panelId}
         aria-label={open ? "Hide full description" : "Read full description"}
-        className="group absolute bottom-0 right-0 text-xs sm:text-sm min-[900px]:text-base !leading-relaxed font-mono font-bold tracking-widest cursor-pointer"
-        style={{ color: accent }}
+        className="group absolute bottom-0 text-xs sm:text-sm min-[900px]:text-base !leading-relaxed font-mono font-bold tracking-widest cursor-pointer"
+        style={{
+          color: accent,
+          left: triggerLeft !== null ? `${triggerLeft}px` : undefined,
+          right: triggerLeft === null ? 0 : undefined,
+        }}
       >
         <span className="underline decoration-dotted underline-offset-4 opacity-90 group-hover:opacity-100 transition-opacity">
           ···
