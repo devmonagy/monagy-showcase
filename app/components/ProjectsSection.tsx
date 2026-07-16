@@ -7,6 +7,7 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { useGSAP } from "@gsap/react";
 import { PROJECTS } from "../data/content";
 import MagneticLink from "./MagneticLink";
+import DescriptionReveal from "./DescriptionReveal";
 
 if (typeof window !== "undefined") {
   gsap.registerPlugin(ScrollTrigger, useGSAP);
@@ -265,10 +266,56 @@ export default function ProjectsSection() {
                       push the Launch App button below the fold for the
                       entire pin). Text column at min-900 is still wide
                       enough per line that 3 lines reads as a complete
-                      thought, not a harsh truncation. */}
-                  <p className="text-xs sm:text-sm min-[900px]:text-base text-[var(--text)] leading-relaxed max-w-md line-clamp-3">
-                    {project.description}
-                  </p>
+                      thought, not a harsh truncation. DescriptionReveal
+                      is absolutely positioned for its trigger/popover, so
+                      it costs zero extra layout height on top of that
+                      budget — the "···" is a real clickable reveal
+                      instead of an inert browser ellipsis.
+
+                      max-h-[4.8em] + overflow-hidden clips at exactly ~3
+                      leading-relaxed (1.625) lines WITHOUT line-clamp:
+                      -webkit-line-clamp always paints its own native "..."
+                      on top of whatever's inside the box, which showed up
+                      as a second, disconnected ellipsis next to
+                      DescriptionReveal's own fade+"···" trigger. Plain
+                      max-height clipping has no such glyph, so the custom
+                      trigger is the only truncation cue — 4.8 rather than
+                      the exact 4.875 (3 x 1.625em) leaves a hair of margin
+                      so a 4th line's ascenders/descenders can never peek
+                      through at the clip edge.
+
+                      !leading-relaxed (not plain leading-relaxed) because
+                      min-[900px]:text-base bundles its own paired
+                      line-height (1.5rem) the same way every Tailwind
+                      text-size utility does, and being a responsive/
+                      prefixed utility it's emitted after the unprefixed
+                      leading-relaxed rule — so at 900px+ it silently won
+                      the cascade and the real line-height was 1.5, not
+                      1.625. max-h-[4.8em] assumed 1.625 at every
+                      breakpoint; against the actual 1.5 it clipped a
+                      hair into a 4th line instead of stopping just under
+                      the 3rd, leaving slack under the last visible line
+                      that pushed DescriptionReveal's trigger dots visibly
+                      below the text's own baseline. Forcing
+                      leading-relaxed to actually win makes the ratio
+                      1.625 everywhere as intended, which is what the
+                      4.8em math needs to be correct.
+
+                      pr-10 reserves 40px the browser's own text-wrapping
+                      will never fill: DescriptionReveal positions its
+                      "···" trigger dynamically at the real last line's
+                      end (not a fixed container-edge position), but if a
+                      line happened to wrap right up to the box's true
+                      edge there'd be nowhere left to put the ~31px-wide
+                      trigger without it overlapping real text. This
+                      padding guarantees that space exists structurally,
+                      so the trigger only ever has to fill it, never
+                      fight for it. */}
+                  <DescriptionReveal
+                    text={project.description}
+                    clampClassName="text-xs sm:text-sm min-[900px]:text-base text-[var(--text)] !leading-relaxed max-w-md overflow-hidden max-h-[4.8em] pr-10"
+                    accent={tone.accent}
+                  />
                   <ul className="flex flex-wrap gap-1.5 font-mono text-[0.5625rem] sm:text-[0.625rem] uppercase tracking-wider text-[var(--text)]">
                     {project.tech.map((t) => (
                       <li
