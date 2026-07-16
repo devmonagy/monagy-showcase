@@ -57,8 +57,16 @@ html {
    proportionally everywhere without per-component overrides. Plateaus
    around ~2900px — 8K needs pixel density more than linear content
    growth, since it's typically viewed at the same physical distance as
-   1440p/4K, so runaway scaling past that point would just waste space. */
-@media (min-width: 1920px) {
+   1440p/4K, so runaway scaling past that point would just waste space.
+   Threshold sits at 2560px (not 1920px) deliberately: a plain 1920x1080
+   monitor's CSS viewport is at most 1920px wide and often a few px less
+   depending on the browser's scrollbar-gutter reservation, so a
+   1920px breakpoint put ordinary 1080p users right on the trigger edge
+   — Chrome (no gutter reserved) crossed it while Edge (gutter reserved)
+   didn't, producing a ~25% root font-size difference between browsers
+   on the identical monitor. 2560px leaves every 1080p viewport,
+   scrollbar or not, safely below the line. */
+@media (min-width: 2560px) {
   html {
     font-size: clamp(16px, 0.62vw + 8.1px, 26px);
   }

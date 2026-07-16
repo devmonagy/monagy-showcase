@@ -119,8 +119,13 @@ export default function HeroSection() {
         </div>
       </div>
 
-      {/* Spinning circular badge */}
-      <div className="hero-badge absolute top-24 right-3 sm:top-28 sm:right-10 md:right-16 w-24 h-24 sm:w-32 sm:h-32 pointer-events-none select-none">
+      {/* Spinning circular badge — fixed size regardless of viewport,
+          deliberately larger than the plain w-24/w-32 base: this is the
+          ~1.25x scale it used to render at under the old 1920px
+          fluid-root-scale breakpoint (see globals.css), kept as the
+          permanent size by request after that breakpoint was fixed to stop
+          firing inconsistently across browsers on ordinary 1080p monitors. */}
+      <div className="hero-badge absolute top-24 right-3 sm:top-28 sm:right-10 md:right-16 w-[7.5rem] h-[7.5rem] sm:w-[10rem] sm:h-[10rem] pointer-events-none select-none">
         <div className="absolute inset-0 animate-[spinSlow_16s_linear_infinite]">
           <svg viewBox="0 0 100 100" className="w-full h-full">
             <defs>
@@ -150,7 +155,7 @@ export default function HeroSection() {
             </text>
           </svg>
         </div>
-        <span className="absolute inset-0 flex items-center justify-center text-[var(--accent-volt)] text-xl">
+        <span className="absolute inset-0 flex items-center justify-center text-[var(--accent-volt)] text-[1.5625rem]">
           ↓
         </span>
       </div>

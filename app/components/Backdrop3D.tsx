@@ -42,10 +42,12 @@ const SPARKLE_COLORS = [
 ];
 
 // 3D wireframe cube built from six bordered faces — CSS preserve-3d, no WebGL.
-// Sized in rem (150px at the 16px base root) rather than raw JS pixels so it
-// grows with the fluid root scale at 1920px+ the same way the ambient orbs
-// around it already do, instead of staying pinned to a fixed size.
-const CUBE_SIZE_REM = 9.375;
+// Fixed size regardless of viewport, deliberately larger than the plain
+// 9.375rem base: this is the ~1.25x scale it used to render at under the old
+// 1920px fluid-root-scale breakpoint (see globals.css), kept as the
+// permanent size by request after that breakpoint was fixed to stop
+// firing inconsistently across browsers on ordinary 1080p monitors.
+const CUBE_SIZE_REM = 9.375 * 1.25;
 const HALF_REM = CUBE_SIZE_REM / 2;
 const CUBE_FACES: React.CSSProperties[] = [
   { transform: `translateZ(${HALF_REM}rem)` },
