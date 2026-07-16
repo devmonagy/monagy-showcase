@@ -42,20 +42,20 @@ const SPARKLE_COLORS = [
 ];
 
 // 3D wireframe cube built from six bordered faces — CSS preserve-3d, no WebGL.
-// Fixed size regardless of viewport, deliberately larger than the plain
-// 9.375rem base: this is the ~1.25x scale it used to render at under the old
-// 1920px fluid-root-scale breakpoint (see globals.css), kept as the
+// Size comes from --cube-size/--cube-half (globals.css): sm+ is fixed at
+// ~1.25x the original 9.375rem base — the scale it used to render at
+// under the old 1920px fluid-root-scale breakpoint — kept as the
 // permanent size by request after that breakpoint was fixed to stop
 // firing inconsistently across browsers on ordinary 1080p monitors.
-const CUBE_SIZE_REM = 9.375 * 1.25;
-const HALF_REM = CUBE_SIZE_REM / 2;
+// Below sm, the vars hold the original, un-bumped size: mobile viewports
+// never crossed that old breakpoint in the first place.
 const CUBE_FACES: React.CSSProperties[] = [
-  { transform: `translateZ(${HALF_REM}rem)` },
-  { transform: `rotateY(180deg) translateZ(${HALF_REM}rem)` },
-  { transform: `rotateY(90deg) translateZ(${HALF_REM}rem)` },
-  { transform: `rotateY(-90deg) translateZ(${HALF_REM}rem)` },
-  { transform: `rotateX(90deg) translateZ(${HALF_REM}rem)` },
-  { transform: `rotateX(-90deg) translateZ(${HALF_REM}rem)` },
+  { transform: `translateZ(var(--cube-half))` },
+  { transform: `rotateY(180deg) translateZ(var(--cube-half))` },
+  { transform: `rotateY(90deg) translateZ(var(--cube-half))` },
+  { transform: `rotateY(-90deg) translateZ(var(--cube-half))` },
+  { transform: `rotateX(90deg) translateZ(var(--cube-half))` },
+  { transform: `rotateX(-90deg) translateZ(var(--cube-half))` },
 ];
 
 export default function Backdrop3D() {
@@ -336,13 +336,20 @@ export default function Backdrop3D() {
       />
 
       {/* Wireframe cube — near layer, top right. Outer div floats, inner
-          div tumbles; nesting keeps both transforms from fighting. */}
+          div tumbles; nesting keeps both transforms from fighting.
+          scale-[0.55] here is inert on this element (and always has
+          been): floatY's keyframes set `transform: translateY(...)`
+          directly in every step, which fully overrides this static
+          `transform: scale()` for as long as the animation runs. The
+          responsive size difference is handled by --cube-size/--cube-half
+          in globals.css instead (plain width/height, unaffected by that
+          conflict). */}
       <div className="bd-near absolute top-[6%] right-[2%] sm:top-[10%] sm:right-[10%] scale-[0.55] sm:scale-100 origin-top-right animate-[floatY_9s_ease-in-out_infinite]">
         <div
           className="relative animate-[spinCube_32s_linear_infinite]"
           style={{
-            width: `${CUBE_SIZE_REM}rem`,
-            height: `${CUBE_SIZE_REM}rem`,
+            width: "var(--cube-size)",
+            height: "var(--cube-size)",
             transformStyle: "preserve-3d",
           }}
         >

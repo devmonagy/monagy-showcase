@@ -72,6 +72,24 @@ html {
   }
 }
 
+/* Hero wireframe cube size (Backdrop3D). sm+ is fixed at 1.25x the base
+   9.375rem/4.6875rem — the size it used to render at under the old
+   1920px fluid-root-scale breakpoint above — kept permanently at request
+   after that breakpoint moved to 2560px. Below sm keeps the original,
+   un-bumped size: mobile viewports never crossed the old breakpoint, so
+   the bug never touched them and their size shouldn't change either. */
+:root {
+  --cube-size: 9.375rem;
+  --cube-half: 4.6875rem;
+}
+
+@media (min-width: 640px) {
+  :root {
+    --cube-size: 11.71875rem;
+    --cube-half: 5.859375rem;
+  }
+}
+
 ::-webkit-scrollbar {
   width: 10px;
   height: 10px;
