@@ -1,20 +1,48 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
+import { FINE_POINTER_QUERY } from "./SmoothScroll";
+
+if (typeof window !== "undefined") {
+  gsap.registerPlugin(useGSAP);
+}
 
 const HOVER_SELECTOR = "a, button, [role='button'], input, textarea, select";
+
+// useSyncExternalStore, not useState+useEffect: setting state synchronously
+// inside an effect body (the previous shape here) is a lint error
+// (react-hooks/set-state-in-effect) precisely because it causes a
+// throwaway extra render — but the naive fix of reading matchMedia
+// straight in the render body would make the server's render (no
+// `window`, always "disabled") disagree with the client's very first
+// render, which IS real content (null vs. the cursor markup) and would
+// trip a hydration mismatch. useSyncExternalStore is React's actual API
+// for this exact "browser-only value, must not desync SSR from the
+// client's first paint" case — getServerSnapshot supplies the SSR/first-
+// paint answer, getSnapshot takes over once mounted, no extra render.
+function subscribe(callback: () => void) {
+  const mql = window.matchMedia(FINE_POINTER_QUERY);
+  mql.addEventListener("change", callback);
+  return () => mql.removeEventListener("change", callback);
+}
+function getSnapshot() {
+  return window.matchMedia(FINE_POINTER_QUERY).matches;
+}
+function getServerSnapshot() {
+  return false;
+}
 
 export default function CustomCursor() {
   const dotRef = useRef<HTMLDivElement>(null);
   const ringRef = useRef<HTMLDivElement>(null);
-  const [enabled, setEnabled] = useState(false);
+  const enabled = useSyncExternalStore(
+    subscribe,
+    getSnapshot,
+    getServerSnapshot,
+  );
   const [isHovering, setIsHovering] = useState(false);
-
-  useEffect(() => {
-    setEnabled(window.matchMedia("(hover: hover) and (pointer: fine)").matches);
-  }, []);
 
   useEffect(() => {
     if (!enabled) return;

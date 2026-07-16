@@ -5,6 +5,10 @@ import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import { FINE_POINTER_QUERY } from "./SmoothScroll";
 
+if (typeof window !== "undefined") {
+  gsap.registerPlugin(useGSAP);
+}
+
 // How far (px) the button may drift toward the cursor. Kept small on
 // purpose — the pull should read as weight, not as the button escaping.
 const MAX_PULL = 12;

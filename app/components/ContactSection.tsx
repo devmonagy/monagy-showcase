@@ -8,7 +8,7 @@ import { SITE, SOCIALS } from "../data/content";
 import { FINE_POINTER_QUERY } from "./SmoothScroll";
 
 if (typeof window !== "undefined") {
-  gsap.registerPlugin(ScrollTrigger);
+  gsap.registerPlugin(ScrollTrigger, useGSAP);
 }
 
 // 12-ray starburst — rotates slowly behind the headline stack.
@@ -19,11 +19,21 @@ export default function ContactSection() {
 
   useGSAP(
     () => {
+      const reduceMotion = window.matchMedia(
+        "(prefers-reduced-motion: reduce)",
+      ).matches;
+
       // Desktop-only reveals: on touch devices this content stays visible
       // from first paint — real phones repeatedly failed to fire these
       // ScrollTriggers on time, leaving the section blank mid-scroll.
       const mm = gsap.matchMedia();
       mm.add(FINE_POINTER_QUERY, () => {
+        if (reduceMotion) {
+          gsap.set(".contact-reveal", { opacity: 1, y: 0 });
+          gsap.set(".contact-punch", { scale: 1 });
+          return;
+        }
+
         gsap.fromTo(
           ".contact-reveal",
           { opacity: 0, y: 50 },
@@ -54,7 +64,11 @@ export default function ContactSection() {
     { scope: sectionRef },
   );
 
+  // Matches MagneticLink's own reduced-motion guard — this is a hand-rolled
+  // equivalent of that shared component's pull effect, so it should respect
+  // the same preference.
   const handleMove = (e: React.MouseEvent<HTMLAnchorElement>) => {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     const el = e.currentTarget;
     const rect = el.getBoundingClientRect();
     const dx = e.clientX - rect.left - rect.width / 2;

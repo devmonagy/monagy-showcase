@@ -4,9 +4,15 @@ import { useEffect, useRef } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { ScrollSmoother } from "gsap/ScrollSmoother";
+import { useGSAP } from "@gsap/react";
 
 if (typeof window !== "undefined") {
-  gsap.registerPlugin(ScrollTrigger, ScrollSmoother);
+  // useGSAP registered alongside the rest: it accommodates cases where a
+  // different gsap module instance ends up loaded (a real risk across
+  // Next.js's server/client/chunk boundaries) by pointing the hook at
+  // this exact core instance rather than whichever one @gsap/react
+  // resolved at import time.
+  gsap.registerPlugin(ScrollTrigger, ScrollSmoother, useGSAP);
 
   // Mobile Safari/Chrome fire resize events as the address bar collapses
   // and expands during scroll — ScrollTrigger recalculates (and re-pins)
