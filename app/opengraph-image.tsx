@@ -11,15 +11,11 @@ export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 export const alt = `${SITE.name} — Software Developer Portfolio`;
 
-// The marquee band's repeating words — same trio as the hero's ghost strip.
-const BAND_WORDS = [
-  "DEVELOPER",
-  "ENGINEER",
-  "CREATOR",
-  "DEVELOPER",
-  "ENGINEER",
-  "CREATOR",
-];
+// Same trio as the hero's ghost strip. Listed once, not repeated: the
+// live site's marquee repeats words to sell an infinite scroll illusion,
+// but this is a static poster — repeating them here just overflowed the
+// centered group further past the canvas edges than the single trio does.
+const BAND_WORDS = ["DEVELOPER", "ENGINEER", "CREATOR"];
 
 // Font subsetting: each request must cover every glyph that weight renders.
 const SYNE_800_TEXT = "MOHAMEDNAGY.DEVELOPERENGINEERCREATOR";
@@ -440,12 +436,20 @@ export default async function OpengraphImage() {
           style={{
             display: "flex",
             position: "absolute",
-            left: -80,
+            // The slab itself still bleeds off both edges (left:-100 +
+            // width:1400 bleeds 100px past each side of the 1200px canvas,
+            // symmetric) for the full-bleed diagonal look — but the words
+            // are centered WITHIN that oversized box via justifyContent
+            // below, rather than left-aligned against its off-canvas edge.
+            // Left-aligned content in a wider-than-canvas absolute box is
+            // exactly what clipped "DEVELOPER" at the left before.
+            left: -100,
             bottom: 116,
             width: 1400,
             flexDirection: "row",
+            justifyContent: "center",
             alignItems: "center",
-            gap: 30,
+            gap: 34,
             padding: "15px 40px",
             background: BRAND.volt,
             boxShadow: "0 18px 60px rgba(0,0,0,0.55)",
@@ -459,7 +463,7 @@ export default async function OpengraphImage() {
                 display: "flex",
                 flexDirection: "row",
                 alignItems: "center",
-                gap: 30,
+                gap: 18,
               }}
             >
               <div
@@ -467,7 +471,7 @@ export default async function OpengraphImage() {
                   display: "flex",
                   fontFamily: "Syne",
                   fontWeight: 800,
-                  fontSize: 38,
+                  fontSize: 36,
                   letterSpacing: -1,
                   // Solid ink vs. translucent ink — the site's marquee
                   // alternates solid/outline, but the faked shadow-outline
