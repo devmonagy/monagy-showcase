@@ -694,3 +694,41 @@ the pane's 1Hz rAF leave MINUTES of lag-smoothed tween crawl fighting
 each other — always reload to a fresh state between gesture scenarios,
 space the pointermoves (≥200ms), and give settles 8-12s + pumped frames
 before reading transforms.
+
+## Eleventh pass — buried cards never move inward; scroll-past resets the deck
+
+Two follow-ups on the tenth pass, both desktop-only (they live inside
+the same fine-pointer matchMedia block):
+
+- **No inward motion, ever.** Watching a drop, the owner saw the
+  just-covered card "leave its sticking-out position and reset more
+  inward" — that was the press accent (slot+18px during the hold,
+  relaxing back to the slot on release) plus the peek flourish (lean out
+  30px, elastically pull back). Both removed. Slots now carry `{x, rot}`
+  (the fan TILT persists too — no straightening), the press tweens
+  buried cards straight to their exact slot, and release touches only
+  scale. A buried card moves outward when dealt its slot, then holds its
+  ground — the only thing that ever moves one back is:
+- **Full scroll-past reset.** A ScrollTrigger spanning the section
+  (`start "top bottom"` / `end "bottom top"`) fires `resetDeck` on
+  onLeave AND onLeaveBack — i.e. only once the deck is entirely
+  off-screen in either direction. Reset = slots back to `{0, baseRot}`,
+  instant `gsap.set` of every card to flush/untilted/unscaled (sets, not
+  tweens — nobody can see it, and `overwrite: "auto"` kills any
+  still-flying throw), wraps' z-index cleared back to DOM paint order,
+  zTop rebased. Re-entering the section always shows the pristine
+  lined-up first-visit deck.
+
+Verification honesty note: mid-round, the embedded pane's renderer went
+from ~1Hz rAF to FULLY SUSPENDED — a counter registered 0 rAF ticks in
+24s, so no GSAP tween (including previously-verified ones like the
+grabbed card's plain scale-up) could advance at all, and `computer`
+screenshots (the usual ticker pump) were timing out too. What WAS
+verified: tsc/eslint clean; onPress fires (z-index bump measured
+synchronously); the slot-dealing math is unchanged from the tenth
+pass's live-measured `[-24,+24]` run apart from adding `rot`. The
+release/reset behavior is code REMOVAL plus synchronous sets riding the
+standard section-bounds trigger pattern. First real-browser session
+should feel-check: drop a card onto another (covered card fans out and
+stays, no inward snap), and scroll fully past then back (deck flush
+again).

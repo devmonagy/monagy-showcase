@@ -192,75 +192,49 @@ export default function ExperienceSection() {
         cards.forEach((c) =>
           baseRots.set(c, Number(gsap.getProperty(c, "rotation")) || 0),
         );
-        // Stick-out offsets are EARNED, not preloaded: the deck loads
-        // flush-aligned (every card at x:0, edges lined up left and right
-        // — the resting look the owner asked back for), and a card only
-        // gains a persistent sideways offset the first time a grab fans
-        // it out. From then on it KEEPS that offset — release returns it
-        // to its stuck-out slot, never to flush center, so anything a
-        // grab once revealed stays visibly (and actually) grabbable. The
-        // previous pass instead baked the fan into the load-time layout,
-        // which the owner explicitly walked back: aligned at rest,
-        // sticky after interaction.
+        // Stick-out slots are EARNED, not preloaded: the deck loads
+        // flush-aligned (every card at x:0, edges lined up left and right),
+        // and a card only gains a slot the first time a grab buries it.
+        // A slot is a one-way, hold-your-ground state — position AND the
+        // little fan tilt persist. There is deliberately NO motion that
+        // ever moves a buried card back INWARD (no press accent that
+        // relaxes on release, no peek that elastically returns): the
+        // owner watched the old release pull the just-covered card back
+        // toward center/straight and asked for exactly that to stop.
+        // Cards only move outward (when dealt), stay put, or reset
+        // wholesale when the deck fully leaves the viewport (below).
         const FAN_X_BASE = 24;
         const FAN_X_STEP = 12;
-        const baseXs = new Map<HTMLElement, number>();
-        cards.forEach((c) => baseXs.set(c, 0));
+        const FAN_TILT = 1.3;
+        const slots = new Map<HTMLElement, { x: number; rot: number }>();
+        const resetSlots = () => {
+          cards.forEach((c) =>
+            slots.set(c, { x: 0, rot: baseRots.get(c) ?? 0 }),
+          );
+        };
+        resetSlots();
         // Called at the top of every press: the grabbed card's home
-        // becomes center-front (0), and any still-flush buried card gets
-        // dealt a persistent slot on whichever side currently holds
-        // fewer cards — so the buried set always splits left/right and
-        // every edge clears the front card's silhouette. Cards that
-        // already own a slot keep it (side AND magnitude), so reshuffles
-        // never yank a card across the deck.
+        // becomes center-front (0, its own resting tilt), and any
+        // still-flush buried card gets dealt a persistent slot on
+        // whichever side currently holds fewer cards — so the buried set
+        // always splits left/right and every edge clears the front
+        // card's silhouette. Cards that already own a slot keep it (side
+        // AND magnitude), so reshuffles never yank a card across the
+        // deck.
         const assignFanSlots = (pressed: HTMLElement) => {
           const others = cards.filter((c) => c !== pressed);
-          let left = others.filter((o) => (baseXs.get(o) ?? 0) < 0).length;
-          let right = others.filter((o) => (baseXs.get(o) ?? 0) > 0).length;
+          let left = others.filter((o) => (slots.get(o)?.x ?? 0) < 0).length;
+          let right = others.filter((o) => (slots.get(o)?.x ?? 0) > 0).length;
           others.forEach((o) => {
-            if ((baseXs.get(o) ?? 0) !== 0) return;
+            if ((slots.get(o)?.x ?? 0) !== 0) return;
             const dir = left <= right ? -1 : 1;
             const k = dir < 0 ? left++ : right++;
-            baseXs.set(o, dir * (FAN_X_BASE + FAN_X_STEP * k));
+            slots.set(o, {
+              x: dir * (FAN_X_BASE + FAN_X_STEP * k),
+              rot: (baseRots.get(o) ?? 0) + FAN_TILT * dir,
+            });
           });
-          baseXs.set(pressed, 0);
-        };
-        // Front-of-deck history: releasing a grab peeks the card that was
-        // JUST covered (the previous front), not everything.
-        const deck: { front: HTMLElement | null; prev: HTMLElement | null } = {
-          front: null,
-          prev: null,
-        };
-        // The newly-buried card leans out FURTHER from its own persisted
-        // slot, holds a beat, then elastically settles back to that slot
-        // (not to center) — "I'm still back here, grab me." Rotation
-        // direction follows the card's own resting tilt; the extra lean
-        // follows its own slot's side so the motion reads as an accent
-        // on the deck's existing geometry, not a contradicting shove.
-        const peekBuried = (c: HTMLElement) => {
-          const b = baseRots.get(c) ?? 0;
-          const bx = baseXs.get(c) ?? 0;
-          const rotDir = b >= 0 ? 1 : -1;
-          const xDir = bx === 0 ? 1 : Math.sign(bx);
-          gsap
-            .timeline()
-            .to(c, {
-              x: bx + 30 * xDir,
-              rotation: b + 2.2 * rotDir,
-              duration: 0.4,
-              ease: "power3.out",
-              overwrite: "auto",
-            })
-            .to(
-              c,
-              {
-                x: bx,
-                rotation: b,
-                duration: 1.1,
-                ease: "elastic.out(1, 0.55)",
-              },
-              "+=0.5",
-            );
+          slots.set(pressed, { x: 0, rot: baseRots.get(pressed) ?? 0 });
         };
         const draggables = cards.map((card) => {
           const wrap = card.closest<HTMLElement>(".exp-card-wrap");
@@ -272,14 +246,14 @@ export default function ExperienceSection() {
           });
           return Draggable.create(card, {
             type: "x,y",
-            // Inertia's x target reads the card's CURRENT persisted
-            // offset at release time (a function, not a value captured at
-            // create time — baseXs changes with every press now): the
-            // grabbed card's home is set to 0 on press, so a throw
+            // Inertia's x target reads the card's CURRENT slot at release
+            // time (a function, not a value captured at create time —
+            // slots change with every press and every scroll-out reset):
+            // the grabbed card's home is set to 0 on press, so a throw
             // boomerangs it to center-front, while any card thrown from a
             // stuck-out slot would land back in that slot.
             inertia: {
-              x: { end: () => baseXs.get(card) ?? 0 },
+              x: { end: () => slots.get(card)?.x ?? 0 },
               y: { end: 0 },
             },
             // Snap tuning: default inertia lets a hard throw glide for
@@ -304,17 +278,13 @@ export default function ExperienceSection() {
               // card's stick-out from a temporary reaction into where it
               // now lives.
               assignFanSlots(card);
-              deck.prev = deck.front;
-              deck.front = card;
-              // Grabbed card lifts; the REST of the deck FANS OUT —
-              // sideways slides along each card's own slot with a touch
-              // of extra tilt, like spreading a hand of cards with your
-              // thumb. Every buried card's side edge slides clear of the
-              // front card's silhouette, which is both the "press is
-              // live" state and a literal display of everything that can
-              // be grabbed next (any painted sliver is a hit target —
-              // see the wraps' pointer-events comment above).
-              // Transform-only.
+              // Grabbed card lifts; every buried card slides straight to
+              // its OWN slot — exactly there, no extra push. The slot is
+              // both the press reaction and the resting state, so
+              // releasing has nothing to pull back inward: newly-dealt
+              // cards fan out and simply stay, already-out cards don't
+              // move at all. The scale step-back alone still
+              // communicates press state under reduced motion.
               gsap.to(card, {
                 scale: 1.035,
                 duration: 0.2,
@@ -322,23 +292,12 @@ export default function ExperienceSection() {
                 overwrite: "auto",
               });
               others.forEach((o) => {
-                // Push FURTHER out along each card's own permanent
-                // stick-out side (not a fresh alternating pattern) — the
-                // press accentuates the resting fan instead of
-                // overriding it, so cards never contradict where they
-                // just were. The sideways push is decorative flourish;
-                // the scale step-back alone still communicates press
-                // state under reduced motion.
-                const bx = baseXs.get(o) ?? 0;
-                const xDir = bx === 0 ? 1 : Math.sign(bx);
+                const slot = slots.get(o);
                 gsap.to(o, {
                   scale: 0.98,
-                  ...(reduceMotion
+                  ...(reduceMotion || !slot
                     ? {}
-                    : {
-                        x: bx + 18 * xDir,
-                        rotation: (baseRots.get(o) ?? 0) + 1.3 * xDir,
-                      }),
+                    : { x: slot.x, rotation: slot.rot }),
                   duration: 0.45,
                   ease: "power3.out",
                   overwrite: "auto",
@@ -359,31 +318,51 @@ export default function ExperienceSection() {
                 ease: "back.out(2)",
                 overwrite: "auto",
               });
-              // Deck settles back to each card's PERSISTED slot — never
-              // to flush center. The press accent (the extra push past
-              // the slot) relaxes, but the slot itself, dealt on this or
-              // any earlier press, is where the card now lives: once a
-              // grab has revealed an edge, that edge stays out and stays
-              // grabbable. Before any first grab, none of this runs and
-              // the deck sits flush-aligned as loaded.
+              // Buried cards: scale relaxes, x/rotation deliberately
+              // UNTOUCHED — they're already sitting on their slots, and
+              // "release" must never read as the deck pulling back
+              // inward or straightening up.
               others.forEach((o) => {
                 gsap.to(o, {
                   scale: 1,
-                  x: baseXs.get(o) ?? 0,
-                  rotation: baseRots.get(o) ?? 0,
-                  duration: 0.5,
+                  duration: 0.4,
                   ease: "power3.out",
                   overwrite: "auto",
                 });
               });
-              // …except the card this grab just covered, which peeks out
-              // once before settling (created after the tuck tween so its
-              // overwrite wins for that one card). Decorative — skipped
-              // under reduced motion.
-              if (!reduceMotion && deck.prev && deck.prev !== card)
-                peekBuried(deck.prev);
             },
           })[0];
+        });
+
+        // Fully scrolling PAST the deck — off the bottom or back off the
+        // top — resets it to its first-visit state: flush-aligned, DOM
+        // paint order, counter rebased. Re-entering the section always
+        // shows the pristine lined-up deck, and slots get re-earned by
+        // interaction from scratch. Instant sets, not tweens: both
+        // callbacks fire while the section is entirely off-screen, so
+        // animating would just be unwatched work — and overwrite kills
+        // any still-flying throw/settle tween that would otherwise fight
+        // the reset.
+        const resetDeck = () => {
+          resetSlots();
+          zTop = 20;
+          cards.forEach((c) => {
+            gsap.set(c, {
+              x: 0,
+              y: 0,
+              rotation: baseRots.get(c) ?? 0,
+              scale: 1,
+              overwrite: "auto",
+            });
+          });
+          wraps.forEach((w) => gsap.set(w, { clearProps: "zIndex" }));
+        };
+        ScrollTrigger.create({
+          trigger: sectionRef.current,
+          start: "top bottom",
+          end: "bottom top",
+          onLeave: resetDeck,
+          onLeaveBack: resetDeck,
         });
 
         return () => {
