@@ -11,6 +11,21 @@ if (typeof window !== "undefined") {
 
 const HOVER_SELECTOR = "a, button, [role='button'], input, textarea, select";
 
+// Elements marked data-cursor="drag" (the experience deck's cards) morph
+// the ring into a labeled DRAG affordance — the native cursor is hidden
+// site-wide on desktop (body cursor:none), so this ring is the only place
+// a grab hint can live. Links INSIDE a draggable still win the plain
+// hover state, checked first below.
+type CursorMode = "default" | "hover" | "drag";
+
+function modeFor(target: EventTarget | null): CursorMode | null {
+  const el = target as HTMLElement | null;
+  if (!el?.closest) return null;
+  if (el.closest(HOVER_SELECTOR)) return "hover";
+  if (el.closest("[data-cursor='drag']")) return "drag";
+  return null;
+}
+
 // useSyncExternalStore, not useState+useEffect: setting state synchronously
 // inside an effect body (the previous shape here) is a lint error
 // (react-hooks/set-state-in-effect) precisely because it causes a
@@ -42,7 +57,7 @@ export default function CustomCursor() {
     getSnapshot,
     getServerSnapshot,
   );
-  const [isHovering, setIsHovering] = useState(false);
+  const [mode, setMode] = useState<CursorMode>("default");
 
   useEffect(() => {
     if (!enabled) return;
@@ -81,14 +96,11 @@ export default function CustomCursor() {
     };
 
     const handleOver = (e: MouseEvent) => {
-      if ((e.target as HTMLElement)?.closest?.(HOVER_SELECTOR)) {
-        setIsHovering(true);
-      }
+      const m = modeFor(e.target);
+      if (m) setMode(m);
     };
     const handleOut = (e: MouseEvent) => {
-      if ((e.target as HTMLElement)?.closest?.(HOVER_SELECTOR)) {
-        setIsHovering(false);
-      }
+      if (modeFor(e.target)) setMode("default");
     };
 
     window.addEventListener("mousemove", handleMove);
@@ -102,21 +114,22 @@ export default function CustomCursor() {
     };
   }, [enabled]);
 
-  // Hover feedback via transform scale only — the ring's width/height stay
+  // Feedback via transform scale only — the ring's width/height stay
   // static so state changes never touch the browser's layout engine, and the
   // whole cursor stays on the compositor. 1.75 scales the 32px ring to the
-  // same 56px the old width/height transition landed on.
+  // same 56px the old width/height transition landed on; drag mode goes
+  // bigger still so the DRAG label inside stays legible.
   useGSAP(
     () => {
       if (!ringRef.current) return;
       gsap.to(ringRef.current, {
-        scale: isHovering ? 1.75 : 1,
+        scale: mode === "drag" ? 2.2 : mode === "hover" ? 1.75 : 1,
         duration: 0.3,
         ease: "power2.out",
         overwrite: "auto",
       });
     },
-    { dependencies: [isHovering, enabled] },
+    { dependencies: [mode, enabled] },
   );
 
   if (!enabled) return null;
@@ -128,11 +141,25 @@ export default function CustomCursor() {
         className="fixed top-0 left-0 z-[9999] w-2 h-2 rounded-full bg-[var(--accent-volt)] pointer-events-none mix-blend-difference"
       />
       {/* Static 32px box — hover growth is GSAP scale (see useGSAP above),
-          never width/height, so the cursor can't cause layout work. */}
+          never width/height, so the cursor can't cause layout work. The
+          border style swap + label fade are CSS on elements GSAP never
+          transforms (the ring's own transform is GSAP's; the class change
+          touches border/opacity only). */}
       <div
         ref={ringRef}
-        className="fixed top-0 left-0 z-[9999] w-8 h-8 rounded-full border border-[var(--accent-volt)] pointer-events-none mix-blend-difference"
-      />
+        className={`fixed top-0 left-0 z-[9999] w-8 h-8 rounded-full border border-[var(--accent-volt)] pointer-events-none mix-blend-difference ${
+          mode === "drag" ? "border-dashed" : ""
+        }`}
+      >
+        <span
+          aria-hidden="true"
+          className={`absolute inset-0 flex items-center justify-center font-mono font-bold text-[0.375rem] tracking-[0.2em] uppercase text-[var(--accent-volt)] transition-opacity duration-150 ${
+            mode === "drag" ? "opacity-100" : "opacity-0"
+          }`}
+        >
+          Drag
+        </span>
+      </div>
     </>
   );
 }

@@ -10,14 +10,14 @@ import { BIO_PARAGRAPHS, SITE, TECH_STACK } from "../data/content";
 import MagneticLink from "./MagneticLink";
 import ScrambleLabel from "./fx/ScrambleLabel";
 import GlitchText, { playGlitchBurst } from "./fx/GlitchText";
-import { FINE_POINTER_QUERY } from "./SmoothScroll";
+import { SIGNAL_LOCK_EASE } from "./fx/constants";
 
 if (typeof window !== "undefined") {
   gsap.registerPlugin(ScrollTrigger, SplitText, CustomEase, useGSAP);
-  // Fast attack, ~11% overshoot around 40%, long settle — each name char
-  // snaps up past its resting pose and locks back, reading as a mechanical
-  // "click into place" that power4 can't produce.
-  CustomEase.create("signalLock", "M0,0 C0.19,0.62 0.26,1.1 0.42,1.11 0.61,1.12 0.79,1 1,1");
+  // Each name char snaps up past its resting pose and locks back, reading
+  // as a mechanical "click into place" that power4 can't produce. Curve
+  // lives in fx/constants — ContactSection's closing beat uses it too.
+  CustomEase.create("signalLock", SIGNAL_LOCK_EASE);
 }
 
 // When the hero's visible choreography begins, in seconds after mount.
@@ -34,12 +34,9 @@ if (typeof window !== "undefined") {
 // today — a stalled preloader riding the 6s safety net — the choreography
 // finishes unseen and the curtain lifts on a settled hero, which is
 // exactly the old behavior, never a hidden one.
-const ENTRANCE_AT = 2.75;
-
-// Depth-stack tilt limits (degrees). ±5° is enough for the translateZ
-// echoes to slide against the solid name under perspective; more starts
-// to skew the glyphs themselves.
-const TILT_MAX = 5;
+// Exported: the navbar sequences its own load-in and logo morph against
+// the same curtain timing.
+export const ENTRANCE_AT = 2.75;
 
 // The name rendered identically for the real h1, the two depth echoes, and
 // the two glitch clones — five copies, one source of truth. All typography
@@ -277,53 +274,19 @@ export default function HeroSection() {
           0.85,
         );
 
-      // Act 2 — live hologram: the whole name stack (solid + translateZ
-      // echoes) tilts toward the cursor under real perspective, so the
-      // echoes slide against the name and the depth reads as physical.
-      // Cursor position is normalized against the VIEWPORT — no
-      // getBoundingClientRect anywhere near mousemove (house rule), and at
-      // the top of the page the hero effectively is the viewport.
-      const mm = gsap.matchMedia();
-      mm.add(FINE_POINTER_QUERY, () => {
-        const tilt = tiltRef.current;
-        const section = sectionRef.current;
-        if (!tilt || !section) return;
-        const rx = gsap.quickTo(tilt, "rotationX", {
-          duration: 0.9,
-          ease: "power3.out",
-        });
-        const ry = gsap.quickTo(tilt, "rotationY", {
-          duration: 0.9,
-          ease: "power3.out",
-        });
-        const onMove = (e: MouseEvent) => {
-          const nx = (e.clientX / window.innerWidth - 0.5) * 2;
-          const ny = (e.clientY / window.innerHeight - 0.5) * 2;
-          ry(nx * TILT_MAX);
-          rx(-ny * TILT_MAX);
-        };
-        const onLeave = () => {
-          rx(0);
-          ry(0);
-        };
-        section.addEventListener("mousemove", onMove);
-        section.addEventListener("mouseleave", onLeave);
-        return () => {
-          section.removeEventListener("mousemove", onMove);
-          section.removeEventListener("mouseleave", onLeave);
-        };
-      });
-      // Touch devices get no pointer, so a slow perpetual sway keeps the
-      // depth stack readable as 3D instead of freezing it flat.
-      mm.add("(hover: none), (pointer: coarse)", () => {
-        gsap.to(tiltRef.current, {
-          rotationY: 2,
-          rotationX: -1.5,
-          duration: 5,
-          ease: "sine.inOut",
-          yoyo: true,
-          repeat: -1,
-        });
+      // Act 2 — live hologram: a slow perpetual sway on the whole name
+      // stack (solid + translateZ echoes) keeps the depth readable as 3D.
+      // Autonomous on every device — the earlier cursor-following tilt was
+      // removed by request, and the depth echoes hide almost entirely
+      // behind the solid name without SOME rotation, so the sway is what
+      // keeps the hologram alive.
+      gsap.to(tiltRef.current, {
+        rotationY: 2,
+        rotationX: -1.5,
+        duration: 5,
+        ease: "sine.inOut",
+        yoyo: true,
+        repeat: -1,
       });
 
       // Ghost strip drifts forever — full words stay readable as they roll

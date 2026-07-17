@@ -9,26 +9,45 @@ if (typeof window !== "undefined") {
   gsap.registerPlugin(ScrollTrigger, useGSAP);
 }
 
+export interface GlitchBurstOptions {
+  /**
+   * Burst intensity. 1 = the quick ~220ms punctuation (hover, hero loop);
+   * ~2 = the full heading treatment — twice the steps, wider chromatic
+   * throw, skew snaps on the real text, amplitude decaying to a clean lock.
+   */
+  power?: number;
+  /**
+   * When true the real element itself materializes out of the interference:
+   * invisible for the first beats (only the chromatic ghosts show), then
+   * flickering in as random scanline bands, then locking whole. End state
+   * is always fully visible, so it's safe to re-fire on elements that were
+   * never hidden.
+   */
+  materialize?: boolean;
+}
+
 /**
- * Builds and plays one ~220ms RGB-split glitch burst: the cyan/violet clones
- * flash on with opposite x offsets while clip-path slices jump between
- * random horizontal bands, and the real text micro-jitters. Discrete .set()
- * steps (not eased tweens) are the point — the hard snapping IS the glitch;
+ * Builds and plays one RGB-split glitch burst: the cyan/violet clones flash
+ * on with opposite x offsets while clip-path slices jump between random
+ * horizontal bands, and the real text micro-jitters. Discrete .set() steps
+ * (not eased tweens) are the point — the hard snapping IS the glitch;
  * easing would read as wobble. Transform / opacity / clip-path only, per the
  * repo rule (never animate filter or text-shadow — see globals.css notes).
  *
- * Exported separately from the component so HeroSection can drive the same
- * burst on its own hand-built name clones (the name's DOM is too specialized
- * — SplitText chars, depth echoes — to wrap in <GlitchText>).
+ * Exported separately from the component so HeroSection (and the navbar
+ * logo) can drive the same burst on their own hand-built clones — DOM too
+ * specialized (SplitText chars, depth echoes) to wrap in <GlitchText>.
  */
 export function playGlitchBurst(
   real: HTMLElement,
   cyan: HTMLElement,
   violet: HTMLElement,
+  { power = 1, materialize = false }: GlitchBurstOptions = {},
 ): gsap.core.Timeline {
   const tl = gsap.timeline();
   const STEP = 0.055;
-  const STEPS = 4;
+  const steps = Math.round(4 * power);
+  const amp = 7 * power;
 
   const slice = () => {
     const top = gsap.utils.random(0, 70);
@@ -36,27 +55,73 @@ export function playGlitchBurst(
     return `inset(${top}% 0 ${Math.max(0, 100 - top - height)}% 0)`;
   };
 
-  for (let i = 0; i < STEPS; i++) {
+  for (let i = 0; i < steps; i++) {
     const t = i * STEP;
-    tl.set(cyan, { opacity: 1, x: gsap.utils.random(-7, -2), y: gsap.utils.random(-2, 2), clipPath: slice() }, t);
-    tl.set(violet, { opacity: 1, x: gsap.utils.random(2, 7), y: gsap.utils.random(-2, 2), clipPath: slice() }, t);
-    tl.set(real, { x: gsap.utils.random(-2, 2) }, t);
+    // Interference dies down across the run — the burst arrives violent
+    // and settles, instead of holding one flat intensity then vanishing.
+    const decayAmp = amp * (1 - (i / steps) * 0.7);
+    tl.set(
+      cyan,
+      {
+        opacity: 1,
+        x: gsap.utils.random(-decayAmp, -decayAmp * 0.3),
+        y: gsap.utils.random(-2, 2) * power,
+        clipPath: slice(),
+      },
+      t,
+    );
+    tl.set(
+      violet,
+      {
+        opacity: 1,
+        x: gsap.utils.random(decayAmp * 0.3, decayAmp),
+        y: gsap.utils.random(-2, 2) * power,
+        clipPath: slice(),
+      },
+      t,
+    );
+    tl.set(
+      real,
+      {
+        x: gsap.utils.random(-2, 2) * power,
+        // Skew snaps only at heading power — on the small quick burst they
+        // read as smearing, not tearing.
+        skewX: power > 1.4 ? gsap.utils.random(-6, 6) * (1 - i / steps) : 0,
+      },
+      t,
+    );
+    if (materialize) {
+      if (i === 0) {
+        tl.set(real, { opacity: 0 }, 0);
+      } else if (i / steps < 0.6) {
+        // Mid-burst the real text exists only as jumping scanline bands.
+        tl.set(real, { opacity: 1, clipPath: slice() }, t);
+      } else {
+        tl.set(real, { opacity: 1, clipPath: "none" }, t);
+      }
+    }
   }
-  const end = STEPS * STEP;
+  const end = steps * STEP;
   tl.set(cyan, { opacity: 0, x: 0, y: 0 }, end);
   tl.set(violet, { opacity: 0, x: 0, y: 0 }, end);
-  tl.set(real, { x: 0 }, end);
+  tl.set(
+    real,
+    { x: 0, skewX: 0, ...(materialize ? { opacity: 1, clipPath: "none" } : {}) },
+    end,
+  );
   return tl;
 }
 
 interface GlitchTextProps {
   children: React.ReactNode;
   /**
-   * "enter" — one burst when scrolled into view (once).
-   * "hover" — one burst on pointerenter of the nearest <a>/<button> ancestor
-   *           (falls back to the wrapper itself), throttled to ~600ms, so a
-   *           button label glitches when the button is hovered — not only
-   *           when the cursor happens to cross the label span.
+   * "enter" — a full-power materialize burst EVERY time the element comes
+   *           into view (scrolling down or back up), throttled so direction
+   *           jiggle at the trigger edge can't machine-gun it.
+   * "hover" — one quick burst on pointerenter of the nearest <a>/<button>
+   *           ancestor (falls back to the wrapper itself), throttled to
+   *           ~600ms, so a button label glitches when the button is hovered
+   *           — not only when the cursor happens to cross the label span.
    */
   trigger: "enter" | "hover";
   /** Extra classes on the wrapper (e.g. "block" for multi-line headings). */
@@ -94,14 +159,23 @@ export default function GlitchText({
       if (window.matchMedia("(prefers-reduced-motion: reduce)").matches)
         return;
 
-      const burst = () => playGlitchBurst(real, cyan, violet);
-
       if (trigger === "enter") {
+        // Replays on every pass — down (onEnter) and back up (onEnterBack)
+        // — so the heading re-materializes whenever it returns to view.
+        // The materialize burst's end state is always fully visible, so
+        // re-firing on visible text can never strand it hidden.
+        let last = 0;
+        const burst = () => {
+          const now = performance.now();
+          if (now - last < 900) return;
+          last = now;
+          playGlitchBurst(real, cyan, violet, { power: 2, materialize: true });
+        };
         ScrollTrigger.create({
           trigger: wrap,
           start: "top 85%",
-          once: true,
           onEnter: burst,
+          onEnterBack: burst,
         });
         return;
       }
@@ -113,7 +187,7 @@ export default function GlitchText({
         const now = performance.now();
         if (now - last < 600) return;
         last = now;
-        burst();
+        playGlitchBurst(real, cyan, violet);
       };
       host.addEventListener("pointerenter", onEnter);
       return () => host.removeEventListener("pointerenter", onEnter);

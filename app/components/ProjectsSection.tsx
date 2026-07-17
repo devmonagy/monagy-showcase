@@ -23,7 +23,6 @@ const SLIDE_TONES = [
 export default function ProjectsSection() {
   const sectionRef = useRef<HTMLDivElement>(null);
   const trackRef = useRef<HTMLDivElement>(null);
-  const progressRef = useRef<HTMLDivElement>(null);
 
   useGSAP(
     () => {
@@ -53,6 +52,12 @@ export default function ProjectsSection() {
         x: () => -getScrollAmount(),
         ease: "none",
         scrollTrigger: {
+          // Named so Navbar can read this exact pin's live start/end and
+          // light "Projects" in the nav for precisely this section's
+          // pinned duration — the section never visually moves in the
+          // viewport while pinned, so a viewport-center heuristic (what
+          // every other nav link uses) would never fire for it.
+          id: "projects-pin",
           trigger: section,
           start: "top top",
           end: () => `+=${getScrollAmount()}`,
@@ -92,27 +97,9 @@ export default function ProjectsSection() {
         );
       }
 
-      const progress = gsap.fromTo(
-        progressRef.current,
-        { scaleX: 0 },
-        {
-          scaleX: 1,
-          ease: "none",
-          scrollTrigger: {
-            trigger: section,
-            start: "top top",
-            end: () => `+=${getScrollAmount()}`,
-            scrub: 1,
-            invalidateOnRefresh: true,
-          },
-        },
-      );
-
       return () => {
         tween.scrollTrigger?.kill();
         tween.kill();
-        progress.scrollTrigger?.kill();
-        progress.kill();
       };
     },
     { scope: sectionRef },
@@ -351,17 +338,6 @@ export default function ProjectsSection() {
             </article>
           );
         })}
-      </div>
-
-      {/* Horizontal progress bar — pin runs at every breakpoint now, so
-          this is the only affordance telling touch users there's no
-          direct swipe here, scrolling drives it */}
-      <div className="absolute bottom-6 sm:bottom-8 min-[900px]:bottom-10 left-5 sm:left-6 min-[900px]:left-10 right-5 sm:right-6 min-[900px]:right-10 h-[3px] rounded-full bg-white/10 overflow-hidden">
-        <div
-          ref={progressRef}
-          className="h-full w-full origin-left bg-[var(--accent-volt)]"
-          style={{ transform: "scaleX(0)" }}
-        />
       </div>
     </section>
   );

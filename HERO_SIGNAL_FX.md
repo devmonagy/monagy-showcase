@@ -207,3 +207,131 @@ directly to `master` per request — this repo's usual flow is one PR per
 branch (see `git log --merges`), but this session skipped that step on
 explicit instruction so a second Claude session could pick up the finished
 state on `master` immediately.
+
+---
+
+## Follow-up pass — same day, second session (feedback round)
+
+Owner feedback on the pass above, and what changed. Supersedes the
+matching bullets earlier in this file:
+
+- **Hero Act 2 rewritten**: the cursor-following tilt is REMOVED by
+  request. The depth stack now runs the slow autonomous ±2° sway on every
+  device (it was touch-only before) — without some rotation the translateZ
+  echoes hide entirely behind the solid name.
+- **Marquee hover = momentum stop, not pause()**: the loop's own timeScale
+  is tweened to 0 on enter (power3.out, ~1.1s coast) and back to 1 on
+  leave. `stoppedRef` gates the scroll-velocity handlers' timeScale writes
+  — the old hard `pause()` also silently ate every velocity boost, which
+  is why the bottom band (where the cursor tends to rest) felt like it
+  never sped up on scroll.
+- **`playGlitchBurst` has options now**: `power` (step count / chromatic
+  throw / skew snaps scale with it) and `materialize` (real text starts
+  invisible, flickers in as scanline bands, locks whole — end state always
+  fully visible, safe to re-fire). Heading enters use
+  `{ power: 2, materialize: true }`.
+- **Every enter-triggered effect repeats**: GlitchText and ScrambleLabel
+  dropped `once: true` for onEnter + onEnterBack with a ~900ms throttle.
+  Headings re-materialize and labels re-decode on every pass, both
+  directions.
+- **Navbar rebuilt** (`Navbar.tsx`): logo server-renders as
+  "Mohamed Nagy." and ScrambleText-folds the middle letters to an empty
+  string at ENTRANCE_AT+2.1s (tweenLength shrinks the text so M/N/. slide
+  together on the browser's own inline layout — no measured offsets),
+  landing on "MN." with a glitch burst; hovering the monogram decodes the
+  full name back out (fine pointer only). Plus: scroll-progress hairline
+  under the bar, active-section magic-line under the desktop links
+  (rect-based measurement — offsetLeft lies once the load-in leaves
+  transforms on the li's), scramble-on-hover link labels, GlitchText on
+  the Resume button, and a mobile hamburger → fullscreen overlay (solid
+  bg, NO backdrop-filter — WebKit compositor history) with staggered
+  masked links and scroll lock. Header uses transition-colors, never
+  transition-all: GSAP owns its transform for the drop-in.
+- **Experience deck is draggable on desktop** (fine pointer only):
+  Draggable + InertiaPlugin on each `.exp-card`, inertia end pinned to
+  {0,0} so every throw boomerangs home with real momentum; press brings
+  the card's wrap to the front (zIndex counter — wraps get
+  position:relative set BEFORE the pins are created so it works in both
+  pin states) and it stays there, so the stack can be reshuffled. Velocity
+  tilt while dragging (quickTo rotation from deltaX). Affordances: a
+  "⠿ drag me" chip per card (fine-pointer media variant) and the custom
+  cursor ring morphs into a dashed DRAG badge over cards
+  (`data-cursor="drag"` — see CustomCursor).
+- **Contact entrance rebuilt**: outline line mask-slides, "Let's Talk."
+  is now hand-built like the hero name (glitch clones + SplitText masked
+  chars on the shared signalLock ease from `fx/constants`), burst fires
+  as the last char locks, supports rise in its wake; whole timeline
+  restarts on every enter/enterBack (desktop). Touch keeps
+  always-visible content + a repeating materialize burst. GOTCHA that bit
+  once already: initial hidden states MUST be standalone `gsap.set`s, not
+  the timeline's fromTo immediateRender — SplitText's font-load re-split
+  reverts the returned timeline, and revert restores pre-TWEEN state,
+  which un-hid the outline line until the sets became that state.
+
+Verified this round: tsc + eslint clean; live DOM measurement in the
+embedded pane (rAF throttled to ~1Hz there — state-based assertions, not
+smoothness): hero chars settle clean + sway runs, logo folds to "MN." on
+schedule, contact initial states survive re-splits and the full
+choreography plays on entry, drag follows pointer → carries momentum →
+boomerangs home with zIndex bump, mobile overlay opens/locks scroll/closes
+via link tap with zero nav overflow at 375px, magic line lands
+pixel-exact. NOT yet eyeballed in a real browser: marquee glide feel and
+the burst/scramble visual quality — check those on a real screen.
+
+Session note: Next.js 16 refuses to run two dev servers for the same
+project dir (singleton lock). If another chat's server owns it, that
+server is serving THIS working tree with HMR — verify against its port
+instead of fighting the lock.
+
+---
+
+## Second follow-up pass — same day, third round (bug reports on the FX pass)
+
+Three concrete bugs the owner found by actually using the site, fixed
+this round:
+
+- **Nav highlighting was flat wrong.** The old approach was one
+  independent `ScrollTrigger` per nav link with a generic "top 50% /
+  bottom 50%" viewport-center heuristic — wrong on two counts: it read
+  as active at creation time before layout/pins had settled (Contact lit
+  on a cold load), and it's fundamentally incompatible with Projects,
+  which is *pinned* — its box never moves in the viewport while its own
+  horizontal scrub runs, so a "center crossed 50%" check could only ever
+  catch one instant, not the whole pinned span. Replaced with a single
+  `onUpdate` on the existing progress-bar ScrollTrigger that checks raw
+  `self.scroll()` against precomputed section boundaries every frame;
+  Projects reads its own pin's live `.start`/`.end` (via
+  `ScrollTrigger.getById("projects-pin")`, set in ProjectsSection) so it
+  stays lit for the section's entire traversal. `s <= 1` clears
+  `activeHref` to null so nothing is lit at the very top — first pixel of
+  scroll lights About. The magic-line underline had its own follow-up bug:
+  it only *moved* on `activeHref` change and did nothing when it went
+  null, so it stayed glowing under "About" at scroll 0 even after the
+  text-color fix landed — now hides on null too.
+- **Double horizontal-scroll indicator.** Removed the local bar under
+  Projects entirely (it read as a redundant second bar directly under the
+  header's own hairline). Relocated the same feedback INTO the header:
+  a segment overlay on the hairline, positioned via
+  `projectsPin.start/end` vs `ScrollTrigger.maxScroll(window)`, that fills
+  0→1 as you scrub through the section and brightens while you're
+  actually inside it.
+- **Experience cards buried under the header.** Caused by the drag
+  feature added this same day: `gsap.set(wraps, {position:"relative"})`
+  was added before creating the pins so z-index (bring-dragged-card-
+  to-front) would take effect. But each wrap already carries an inline
+  `top` offset meant to apply ONLY once GSAP switches it to
+  `position:fixed` on pin — forcing `relative` beforehand made that same
+  `top` value shift the wrap while merely static too (relative honors
+  top/left, static ignores them), pulling the whole pre-pin deck up
+  under the fixed header. Fix: don't force position at all — a card is
+  only ever grabbable once its wrap is already pinned (fixed, which
+  z-index already honors), so the explicit relative was both wrong and
+  unnecessary.
+
+**Gotcha reconfirmed this round:** window.scrollTo() while ScrollSmoother
+is active sets the *target*, not the rendered position — the smoother
+lerps toward it (smooth:1.2 = ~1.2s settle), and that lerp is itself
+gated by the pane's throttled rAF, so checking DOM state immediately
+after a programmatic scroll reads the OLD position. Same fix as always:
+either wait for the lerp (several seconds) or fire back-to-back
+screenshots to keep rAF alive and re-check.

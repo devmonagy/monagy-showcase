@@ -33,6 +33,12 @@ export default function Marquee({
   const bandRef = useRef<HTMLDivElement>(null);
   const trackRef = useRef<HTMLDivElement>(null);
   const tweenRef = useRef<gsap.core.Tween | null>(null);
+  // True while the pointer holds the band stopped (or a touch-tap parked
+  // it). Read by the scroll-velocity handlers so their per-frame timeScale
+  // writes don't fight the hover glide — with the old hard pause() this
+  // didn't matter, but a paused tween also silently ate every velocity
+  // boost, which is why a band under the resting cursor felt dead.
+  const stoppedRef = useRef(false);
 
   useGSAP(
     () => {
@@ -87,23 +93,33 @@ export default function Marquee({
 
       // Scroll-velocity feedback: fast scrolling speeds the loop up and
       // skews the type in the scroll direction; a per-frame decay relaxes
-      // both back to rest once scrolling stops.
+      // both back to rest once scrolling stops. timeScale writes stand
+      // down while the band is hover-stopped, and a real scroll burst
+      // kills any in-flight hover glide so the boost takes over cleanly.
       const st = ScrollTrigger.create({
         onUpdate(self) {
           const v = self.getVelocity();
           gsap.set(trackRef.current, {
             skewX: gsap.utils.clamp(-12, 12, v / 160),
           });
-          tween.timeScale(gsap.utils.clamp(1, 5, 1 + Math.abs(v) / 700));
+          if (stoppedRef.current) return;
+          if (Math.abs(v) > 100) gsap.killTweensOf(tween);
+          if (!gsap.isTweening(tween))
+            tween.timeScale(gsap.utils.clamp(1, 5, 1 + Math.abs(v) / 700));
         },
       });
 
       const decay = () => {
         const current = Number(gsap.getProperty(trackRef.current, "skewX")) || 0;
+        const skewIdle = Math.abs(current) < 0.05;
+        // While a hover glide owns timeScale, only the skew needs relaxing.
+        if (stoppedRef.current || gsap.isTweening(tween)) {
+          if (!skewIdle) gsap.set(trackRef.current, { skewX: current * 0.92 });
+          return;
+        }
         // At rest there's nothing to relax — skip the per-frame writes so
         // an idle page (3 marquee tickers) costs nothing.
-        if (Math.abs(current) < 0.05 && Math.abs(tween.timeScale() - 1) < 0.01)
-          return;
+        if (skewIdle && Math.abs(tween.timeScale() - 1) < 0.01) return;
         gsap.set(trackRef.current, { skewX: current * 0.92 });
         tween.timeScale(gsap.utils.interpolate(tween.timeScale(), 1, 0.05));
       };
@@ -117,13 +133,26 @@ export default function Marquee({
     { scope: containerRef, dependencies: [direction, duration, tilt] },
   );
 
-  const pause = () => tweenRef.current?.pause();
-  const resume = () => tweenRef.current?.resume();
-  const togglePlay = () => {
+  // Momentum stop/start instead of a hard pause: the loop's own timeScale
+  // is tweened, so the band coasts into stillness under the cursor and
+  // lazily spools back up on leave. overwrite:true retargets cleanly if
+  // the pointer jitters across the band edge mid-glide.
+  const glideTo = (timeScale: number, duration: number, ease: string) => {
     const tween = tweenRef.current;
     if (!tween) return;
-    if (tween.paused()) tween.resume();
-    else tween.pause();
+    gsap.to(tween, { timeScale, duration, ease, overwrite: true });
+  };
+  const glideStop = () => {
+    stoppedRef.current = true;
+    glideTo(0, 1.1, "power3.out");
+  };
+  const glideStart = () => {
+    stoppedRef.current = false;
+    glideTo(1, 1.5, "power2.inOut");
+  };
+  const togglePlay = () => {
+    if (stoppedRef.current) glideStart();
+    else glideStop();
   };
 
   const bg = tone === "volt" ? "var(--accent-volt)" : "var(--accent-cyan)";
@@ -141,8 +170,8 @@ export default function Marquee({
     >
       <div
         ref={bandRef}
-        onMouseEnter={pause}
-        onMouseLeave={resume}
+        onMouseEnter={glideStop}
+        onMouseLeave={glideStart}
         onTouchStart={togglePlay}
         className="relative w-[110vw] ml-[-5vw] overflow-hidden select-none py-4 sm:py-6 shadow-[0_18px_50px_rgba(0,0,0,0.45)]"
         style={{ backgroundColor: bg, transform: `rotate(${tilt}deg)` }}

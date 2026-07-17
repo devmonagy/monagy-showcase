@@ -14,7 +14,8 @@ if (typeof window !== "undefined") {
 interface ScrambleLabelProps {
   text: string;
   /**
-   * "enter" — decode once when scrolled into view.
+   * "enter" — decode every time it comes into view (down or back up),
+   *           throttled at the trigger edge.
    * "mount" — decode on mount after `delay` seconds; the hero kicker uses
    *           this to land inside the post-preloader choreography.
    */
@@ -54,24 +55,38 @@ export default function ScrambleLabel({
       // slower so the effect stays legible, capped so nothing drags.
       const duration = Math.min(0.4 + text.length * 0.0045, 1.1);
 
-      gsap.to(el, {
+      if (trigger === "mount") {
+        gsap.to(el, {
+          duration,
+          delay,
+          ease: "power1.out",
+          scrambleText: { text, chars: SCRAMBLE_CHARS, speed: 1 },
+        });
+        return;
+      }
+
+      // enter: one paused tween, restarted on every pass into view — down
+      // (onEnter) and back up (onEnterBack) — so the label re-decodes
+      // whenever it returns. Throttled so direction jiggle right at the
+      // trigger edge can't stutter-restart it mid-decode.
+      const tween = gsap.to(el, {
         duration,
-        delay: trigger === "mount" ? delay : 0,
         ease: "power1.out",
-        scrambleText: {
-          text,
-          chars: SCRAMBLE_CHARS,
-          speed: 1,
-        },
-        ...(trigger === "enter"
-          ? {
-              scrollTrigger: {
-                trigger: el,
-                start: "top 88%",
-                once: true,
-              },
-            }
-          : {}),
+        scrambleText: { text, chars: SCRAMBLE_CHARS, speed: 1 },
+        paused: true,
+      });
+      let last = 0;
+      const replay = () => {
+        const now = performance.now();
+        if (now - last < 900) return;
+        last = now;
+        tween.restart();
+      };
+      ScrollTrigger.create({
+        trigger: el,
+        start: "top 88%",
+        onEnter: replay,
+        onEnterBack: replay,
       });
     },
     { scope: ref, dependencies: [text, trigger, delay] },

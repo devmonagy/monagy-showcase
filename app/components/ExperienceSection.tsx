@@ -3,6 +3,8 @@
 import { useRef } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
+import { Draggable } from "gsap/Draggable";
+import { InertiaPlugin } from "gsap/InertiaPlugin";
 import { useGSAP } from "@gsap/react";
 import { EXPERIENCES } from "../data/content";
 import { FINE_POINTER_QUERY } from "./SmoothScroll";
@@ -10,7 +12,7 @@ import GlitchText from "./fx/GlitchText";
 import ScrambleLabel from "./fx/ScrambleLabel";
 
 if (typeof window !== "undefined") {
-  gsap.registerPlugin(ScrollTrigger, useGSAP);
+  gsap.registerPlugin(ScrollTrigger, Draggable, InertiaPlugin, useGSAP);
 }
 
 // Three color-blocked looks cycling down the stack: solid volt, dark with a
@@ -89,6 +91,16 @@ export default function ExperienceSection() {
       const mm = gsap.matchMedia();
       mm.add(FINE_POINTER_QUERY, () => {
         const wraps = gsap.utils.toArray<HTMLElement>(".exp-card-wrap");
+        // Wraps stay position:static in their resting state on purpose —
+        // do NOT force position:relative here. Each wrap carries an inline
+        // `top` offset meant to apply only once GSAP switches it to
+        // position:fixed on pin; forcing relative beforehand makes that
+        // same top value shift the element WHILE static too (relative
+        // honors top/left, static ignores them), pulling the whole
+        // pre-pin deck up under the fixed header. z-index bring-to-front
+        // (onPress below) still works without this: a card is only
+        // grabbable once its wrap is already on-screen and pinned
+        // (fixed — a positioned value z-index already honors).
         const lastOffset = 84 + (wraps.length - 1) * 18;
         wraps.forEach((wrap, i) => {
           ScrollTrigger.create({
@@ -100,6 +112,55 @@ export default function ExperienceSection() {
             pinSpacing: false,
           });
         });
+
+        // The deck is a hands-on toy: every card is grabbable at any
+        // scroll position (fully stacked or barely peeking), rides the
+        // cursor with a velocity tilt, and — because inertia's end is
+        // pinned to 0,0 — every throw boomerangs back into its slot with
+        // real momentum. Grabbing brings the card to the deck's front and
+        // it STAYS there, so the stack can be reshuffled to peek at
+        // covered cards. Desktop-only by design (this mm block): on touch,
+        // any drag would fight native scroll on the same gesture.
+        let zTop = 20;
+        const draggables = gsap.utils
+          .toArray<HTMLElement>(".exp-card")
+          .map((card) => {
+            const wrap = card.closest<HTMLElement>(".exp-card-wrap");
+            const baseRot = Number(gsap.getProperty(card, "rotation")) || 0;
+            const rotTo = gsap.quickTo(card, "rotation", {
+              duration: 0.4,
+              ease: "power2.out",
+            });
+            return Draggable.create(card, {
+              type: "x,y",
+              inertia: { x: { end: 0 }, y: { end: 0 } },
+              // The site hides the native cursor (body cursor:none) — the
+              // custom ring already shows DRAG over cards, so keep
+              // Draggable from re-imposing its default `move` cursor.
+              cursor: "none",
+              activeCursor: "none",
+              onPress() {
+                if (wrap) gsap.set(wrap, { zIndex: ++zTop });
+                gsap.to(card, {
+                  scale: 1.02,
+                  duration: 0.25,
+                  ease: "power2.out",
+                });
+              },
+              onDrag(this: Draggable) {
+                // Per-event pointer delta → a paper-being-yanked tilt.
+                rotTo(baseRot + gsap.utils.clamp(-9, 9, this.deltaX * 0.55));
+              },
+              onRelease() {
+                rotTo(baseRot);
+                gsap.to(card, { scale: 1, duration: 0.4, ease: "power2.out" });
+              },
+            })[0];
+          });
+
+        return () => {
+          draggables.forEach((d) => d.kill());
+        };
       });
     },
     { scope: sectionRef },
@@ -147,6 +208,7 @@ export default function ExperienceSection() {
                 style={{ top: `${84 + i * 18}px` }}
               >
                 <article
+                  data-cursor="drag"
                   className="exp-card relative overflow-hidden rounded-3xl p-6 sm:p-10 md:p-14 shadow-[0_30px_80px_rgba(0,0,0,0.55)]"
                   style={{
                     backgroundColor: look.bg,
@@ -161,6 +223,19 @@ export default function ExperienceSection() {
                     aria-hidden="true"
                   >
                     0{i + 1}
+                  </span>
+
+                  {/* Drag affordance — fine-pointer devices only, matching
+                      exactly where Draggable binds. The cursor ring also
+                      morphs into a DRAG badge over the card (CustomCursor),
+                      this chip is the always-visible hint. */}
+                  <span
+                    aria-hidden="true"
+                    className="hidden [@media(hover:hover)_and_(pointer:fine)]:inline-flex absolute bottom-4 right-5 sm:bottom-6 sm:right-8 items-center gap-2 font-mono text-[0.5625rem] font-bold uppercase tracking-widest px-2.5 py-1 rounded-full border select-none"
+                    style={{ color: look.sub, borderColor: look.pillBorder }}
+                  >
+                    <span className="text-[0.6875rem] leading-none">⠿</span>
+                    Drag me
                   </span>
 
                   <div className="relative z-10 grid md:grid-cols-[1fr_1.3fr] gap-6 md:gap-12">
