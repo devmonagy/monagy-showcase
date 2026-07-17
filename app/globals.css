@@ -249,6 +249,39 @@ h4 {
   clip-path: polygon(-8% -6%, 122% -6%, 108% 106%, -22% 106%);
 }
 
+/* Transmission word-lock (DescriptionReveal): with the Full Transmission
+   popover open, hovering a word in the clamped outside description locks
+   onto the SAME word inside the popover — so the eye that just hit the
+   clamp's last visible word knows exactly where to carry on reading.
+   The outside word gets the quiet pairing cue; the popover word gets the
+   loud lock-on: accent inversion + reticle outline ring + a
+   transform-only snap. display:inline-block only while hot, because
+   inline boxes silently ignore transforms — same glyphs, same metrics,
+   so the swap never shifts layout. --dr-accent is set per project card
+   (volt / cyan) on the component's wrapper. */
+.dr-word-src {
+  color: var(--dr-accent);
+  text-decoration: underline dotted;
+  text-underline-offset: 3px;
+}
+.dr-word-hot {
+  display: inline-block;
+  background-color: var(--dr-accent);
+  color: var(--card-bg);
+  outline: 1px solid var(--dr-accent);
+  outline-offset: 2px;
+  border-radius: 2px;
+  animation: drLock 0.3s cubic-bezier(0.2, 0.9, 0.3, 1.35);
+}
+@keyframes drLock {
+  0% {
+    transform: scale(1.3) skewX(-8deg);
+  }
+  100% {
+    transform: scale(1) skewX(0deg);
+  }
+}
+
 /* ---- Backdrop 3D shape animations (transform-only, compositor-friendly) ---- */
 
 @keyframes spinCube {
@@ -564,9 +597,12 @@ h4 {
     animation: none;
   }
 
-  /* Hover feedback stays (the accent fill still communicates), it just
-     lands instantly instead of sweeping. */
+  /* Hover feedback stays (the accent fill / word lock still communicate),
+     it just lands instantly instead of sweeping or snapping. */
   .proj-title-fill {
     transition: none;
+  }
+  .dr-word-hot {
+    animation: none;
   }
 }

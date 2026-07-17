@@ -249,17 +249,25 @@ export default function ProjectsSection() {
                       slanted clip wipe (.proj-title-fill, globals.css)
                       while the GlitchText clones tear chromatically — one
                       gesture, two layers of the same signal language.
-                      w-max caps the hover zone at the text itself instead
-                      of the full column width. */}
-                  <h3
-                    className="proj-title relative w-max max-w-full font-[family-name:var(--font-syne)] font-extrabold text-2xl sm:text-4xl min-[900px]:text-5xl tracking-tight text-[var(--text-contrast)] leading-[1.05]"
-                    style={
-                      { "--proj-accent": tone.accent } as React.CSSProperties
-                    }
-                  >
-                    <GlitchText trigger="hover">{project.title}</GlitchText>
-                    <span className="proj-title-fill" aria-hidden="true">
-                      {project.title}
+                      The hover host is an INNER inline-block span, never
+                      width classes on the h3 itself: w-max here once made
+                      the h3's grid min-content contribution the full
+                      single-line title width, which stretched the text
+                      column and crushed the image column beside it. An
+                      inline-block shrink-wraps AND wraps normally, so the
+                      title lays out exactly like plain text while the
+                      hover zone still hugs the words. */}
+                  <h3 className="font-[family-name:var(--font-syne)] font-extrabold text-2xl sm:text-4xl min-[900px]:text-5xl tracking-tight text-[var(--text-contrast)] leading-[1.05]">
+                    <span
+                      className="proj-title relative inline-block"
+                      style={
+                        { "--proj-accent": tone.accent } as React.CSSProperties
+                      }
+                    >
+                      <GlitchText trigger="hover">{project.title}</GlitchText>
+                      <span className="proj-title-fill" aria-hidden="true">
+                        {project.title}
+                      </span>
                     </span>
                   </h3>
                   {/* Clamped to the same 3 lines at every breakpoint: the

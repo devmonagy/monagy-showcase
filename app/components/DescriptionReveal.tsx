@@ -1,9 +1,11 @@
 "use client";
 
 import {
+  Fragment,
   useEffect,
   useId,
   useLayoutEffect,
+  useMemo,
   useRef,
   useState,
   type RefObject,
@@ -11,6 +13,7 @@ import {
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import { SCRAMBLE_CHARS } from "./fx/constants";
+import { FINE_POINTER_QUERY } from "./SmoothScroll";
 
 if (typeof window !== "undefined") {
   gsap.registerPlugin(useGSAP);
@@ -92,12 +95,20 @@ function useLastLineEnd(
   useLayoutEffect(() => {
     const measure = () => {
       const p = paragraphRef.current;
-      const textNode = p?.firstChild;
-      if (!p || !textNode) return;
+      if (!p || !p.firstChild) return;
       const pRect = p.getBoundingClientRect();
       const range = document.createRange();
-      range.selectNodeContents(textNode);
-      const rects = Array.from(range.getClientRects());
+      // Whole-contents selection, not p.firstChild: the paragraph renders
+      // per-word spans now (for the word-lock highlight), so the first
+      // child is an element, and the range must cover every word/space
+      // node. getClientRects still yields one rect per inline segment in
+      // document order — the last visible one's right edge is still the
+      // last visible word's end. Zero-width rects (collapsed element
+      // boundaries) are noise, not glyphs.
+      range.selectNodeContents(p);
+      const rects = Array.from(range.getClientRects()).filter(
+        (r) => r.width > 0,
+      );
       const visible = rects.filter((r) => r.bottom <= pRect.bottom + 1);
       const last = visible[visible.length - 1];
       if (!last) return;
@@ -142,9 +153,70 @@ export default function DescriptionReveal({
   const textRef = useRef<HTMLParagraphElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const scanRef = useRef<HTMLDivElement>(null);
+  const popupTextRef = useRef<HTMLParagraphElement>(null);
+  const hotWordRef = useRef<HTMLElement | null>(null);
+  const srcWordRef = useRef<HTMLElement | null>(null);
   const panelId = useId();
   const scrambled = useScrambleReveal(open, text);
   const lastLine = useLastLineEnd(textRef, text);
+
+  // Both the clamped paragraph and the popover render the SAME word list
+  // as indexed spans — word i outside IS word i inside, which is what the
+  // word-lock hover below maps across. Splitting on single spaces keeps
+  // the rendered text byte-identical to the plain string (spans + plain
+  // space text nodes wrap exactly like raw text), and the offsets let the
+  // popover keep the scramble decode by slicing the churning string
+  // per-word inside stable spans.
+  const words = useMemo(() => text.split(" "), [text]);
+  const wordOffsets = useMemo(() => {
+    const offsets: number[] = [];
+    for (let i = 0, acc = 0; i < words.length; i++) {
+      offsets.push(acc);
+      acc += words[i].length + 1;
+    }
+    return offsets;
+  }, [words]);
+
+  // Word-lock: hovering a word in the clamped text (desktop, popover
+  // open) locks onto the same word inside the popover — so when the eye
+  // hits the clamp's last visible word, the highlight shows exactly where
+  // to carry on reading. Class toggles on refs, not React state: this
+  // runs on pointerover and shouldn't re-render two word lists per twitch.
+  const releaseWordLock = () => {
+    hotWordRef.current?.classList.remove("dr-word-hot");
+    srcWordRef.current?.classList.remove("dr-word-src");
+    hotWordRef.current = null;
+    srcWordRef.current = null;
+  };
+  const onWordOver = (e: React.PointerEvent<HTMLParagraphElement>) => {
+    if (!open) return;
+    if (!window.matchMedia(FINE_POINTER_QUERY).matches) return;
+    const src = (e.target as HTMLElement).closest?.(
+      "[data-w]",
+    ) as HTMLElement | null;
+    // Pointer over inter-word space: keep the current lock instead of
+    // flickering it off between words.
+    if (!src || src === srcWordRef.current) return;
+    const hot = popupTextRef.current?.querySelector<HTMLElement>(
+      `[data-w="${src.dataset.w}"]`,
+    );
+    releaseWordLock();
+    if (!hot) return;
+    src.classList.add("dr-word-src");
+    hot.classList.add("dr-word-hot");
+    srcWordRef.current = src;
+    hotWordRef.current = hot;
+  };
+
+  // Any close path drops the lock — a stale highlight inside a hidden
+  // panel would just reappear wrongly on the next open.
+  useEffect(() => {
+    if (open) return;
+    hotWordRef.current?.classList.remove("dr-word-hot");
+    srcWordRef.current?.classList.remove("dr-word-src");
+    hotWordRef.current = null;
+    srcWordRef.current = null;
+  }, [open]);
   // +6px gap so the trigger doesn't crowd the last word. The Math.min is
   // a defensive backstop, not the primary guard against overflow — the
   // paragraph's own pr-10 (ProjectsSection) reserves 40px of width the
@@ -238,9 +310,23 @@ export default function DescriptionReveal({
   );
 
   return (
-    <div ref={wrapperRef} className="relative">
-      <p ref={textRef} className={clampClassName}>
-        {text}
+    <div
+      ref={wrapperRef}
+      className="relative"
+      style={{ "--dr-accent": accent } as React.CSSProperties}
+    >
+      <p
+        ref={textRef}
+        className={clampClassName}
+        onPointerOver={onWordOver}
+        onPointerLeave={releaseWordLock}
+      >
+        {words.map((w, i) => (
+          <Fragment key={i}>
+            <span data-w={i}>{w}</span>
+            {i < words.length - 1 ? " " : null}
+          </Fragment>
+        ))}
       </p>
 
       {/* text-xs/sm/base + !leading-relaxed here deliberately mirror the
@@ -342,8 +428,24 @@ export default function DescriptionReveal({
           </button>
         </div>
 
-        <p className="relative text-xs sm:text-sm leading-relaxed text-[var(--text)]">
-          {open ? scrambled || text : text}
+        {/* Same indexed word spans as the clamped paragraph — the decode
+            still churns (each span shows its slice of the scrambling
+            string until it settles to the real text), but the spans stay
+            stable so the word-lock highlight can land mid-decode too. */}
+        <p
+          ref={popupTextRef}
+          className="relative text-xs sm:text-sm leading-relaxed text-[var(--text)]"
+        >
+          {words.map((w, i) => (
+            <Fragment key={i}>
+              <span data-w={i}>
+                {open && scrambled && scrambled !== text
+                  ? scrambled.slice(wordOffsets[i], wordOffsets[i] + w.length)
+                  : w}
+              </span>
+              {i < words.length - 1 ? " " : null}
+            </Fragment>
+          ))}
         </p>
       </div>
     </div>

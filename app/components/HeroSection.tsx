@@ -100,11 +100,6 @@ export default function HeroSection() {
       let scatterTween: gsap.core.Tween | null = null;
       let scatterProgress = 0;
       let glitchCall: gsap.core.Tween | null = null;
-      // Live references to the CURRENT split's chars/masks — replaced on
-      // every re-split (font load / resize), read by the scroll-return
-      // replay below, which outlives any single split.
-      let currentChars: Element[] = [];
-      let currentMasks: HTMLElement[] = [];
 
       // Act 4 — scroll de-rez: the name's chars scatter and dissolve as the
       // hero releases into the page, then reassemble scrolling back up.
@@ -185,8 +180,6 @@ export default function HeroSection() {
             // pin the properly spaced name instead (re-applied per split;
             // autoSplit re-runs this on font load / resize).
             nameEl.setAttribute("aria-label", "Mohamed Nagy.");
-            currentChars = self.chars;
-            currentMasks = self.masks as HTMLElement[];
             if (entrancePlayed) {
               // Re-split after the show (viewport resize, late font swap):
               // land chars in their final pose, unclip the fresh masks so
@@ -261,15 +254,15 @@ export default function HeroSection() {
         });
 
         // Signal re-lock: after the initial show, scrolling back up to
-        // the hero replays the char flip-up — same repeat-on-return
-        // language as every other heading's glitch/scramble. Fires on
-        // onLeaveBack of a start 25% past the top, i.e. the moment the
-        // name is mostly back in frame on the way up. Animates ONLY
-        // yPercent/rotationX (the entrance's own channels) so it composes
-        // with the scatter scrub, which owns x/y/rotation/opacity and is
-        // simultaneously easing those to rest as the user reaches the
-        // top. Masks re-clip for the flight so chars genuinely rise
-        // through them, then unclip so the next scroll-away can scatter.
+        // the hero re-fires the full-power interference burst — same
+        // repeat-on-return language as every other heading, and
+        // deliberately NOT a replay of the whole char flip-up (tried;
+        // read as too much on every return). materialize flickers the
+        // name back in through scanline bands without moving a single
+        // char, so it composes cleanly with the scatter scrub easing the
+        // chars home at the same time. Fires on onLeaveBack of a start
+        // 25% past the top, i.e. the moment the name is mostly back in
+        // frame on the way up.
         let lastReplay = 0;
         ScrollTrigger.create({
           trigger: sectionRef.current,
@@ -277,25 +270,11 @@ export default function HeroSection() {
           onLeaveBack: () => {
             const now = performance.now();
             if (!entrancePlayed || now - lastReplay < 1500) return;
-            if (!currentChars.length) return;
             lastReplay = now;
-            currentMasks.forEach((m) => (m.style.overflow = "clip"));
-            gsap.fromTo(
-              currentChars,
-              { yPercent: 120, rotationX: -85, transformOrigin: "50% 100%" },
-              {
-                yPercent: 0,
-                rotationX: 0,
-                duration: 0.7,
-                ease: "signalLock",
-                stagger: 0.04,
-                overwrite: "auto",
-                onComplete: () => {
-                  currentMasks.forEach((m) => (m.style.overflow = "visible"));
-                  playGlitchBurst(nameEl, cyan, violet);
-                },
-              },
-            );
+            playGlitchBurst(nameEl, cyan, violet, {
+              power: 2,
+              materialize: true,
+            });
           },
         });
       }

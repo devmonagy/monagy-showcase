@@ -383,3 +383,28 @@ screenshots to keep rAF alive and re-check.
   72% to 62% so the first beats play where they can actually be seen.
   Touch path: the kicker decode rides the same enter/enterBack callback
   as the punch line's materialize burst.
+
+### Feedback fixes on the third pass
+
+- **Hero scroll-return = burst only.** The full char flip-up replay read
+  as too much; onLeaveBack now fires just the power-2 materialize burst
+  (no char movement, composes with the scatter scrub). The
+  currentChars/currentMasks plumbing went with it.
+- **Projects title layout regression fixed**: `w-max` on the h3 made its
+  grid min-content contribution the full single-line title width, which
+  stretched the copy column and crushed the image beside it. The hover
+  host is now an INNER `inline-block` span (`.proj-title`) — shrink-wraps
+  and wraps like plain text; never put width classes on that h3.
+- **Transmission word-lock** (`DescriptionReveal`): both the clamped
+  description and the Full Transmission popover render the same
+  `data-w`-indexed word spans; on desktop, with the popover open,
+  hovering word i outside locks onto word i inside — accent inversion +
+  outline ring + a transform-only snap (`.dr-word-hot`, globals.css;
+  `display:inline-block` only while hot since inline boxes ignore
+  transforms), with a dotted accent underline pairing cue on the outside
+  word (`.dr-word-src`). Class toggles on refs, not React state — no
+  re-render per pointer twitch. The popover decode still churns: each
+  span shows its slice of the scrambling string until it settles.
+  `useLastLineEnd` now measures `selectNodeContents(p)` with a
+  zero-width-rect filter, since the paragraph's first child is a span,
+  not a text node.
