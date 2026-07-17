@@ -597,3 +597,67 @@ overflow; 393px (the exact reported iPhone 16 Pro) → 33.4px, zero
 overflow; 428px → 36.4px, zero overflow; 639px (the sm: boundary, where
 the desktop nav takes over) → the full original 48px restored, still
 zero overflow. tsc + eslint clean.
+
+---
+
+## Eighth pass — mobile entrance jank (real-device video evidence)
+
+Owner supplied a screen recording of a real iPhone loading the site.
+Frame-by-frame extraction (ffmpeg, 6fps) nailed the mechanism: between two
+frames 166ms apart, the bio paragraphs, tech tags, and Download Resume
+button jumped from fully invisible straight to fully visible with ZERO
+intermediate fade frames — not a slow tween, a dropped-frame snap. The
+preloader's own counter was independently caught running ~1s behind its
+nominal ~2.85s timing on the same device, before the hero even started —
+direct evidence of main-thread congestion, not an animation-logic bug.
+
+Root cause: roughly TEN components (Hero, Navbar, Backdrop3D, Experience,
+Projects, three Marquees, Contact, five DescriptionReveal instances) all
+register GSAP setup — `SplitText.create`, `ScrollTrigger.create`, layout
+measurements via `getClientRects()` — in the SAME mount tick, all
+competing with the hero's own entrance timeline for the identical
+main-thread window a mid-tier phone can't clear in time. Desktop never
+shows this because it has the headroom to absorb ten components' setup
+cost inside one frame; the recorded phone didn't.
+
+Two changes, both touch-only / additive (desktop gets zero behavior
+change, verified — `showRest` flips in the same tick as mount there):
+
+- **`page.tsx`**: everything below `<HeroSection>` (both above/below-fold
+  Marquees, Experience, Projects, Contact, Telemetry, Footer) is now
+  gated behind a `showRest` state that starts `false` on both server and
+  client (no hydration mismatch) and flips via a **plain `setTimeout`**
+  — `MOBILE_DEFER_MS = 5300` on touch (`matchMedia("(hover: none),
+  (pointer: coarse)")`), `0` on desktop. Deliberately NOT an
+  event/completion signal (e.g. "hero finished" callback): this exact
+  codebase already learned that lesson once — a cross-component
+  preloader-done signal proved unreliable on real mobile devices, which
+  is why `ENTRANCE_AT` itself is a flat mount delay rather than an
+  `onComplete` wire-up. 5300ms = `ENTRANCE_AT` (2.75s) + the ~2.5s the
+  hero's full choreography (char flip-up, bio/tag/button stagger, echo
+  fade-in) takes to settle, plus real-device margin — the recorded phone
+  was already running behind the theoretical minimum, so the buffer is
+  intentional, not tight. On touch, nothing below the hero mounts (or
+  registers a SINGLE ScrollTrigger/SplitText) until that timer fires, so
+  it can never compete with the hero+preloader's own critical window.
+- **`Marquee.tsx`**: the scroll-velocity feedback (fast-scroll speedup +
+  skew, plus its persistent per-frame `gsap.ticker.add(decay)`) moved
+  inside the EXISTING fine-pointer `gsap.matchMedia` block (previously it
+  ran unconditionally, forever, across all three marquee instances, on
+  every device). This is a steady-state fix, not just entrance: it was
+  writing on every scroll tick across 3 tickers for the site's entire
+  mobile lifetime, for a flourish that reads as a desktop scroll-wheel
+  nicety in the first place — touch scrolling already has its own native
+  momentum feel. `gsap.matchMedia`'s own revert handles cleanup, so the
+  previous manual `st.kill()`/`gsap.ticker.remove(decay)` moved inside
+  the block's own returned cleanup function.
+
+Verified: desktop mounts `#experience`/`#projects`/`#contact` within one
+tick of navigation (measured `elapsedMs: 0`) — no change from prior
+behavior; the touch-branch timer logic (identical code, isolated) fires
+at exactly `MOBILE_DEFER_MS` (measured 5303ms); console clean; tsc +
+eslint clean. Real touch hardware isn't available in the verification
+pane, so the deferred-mount branch itself should get one real-device
+pass — the timing math and gating logic are proven, but the FEEL (does
+5.3s read as "content pops in a beat late" vs. invisible) is worth a
+glance on the owner's own phone.
