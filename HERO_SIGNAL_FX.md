@@ -657,3 +657,40 @@ press-fan pushed the non-grabbed cards further along their own sides;
 release landed back on the EXACT resting values; dragging and throwing
 the middle card boomeranged it back to precisely `x: -18px`, its own
 permanent slot — not zero. Console clean, tsc + eslint clean.
+
+## Tenth pass — stick-out is earned, not preloaded (owner walked the ninth pass back)
+
+Owner feedback on the ninth pass: the LOAD-TIME stagger was a step too
+far — "I liked it more when the cards used to load all on the same line"
+— but the part worth keeping was exactly the persistence: once a grab
+fans a card out, it should NOT square itself back flush ("resetting its
+stick out … makes it hide back inside under the other cards and harder
+to drag"). So the two ideas were split:
+
+- **At rest, before any interaction: flush.** `baseXs` initializes to 0
+  for every card and no resting offset is applied — the deck loads
+  edge-aligned left and right, the pre-ninth-pass look.
+- **`assignFanSlots(pressed)` runs at the top of every press**: the
+  grabbed card's home becomes 0 (center-front), and any still-flush
+  buried card is dealt a persistent slot on whichever side currently
+  holds fewer cards (`FAN_X_BASE 24 + FAN_X_STEP 12` per extra card on
+  that side). Cards that already own a slot keep it — side AND
+  magnitude — so reshuffles never yank a card across the deck.
+- **Release returns everything to `baseXs`** (same code path as the
+  ninth pass) — but since slots now only EXIST after a grab, the net
+  behavior is: aligned until you touch the deck, sticky after.
+- **Inertia's `x.end` became a function** (`() => baseXs.get(card)`),
+  not a value captured at `Draggable.create` time — baseXs mutates on
+  every press now, and a captured constant would boomerang the card to
+  a stale home.
+
+Verified fresh-load lifecycle end-to-end: rest `[0,0,0]`; grab+release
+the front card → `[-24,+24,0]` HELD after release; grab the buried left
+card → it homes to 0, old front dealt `-24` (measured mid-flight at
+exactly `-54` = slot + the 30px peek lean, settling to `-24`), other
+card undisturbed at `+24`. Final `[0,+24,-24]`. Console clean, tsc +
+eslint clean. Gotcha from this round: overlapping synthetic gestures at
+the pane's 1Hz rAF leave MINUTES of lag-smoothed tween crawl fighting
+each other — always reload to a fresh state between gesture scenarios,
+space the pointermoves (≥200ms), and give settles 8-12s + pumped frames
+before reading transforms.
