@@ -106,11 +106,22 @@ export default function ExperienceSection() {
         // zero shift. (Reverted by this matchMedia context if the
         // pointer condition ever flips, so sticky's inline top survives.)
         gsap.set(wraps, { position: "relative", top: 0 });
-        const lastOffset = 84 + (wraps.length - 1) * 18;
+        // 104, not the 84 the inline `top` uses: that value was tuned for
+        // the TOUCH path's sticky under mobile's h-16 (64px) header —
+        // 20px of daylight. The desktop header is h-20 (80px), so pinning
+        // at 84px tucked the cards' rounded tops 4px under its blurred
+        // bar, reading as "buried". Fixed HERE in the trigger start
+        // strings only — position/top on the wraps stays exactly as
+        // above; the last time this clearance was "fixed" by touching the
+        // wraps' positioning it killed the drag z-order (see the comment
+        // above), and the two knobs were never actually coupled.
+        const PIN_TOP = 104;
+        const PIN_STEP = 18;
+        const lastOffset = PIN_TOP + (wraps.length - 1) * PIN_STEP;
         wraps.forEach((wrap, i) => {
           ScrollTrigger.create({
             trigger: wrap,
-            start: `top ${84 + i * 18}px`,
+            start: `top ${PIN_TOP + i * PIN_STEP}px`,
             endTrigger: wraps[wraps.length - 1],
             end: `top ${lastOffset}px`,
             pin: true,
@@ -127,41 +138,92 @@ export default function ExperienceSection() {
         // covered cards. Desktop-only by design (this mm block): on touch,
         // any drag would fight native scroll on the same gesture.
         let zTop = 20;
-        const draggables = gsap.utils
-          .toArray<HTMLElement>(".exp-card")
-          .map((card) => {
-            const wrap = card.closest<HTMLElement>(".exp-card-wrap");
-            const baseRot = Number(gsap.getProperty(card, "rotation")) || 0;
-            const rotTo = gsap.quickTo(card, "rotation", {
-              duration: 0.4,
-              ease: "power2.out",
-            });
-            return Draggable.create(card, {
-              type: "x,y",
-              inertia: { x: { end: 0 }, y: { end: 0 } },
-              // The site hides the native cursor (body cursor:none) — the
-              // custom ring already shows DRAG over cards, so keep
-              // Draggable from re-imposing its default `move` cursor.
-              cursor: "none",
-              activeCursor: "none",
-              onPress() {
-                if (wrap) gsap.set(wrap, { zIndex: ++zTop });
-                gsap.to(card, {
-                  scale: 1.02,
-                  duration: 0.25,
-                  ease: "power2.out",
-                });
-              },
-              onDrag(this: Draggable) {
-                // Per-event pointer delta → a paper-being-yanked tilt.
-                rotTo(baseRot + gsap.utils.clamp(-9, 9, this.deltaX * 0.55));
-              },
-              onRelease() {
-                rotTo(baseRot);
-                gsap.to(card, { scale: 1, duration: 0.4, ease: "power2.out" });
-              },
-            })[0];
+        const bringToFront = (wrap: HTMLElement) => {
+          // The counter must never climb into the fixed header's z-50:
+          // enough grabs in one session and reshuffled cards would start
+          // painting OVER the navbar. Renormalize instead of capping —
+          // compress the wraps' current values back down to base while
+          // keeping their visual order, then stack on top as usual.
+          if (zTop >= 44) {
+            const ordered = [...wraps].sort(
+              (a, b) =>
+                (Number(gsap.getProperty(a, "zIndex")) || 0) -
+                (Number(gsap.getProperty(b, "zIndex")) || 0),
+            );
+            zTop = 20;
+            ordered.forEach((w) => gsap.set(w, { zIndex: ++zTop }));
+          }
+          gsap.set(wrap, { zIndex: ++zTop });
+        };
+        const cards = gsap.utils.toArray<HTMLElement>(".exp-card");
+        const draggables = cards.map((card) => {
+          const wrap = card.closest<HTMLElement>(".exp-card-wrap");
+          const others = cards.filter((c) => c !== card);
+          const baseRot = Number(gsap.getProperty(card, "rotation")) || 0;
+          const rotTo = gsap.quickTo(card, "rotation", {
+            duration: 0.25,
+            ease: "power2.out",
           });
+          return Draggable.create(card, {
+            type: "x,y",
+            inertia: { x: { end: 0 }, y: { end: 0 } },
+            // Snap tuning: default inertia lets a hard throw glide for
+            // well over a second before wandering home. Higher resistance
+            // + a capped duration + near-zero overshoot slack means every
+            // throw still carries real momentum but the card is back in
+            // its slot fast — the deck reads as spring-loaded, not
+            // floaty.
+            throwResistance: 2600,
+            maxDuration: 0.9,
+            minDuration: 0.25,
+            overshootTolerance: 0.15,
+            // The site hides the native cursor (body cursor:none) — the
+            // custom ring already shows DRAG over cards, so keep
+            // Draggable from re-imposing its default `move` cursor.
+            cursor: "none",
+            activeCursor: "none",
+            onPress() {
+              if (wrap) bringToFront(wrap);
+              // Grabbed card lifts, the REST of the deck steps back — the
+              // press state is readable at a glance (which card is live,
+              // which are passive), not just from the cursor badge.
+              // Transform-only on all of it.
+              gsap.to(card, {
+                scale: 1.035,
+                duration: 0.2,
+                ease: "power3.out",
+                overwrite: "auto",
+              });
+              gsap.to(others, {
+                scale: 0.98,
+                duration: 0.35,
+                ease: "power2.out",
+                overwrite: "auto",
+              });
+            },
+            onDrag(this: Draggable) {
+              // Per-event pointer delta → a paper-being-yanked tilt.
+              rotTo(baseRot + gsap.utils.clamp(-10, 10, this.deltaX * 0.65));
+            },
+            onRelease() {
+              rotTo(baseRot);
+              // back.out gives the settle a tiny elastic kiss as the
+              // inertia boomerang lands — "placed", not "faded back".
+              gsap.to(card, {
+                scale: 1,
+                duration: 0.45,
+                ease: "back.out(2)",
+                overwrite: "auto",
+              });
+              gsap.to(others, {
+                scale: 1,
+                duration: 0.45,
+                ease: "power2.out",
+                overwrite: "auto",
+              });
+            },
+          })[0];
+        });
 
         return () => {
           draggables.forEach((d) => d.kill());

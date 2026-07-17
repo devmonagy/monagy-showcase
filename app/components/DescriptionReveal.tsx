@@ -99,9 +99,9 @@ function useLastLineEnd(
       const pRect = p.getBoundingClientRect();
       const range = document.createRange();
       // Whole-contents selection, not p.firstChild: the paragraph renders
-      // per-word spans now (for the word-lock highlight), so the first
-      // child is an element, and the range must cover every word/space
-      // node. getClientRects still yields one rect per inline segment in
+      // per-word spans now (they index the flashlight beam's targets), so
+      // the first child is an element, and the range must cover every
+      // word/space node. getClientRects still yields one rect per inline segment in
       // document order — the last visible one's right edge is still the
       // last visible word's end. Zero-width rects (collapsed element
       // boundaries) are noise, not glyphs.
@@ -154,15 +154,19 @@ export default function DescriptionReveal({
   const panelRef = useRef<HTMLDivElement>(null);
   const scanRef = useRef<HTMLDivElement>(null);
   const popupTextRef = useRef<HTMLParagraphElement>(null);
-  const hotWordRef = useRef<HTMLElement | null>(null);
-  const srcWordRef = useRef<HTMLElement | null>(null);
+  const brightRef = useRef<HTMLParagraphElement>(null);
+  const glowRef = useRef<HTMLDivElement>(null);
+  const flashRef = useRef<{
+    move: (i: number) => void;
+    release: () => void;
+  } | null>(null);
   const panelId = useId();
   const scrambled = useScrambleReveal(open, text);
   const lastLine = useLastLineEnd(textRef, text);
 
   // Both the clamped paragraph and the popover render the SAME word list
   // as indexed spans — word i outside IS word i inside, which is what the
-  // word-lock hover below maps across. Splitting on single spaces keeps
+  // flashlight beam below maps across. Splitting on single spaces keeps
   // the rendered text byte-identical to the plain string (spans + plain
   // space text nodes wrap exactly like raw text), and the offsets let the
   // popover keep the scramble decode by slicing the churning string
@@ -177,46 +181,153 @@ export default function DescriptionReveal({
     return offsets;
   }, [words]);
 
-  // Word-lock: hovering a word in the clamped text (desktop, popover
-  // open) locks onto the same word inside the popover — so when the eye
-  // hits the clamp's last visible word, the highlight shows exactly where
-  // to carry on reading. Class toggles on refs, not React state: this
-  // runs on pointerover and shouldn't re-render two word lists per twitch.
-  const releaseWordLock = () => {
-    hotWordRef.current?.classList.remove("dr-word-hot");
-    srcWordRef.current?.classList.remove("dr-word-src");
-    hotWordRef.current = null;
-    srcWordRef.current = null;
-  };
-  const onWordOver = (e: React.PointerEvent<HTMLParagraphElement>) => {
-    if (!open) return;
-    if (!window.matchMedia(FINE_POINTER_QUERY).matches) return;
-    const src = (e.target as HTMLElement).closest?.(
+  // Flashlight word-tracking: hovering a word in the clamped text
+  // (desktop, popover open) glides an accent-colored beam onto the SAME
+  // word inside the popover — so when the eye hits the clamp's last
+  // visible word, the light shows exactly where to carry on reading.
+  // The outside text itself gets NO styling at all (by request — it
+  // reads as plain text under the pointer); the popover carries the whole
+  // show. The pointer handlers only forward a word index; everything
+  // visual lives in the GSAP engine below.
+  const onWordsOver = (e: React.PointerEvent<HTMLParagraphElement>) => {
+    if (!open || !flashRef.current) return;
+    const w = (e.target as HTMLElement).closest?.(
       "[data-w]",
     ) as HTMLElement | null;
-    // Pointer over inter-word space: keep the current lock instead of
+    // Pointer over inter-word space: hold the beam where it is instead of
     // flickering it off between words.
-    if (!src || src === srcWordRef.current) return;
-    const hot = popupTextRef.current?.querySelector<HTMLElement>(
-      `[data-w="${src.dataset.w}"]`,
-    );
-    releaseWordLock();
-    if (!hot) return;
-    src.classList.add("dr-word-src");
-    hot.classList.add("dr-word-hot");
-    srcWordRef.current = src;
-    hotWordRef.current = hot;
+    if (!w) return;
+    flashRef.current.move(Number(w.dataset.w));
   };
+  const onWordsLeave = () => flashRef.current?.release();
 
-  // Any close path drops the lock — a stale highlight inside a hidden
-  // panel would just reappear wrongly on the next open.
+  // Any close path kills the light — a stale beam inside a hidden panel
+  // would just reappear wrongly on the next open.
   useEffect(() => {
-    if (open) return;
-    hotWordRef.current?.classList.remove("dr-word-hot");
-    srcWordRef.current?.classList.remove("dr-word-src");
-    hotWordRef.current = null;
-    srcWordRef.current = null;
+    if (!open) flashRef.current?.release();
   }, [open]);
+
+  // The beam engine. One quickTo per axis is what makes the glide SMOOTH:
+  // every new hovered word simply retargets the in-flight tween, so the
+  // light carves a continuous path across the paragraph instead of
+  // teleporting per word. Two layers ride the same coordinates —
+  //   · a soft radial glow (transform x/y, compositor-only), and
+  //   · an accent-colored twin of the text clipped by a circle
+  //     (clip-path: circle(var(--drr) at var(--drx) var(--dry)) — CSS vars
+  //     tweened by GSAP; clip-path is in the approved animatable set).
+  // The base text dims while the light is on, so the beam reads as a
+  // flashlight in a dark room, not a highlighter. Word centers come from
+  // offsetLeft/offsetTop at pointerover — event-driven and word-coarse,
+  // never a per-frame measurement (house rule is about mousemove paths).
+  // Fine pointers only: no hover exists to drive it anywhere else.
+  useGSAP(
+    () => {
+      if (!window.matchMedia(FINE_POINTER_QUERY).matches) return;
+      if (window.matchMedia("(prefers-reduced-motion: reduce)").matches)
+        return;
+      const bright = brightRef.current;
+      const glow = glowRef.current;
+      const base = popupTextRef.current;
+      if (!bright || !glow || !base) return;
+
+      gsap.set(glow, { xPercent: -50, yPercent: -50, opacity: 0, scale: 0.6 });
+      const xTo = gsap.quickTo(bright, "--drx", {
+        duration: 0.45,
+        ease: "power3.out",
+      });
+      const yTo = gsap.quickTo(bright, "--dry", {
+        duration: 0.45,
+        ease: "power3.out",
+      });
+      // The halo trails the clip circle by a breath (0.5 vs 0.45) — the
+      // slight lag between the two layers is what sells "light swinging
+      // across the page" over "two rectangles moving in lockstep".
+      const gxTo = gsap.quickTo(glow, "x", {
+        duration: 0.5,
+        ease: "power3.out",
+      });
+      const gyTo = gsap.quickTo(glow, "y", {
+        duration: 0.5,
+        ease: "power3.out",
+      });
+      let lit = false;
+
+      flashRef.current = {
+        move(i) {
+          // Measure the bright twin's own span — the clip circle's `at`
+          // coordinates are relative to that element's box, so measuring
+          // anything else could drift. The twin is inset-0 over the base,
+          // so the glow (positioned in the shared stack) agrees too.
+          const w = bright.querySelector<HTMLElement>(`[data-w="${i}"]`);
+          if (!w) return;
+          const x = w.offsetLeft + w.offsetWidth / 2;
+          const y = w.offsetTop + w.offsetHeight / 2;
+          if (!lit) {
+            lit = true;
+            // First contact: snap the position (quickTo's second arg sets
+            // the start too) and grow the beam ON at the word — gliding in
+            // from a stale corner would read as the light arriving late.
+            xTo(x, x);
+            yTo(y, y);
+            gxTo(x, x);
+            gyTo(y, y);
+            gsap.to(bright, {
+              "--drr": "52px",
+              duration: 0.4,
+              ease: "back.out(1.6)",
+              overwrite: "auto",
+            });
+            gsap.to(glow, {
+              opacity: 0.3,
+              scale: 1,
+              duration: 0.4,
+              ease: "power2.out",
+              overwrite: "auto",
+            });
+            gsap.to(base, {
+              opacity: 0.45,
+              duration: 0.45,
+              ease: "power2.out",
+              overwrite: "auto",
+            });
+          } else {
+            xTo(x);
+            yTo(y);
+            gxTo(x);
+            gyTo(y);
+          }
+        },
+        release() {
+          if (!lit) return;
+          lit = false;
+          gsap.to(bright, {
+            "--drr": "0px",
+            duration: 0.35,
+            ease: "power2.in",
+            overwrite: "auto",
+          });
+          gsap.to(glow, {
+            opacity: 0,
+            scale: 0.6,
+            duration: 0.35,
+            ease: "power2.in",
+            overwrite: "auto",
+          });
+          gsap.to(base, {
+            opacity: 1,
+            duration: 0.4,
+            ease: "power2.out",
+            overwrite: "auto",
+          });
+        },
+      };
+
+      return () => {
+        flashRef.current = null;
+      };
+    },
+    { scope: wrapperRef },
+  );
   // +6px gap so the trigger doesn't crowd the last word. The Math.min is
   // a defensive backstop, not the primary guard against overflow — the
   // paragraph's own pr-10 (ProjectsSection) reserves 40px of width the
@@ -246,6 +357,21 @@ export default function DescriptionReveal({
   }, [open]);
 
   const isFirstRender = useRef(true);
+
+  // Rendered twice in the popover (base text + the flashlight's bright
+  // twin) — one element array keeps the two layers character-identical by
+  // construction, including mid-decode when each span shows its slice of
+  // the churning scramble string.
+  const popupWords = words.map((w, i) => (
+    <Fragment key={i}>
+      <span data-w={i}>
+        {open && scrambled && scrambled !== text
+          ? scrambled.slice(wordOffsets[i], wordOffsets[i] + w.length)
+          : w}
+      </span>
+      {i < words.length - 1 ? " " : null}
+    </Fragment>
+  ));
 
   useGSAP(
     () => {
@@ -318,8 +444,8 @@ export default function DescriptionReveal({
       <p
         ref={textRef}
         className={clampClassName}
-        onPointerOver={onWordOver}
-        onPointerLeave={releaseWordLock}
+        onPointerOver={onWordsOver}
+        onPointerLeave={onWordsLeave}
       >
         {words.map((w, i) => (
           <Fragment key={i}>
@@ -428,25 +554,43 @@ export default function DescriptionReveal({
           </button>
         </div>
 
-        {/* Same indexed word spans as the clamped paragraph — the decode
-            still churns (each span shows its slice of the scrambling
-            string until it settles to the real text), but the spans stay
-            stable so the word-lock highlight can land mid-decode too. */}
-        <p
-          ref={popupTextRef}
-          className="relative text-xs sm:text-sm leading-relaxed text-[var(--text)]"
-        >
-          {words.map((w, i) => (
-            <Fragment key={i}>
-              <span data-w={i}>
-                {open && scrambled && scrambled !== text
-                  ? scrambled.slice(wordOffsets[i], wordOffsets[i] + w.length)
-                  : w}
-              </span>
-              {i < words.length - 1 ? " " : null}
-            </Fragment>
-          ))}
-        </p>
+        {/* The flashlight stack — three layers sharing one coordinate
+            space:
+              1. glow: a soft accent radial halo BEHIND the text,
+              2. base: the real text (dims while the light is on),
+              3. bright: an aria-hidden accent-colored twin clipped to a
+                 circle — only what's inside the beam shows.
+            Base and twin render the SAME indexed word spans with the same
+            type classes, so they overlay glyph-for-glyph; the decode still
+            churns through both (each span shows its slice of the
+            scrambling string), and the beam can land mid-decode. Hovering
+            words inside the popover drives the same beam as hovering the
+            clamped text outside. */}
+        <div className="relative">
+          <div ref={glowRef} aria-hidden="true" className="dr-flashlight-glow" />
+          <p
+            ref={popupTextRef}
+            onPointerOver={onWordsOver}
+            onPointerLeave={onWordsLeave}
+            className="relative z-[1] text-xs sm:text-sm leading-relaxed text-[var(--text)]"
+          >
+            {popupWords}
+          </p>
+          <p
+            ref={brightRef}
+            aria-hidden="true"
+            className="dr-flashlight-text absolute inset-0 z-[2] pointer-events-none text-xs sm:text-sm leading-relaxed"
+            style={
+              {
+                "--drx": "0px",
+                "--dry": "0px",
+                "--drr": "0px",
+              } as React.CSSProperties
+            }
+          >
+            {popupWords}
+          </p>
+        </div>
       </div>
     </div>
   );

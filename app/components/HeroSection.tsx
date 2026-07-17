@@ -42,11 +42,22 @@ export const ENTRANCE_AT = 2.75;
 // the two glitch clones — five copies, one source of truth. All typography
 // classes live on the shared wrapper (font metrics inherit), so the copies
 // can never drift out of alignment.
+//
+// whitespace-nowrap is load-bearing, not defensive: as raw text each line
+// is one unbreakable word, but SplitText wraps every character in its own
+// inline-block mask, which creates a legal break opportunity BETWEEN
+// every letter — on real phones (390-430px), where the size clamp was
+// tuned against raw-text width with near-zero slack, that let "Mohamed"
+// wrap to "Mohame / d" mid-word (while the unsplit echo copies behind it
+// stayed on one line, doubling the mess). nowrap on the line makes a
+// mid-name break impossible in both the split and unsplit states; the
+// clamp's trimmed vw term (see the wrapper below) supplies the slack so
+// nowrap never clips instead.
 function NameLines() {
   return (
     <>
-      <span className="block">Mohamed</span>
-      <span className="block">
+      <span className="block whitespace-nowrap">Mohamed</span>
+      <span className="block whitespace-nowrap">
         Nagy<span className="text-[var(--accent-volt)]">.</span>
       </span>
     </>
@@ -500,18 +511,40 @@ export default function HeroSection() {
 
             clamp() keeps the longest line ("Mohamed") narrower than the
             max-w-4xl column at every viewport — fixed sizes clipped the
-            final letters behind the reveal masks. The 11.2vw term is
-            purely width-driven, so on a wide-but-short viewport it can
-            render at ~90px regardless of having very little height to
-            work with — the single biggest contributor left once the
-            navbar-clearance and section-padding fixes above still didn't
-            close the gap at 800x480/960x600/1024x600. max-height:619px
-            (matching the section's own compact/ultra-compact tiers, i.e.
-            everywhere shorter than the "full content" 620px tier) swaps
-            in a smaller clamp so the name stays legible without
-            dominating a tight budget. */}
+            final letters behind the reveal masks. 10.8vw, trimmed from
+            the 11.2vw the raw-text pass had verified: SplitText's
+            per-char inline-block masks measure a whisker wider than the
+            same word as plain text, and 11.2vw had been tuned against
+            plain text with near-zero slack on phones — the overflow
+            surfaced as "Mohamed" wrapping mid-word (see NameLines). The
+            trim restores real slack so the nowrap'd line fits with room
+            at every phone width instead of clipping.
+
+            Every tier is additionally wrapped in
+            min(..., calc((100vw-2.5rem)/8.45)): the hard "can the word
+            physically fit" cap. The clamps' rem FLOORS exist to keep the
+            name legible on short viewports, but a floor is width-blind —
+            at 240px wide (feature-phone tier) the compact floor's 28px
+            "Mohamed" measured 34px wider than the container, and a
+            280px-wide Galaxy-Fold cover screen would overflow the main
+            tier's 2.4rem floor the same way. 8.45 is the split name's
+            measured width ratio (~8.36em for "Mohamed" in Syne extrabold
+            at tracking-tighter, SplitText masks included) plus slack;
+            2.5rem is the mobile px-5 padding. The cap only ever binds
+            below ~400px width — everywhere else the vw/rem terms are
+            smaller anyway.
+
+            The vw term is purely width-driven, so on a wide-but-short
+            viewport it can render at ~90px regardless of having very
+            little height to work with — the single biggest contributor
+            left once the navbar-clearance and section-padding fixes
+            above still didn't close the gap at 800x480/960x600/1024x600.
+            max-height:619px (matching the section's own compact/ultra-
+            compact tiers, i.e. everywhere shorter than the "full
+            content" 620px tier) swaps in a smaller clamp so the name
+            stays legible without dominating a tight budget. */}
         <div
-          className="relative font-[family-name:var(--font-syne)] font-extrabold text-[clamp(2.4rem,11.2vw,6.75rem)] [@media(max-height:619px)]:text-[clamp(1.75rem,7vw,3.5rem)] [@media(max-height:269px)]:!text-[clamp(1.25rem,5vw,2rem)] leading-[0.95] tracking-tighter"
+          className="relative font-[family-name:var(--font-syne)] font-extrabold text-[min(clamp(2.4rem,10.8vw,6.75rem),calc((100vw-2.5rem)/8.45))] [@media(max-height:619px)]:text-[min(clamp(1.75rem,7vw,3.5rem),calc((100vw-2.5rem)/8.45))] [@media(max-height:269px)]:!text-[min(clamp(1.25rem,5vw,2rem),calc((100vw-2.5rem)/8.45))] leading-[0.95] tracking-tighter"
           style={{ perspective: "56.25rem" }}
         >
           <div

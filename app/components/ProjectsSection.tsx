@@ -258,7 +258,19 @@ export default function ProjectsSection() {
                       title lays out exactly like plain text while the
                       hover zone still hugs the words. */}
                   <h3 className="font-[family-name:var(--font-syne)] font-extrabold text-2xl sm:text-4xl min-[900px]:text-5xl tracking-tight text-[var(--text-contrast)] leading-[1.05]">
-                    <span
+                    {/* The title is a real link to the live app (same
+                        destination as the screenshot frame and Launch App
+                        button). Still the INNER inline-block host, never
+                        width classes on the h3 — see the layout-regression
+                        note above. Being an <a> also makes it GlitchText's
+                        hover host (closest("a")) and grows the custom
+                        cursor ring, so the fill+glitch+cursor all agree
+                        this is clickable. */}
+                    <a
+                      href={project.liveUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      aria-label={`${project.title} — open live app`}
                       className="proj-title relative inline-block"
                       style={
                         { "--proj-accent": tone.accent } as React.CSSProperties
@@ -268,7 +280,7 @@ export default function ProjectsSection() {
                       <span className="proj-title-fill" aria-hidden="true">
                         {project.title}
                       </span>
-                    </span>
+                    </a>
                   </h3>
                   {/* Clamped to the same 3 lines at every breakpoint: the
                       whole card stack shares one height (the tallest

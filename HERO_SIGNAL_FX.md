@@ -408,3 +408,112 @@ screenshots to keep rAF alive and re-check.
   `useLastLineEnd` now measures `selectNodeContents(p)` with a
   zero-width-rect filter, since the paragraph's first child is a span,
   not a text node.
+
+---
+
+## Fourth follow-up pass — titles-as-links, flashlight rework, deck feel
+
+- **Project titles are links now**: the `.proj-title` inline-block host is
+  a real `<a>` to `project.liveUrl` (new tab) — same destination as the
+  screenshot frame and Launch App button. Being an anchor also makes it
+  GlitchText's hover host (`closest("a")`) and grows the custom cursor
+  ring, so fill + glitch + cursor all agree it's clickable. Still never
+  width classes on the h3 (the `w-max` grid regression note above stands).
+- **Word-lock → flashlight beam** (`DescriptionReveal`): the outside
+  clamped text now has NO hover styling at all (by request — plain text
+  under the pointer). All the show moved inside the Full Transmission
+  popover as a gliding accent flashlight:
+  · the base popover text dims to 0.45 while the light is on;
+  · an aria-hidden accent-colored TWIN of the paragraph sits inset-0
+    above it, clipped by `clip-path: circle(var(--drr) at var(--drx)
+    var(--dry))` — only what's in the beam shows;
+  · a soft radial-gradient halo (`.dr-flashlight-glow`, transform x/y,
+    no filter:blur) trails the clip circle by ~50ms of extra tween lag,
+    which is what sells "light swinging" over "two shapes in lockstep".
+  Hovering word i outside (or inside the popover itself) glides the beam
+  onto word i inside via one `gsap.quickTo` per axis — every new word
+  RETARGETS the in-flight tween, so the light carves one continuous path
+  instead of teleporting (the old per-word class snap). First contact
+  snaps position and grows the radius on (quickTo's second arg sets the
+  start); pointer-leave / close shrinks it away. Word centers come from
+  offsetLeft/Top at pointerover — event-driven, never per-frame. The
+  bright twin renders the same element array as the base (including
+  mid-decode scramble slices), so the layers are character-identical by
+  construction. Fine-pointer only; inert on touch/reduced-motion (both
+  layers rest invisible). `.dr-word-src`/`.dr-word-hot`/`drLock` CSS
+  removed.
+- **Deck header clearance, fixed in the right knob this time**: desktop
+  pin starts moved 84 → 104px (`PIN_TOP`; 80px h-20 header + real
+  daylight). 84 was tuned for the TOUCH path's sticky under the 64px
+  mobile header and leaked into the desktop trigger strings. Only the
+  ScrollTrigger `start`/`end` strings changed — the wraps'
+  `position:relative; top:0` (the drag z-order fix) is untouched, because
+  the clearance and the z-order were never actually coupled, which is
+  what the earlier break was. Inline `top: 84+18i` stays — it's the touch
+  sticky's offset, correct under h-16.
+- **Drag feel**: throwResistance 2600 + maxDuration 0.9 + tight
+  overshootTolerance = throws carry momentum but land fast
+  ("spring-loaded, not floaty"); press scale 1.035 in 0.2s, release
+  settles with back.out(2); tilt clamp ±10 at 0.25s quickTo; grabbing a
+  card steps the REST of the deck back to scale 0.98 (press state
+  readable at a glance, restored on release). zIndex counter renormalizes
+  before it could ever climb into the fixed header's z-50 (compresses
+  wrap z-values back to base preserving order).
+
+Verified this round (state-based, embedded pane): all five titles are
+anchors with correct href/target/aria-label; flashlight beam measured ON
+at `circle(52px at word-center)` with glow 0.3 / base 0.45 and the center
+GLIDING between word targets on retarget; pins measured at 104/122/140;
+synthetic-pointer drag followed at `translate3d(210px,…) rotate(9.4deg)
+scale(1.035)` with others at 0.985, then boomeranged to exactly
+`translate3d(0,0,0) rotate(base)`. tsc + eslint clean. Pane gotcha, new
+flavor: screenshots can return solid BLACK frames while the DOM is fully
+correct — trust element-state assertions, not pixels, in that pane.
+
+---
+
+## Fifth pass — fluid-scale ramp + name-wrap fix (owner bug reports, 2560×1440 monitor + real iPhone)
+
+Two field reports from the owner's own hardware, both root-caused:
+
+- **2560×1440: "Edge zoomed out, Chrome way zoomed in."** The fluid root
+  scale's `min-width: 2560px` cliff sat exactly ON the owner's monitor
+  width — Chrome (overlay scrollbar) measured 2560 and jumped the root
+  font to ~24px (1.5×) while Edge (classic gutter) measured ~2545 and
+  stayed at 16px. The IDENTICAL bug the earlier pass fixed at 1920px, just
+  relocated to the next common resolution by moving the cliff instead of
+  removing it. Fixed structurally: the stepped jump is now a continuous
+  ramp from 1920px — `clamp(16px, 0.41667vw + 8px, 26px)` — which equals
+  EXACTLY 16px at the 1920 boundary (measured 16.0001px) and rises +8px
+  per 1920px of width: 2560 → ~18.7px, 3840 → 24px, capped 26px. A
+  scrollbar gutter's few px now move the size by hundredths of a pixel
+  (measured Chrome-vs-Edge delta at QHD: 0.063px, previously 8px). Since
+  it's the ROOT font and everything is rem-based, the whole app scales as
+  one system — headings, cards, spacing, all sections, never just the
+  hero.
+- **iPhone: "Mohame / d" — name wrapping mid-word.** SplitText wraps every
+  char in its own inline-block mask, which (a) creates a legal line-break
+  opportunity BETWEEN every letter of an unbreakable word and (b) measures
+  a whisker wider than the raw text the 11.2vw clamp had been tuned
+  against with near-zero phone slack. Meanwhile the unsplit echo copies
+  behind stayed on one line, doubling the visual mess. Three-part fix in
+  HeroSection:
+  1. `whitespace-nowrap` on both NameLines spans — a mid-name break is
+     now impossible by construction, in split and unsplit states alike;
+  2. vw term trimmed 11.2 → 10.8 so the nowrap'd line has real slack
+     instead of clipping;
+  3. every size tier wrapped in `min(clamp(...),
+     calc((100vw-2.5rem)/8.45))` — the "can the word physically fit" cap.
+     The clamps' rem floors are width-blind: at 240px wide (screenfly's
+     feature-phone tier) the compact floor's 28px name measured 34px
+     wider than the container, and a 280px Galaxy-Fold cover screen would
+     overflow the main tier's floor the same way. 8.45 is the split
+     name's measured width ratio (~8.36em) plus slack; the cap only binds
+     below ~400px width.
+
+Verified by measurement (scrollWidth vs clientWidth per name line +
+root font-size), full sweep: 240×320, 280×653, 320×568, 390×844,
+428×926 (incl. button/scroll-cue overlap guard), 1024×600, 1920×1080
+(boundary continuity), 2545 + 2560 ×1440 (the Edge/Chrome pair), and
+3840×2160 — zero overflow, single-line name, and agreeing browsers at
+every width. tsc + eslint clean.
