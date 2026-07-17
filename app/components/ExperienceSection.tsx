@@ -190,31 +190,68 @@ export default function ExperienceSection() {
         cards.forEach((c) =>
           baseRots.set(c, Number(gsap.getProperty(c, "rotation")) || 0),
         );
+        // Permanent left/right stagger — a static resting offset, not a
+        // press reaction. The deck's natural paint order puts the LAST
+        // card on top (later in DOM = later index = renders over earlier
+        // siblings with no z-index needed, matching how the vertical
+        // PIN_STEP stagger already reads as "newest slides in front"), so
+        // "depth" counts backward from that front card: 0 at the front,
+        // increasing toward the back of the stack. Each step back
+        // alternates side and grows the offset, so a buried card's edge
+        // clears the one in front of it instead of hiding flush behind
+        // it — the "stick out on either side, permanently" the fan-on-
+        // press used to only show for the length of the gesture. Applied
+        // unconditionally (not gated behind reduceMotion): this is a
+        // static layout choice, same category as CARD_LOOKS' own static
+        // rotate() below, not motion.
+        const REST_X_BASE = 18;
+        const REST_X_STEP = 10;
+        const baseXs = new Map<HTMLElement, number>();
+        cards.forEach((c, i) => {
+          const depth = cards.length - 1 - i;
+          if (depth === 0) {
+            baseXs.set(c, 0);
+            return;
+          }
+          const dir = depth % 2 === 1 ? -1 : 1;
+          baseXs.set(c, (REST_X_BASE + REST_X_STEP * (depth - 1)) * dir);
+        });
+        gsap.set(cards, { x: (i, target) => baseXs.get(target as HTMLElement) ?? 0 });
         // Front-of-deck history: releasing a grab peeks the card that was
         // JUST covered (the previous front), not everything.
         const deck: { front: HTMLElement | null; prev: HTMLElement | null } = {
           front: null,
           prev: null,
         };
-        // The newly-buried card leans out from behind the stack, holds a
-        // beat, then elastically tucks back — "I'm still back here, grab
-        // me." Direction follows the card's own resting tilt so the wave
-        // reads as the deck's existing geometry, not a random shove.
+        // The newly-buried card leans out FURTHER from its own permanent
+        // stick-out offset, holds a beat, then elastically settles back
+        // to that resting offset (not to center) — "I'm still back here,
+        // grab me." Rotation direction follows the card's own resting
+        // tilt; the extra lean follows its own baseX side so the motion
+        // reads as an accent on the deck's existing geometry, not a
+        // contradicting shove.
         const peekBuried = (c: HTMLElement) => {
           const b = baseRots.get(c) ?? 0;
-          const dir = b >= 0 ? 1 : -1;
+          const bx = baseXs.get(c) ?? 0;
+          const rotDir = b >= 0 ? 1 : -1;
+          const xDir = bx === 0 ? 1 : Math.sign(bx);
           gsap
             .timeline()
             .to(c, {
-              x: 34 * dir,
-              rotation: b + 2.2 * dir,
+              x: bx + 30 * xDir,
+              rotation: b + 2.2 * rotDir,
               duration: 0.4,
               ease: "power3.out",
               overwrite: "auto",
             })
             .to(
               c,
-              { x: 0, rotation: b, duration: 1.1, ease: "elastic.out(1, 0.55)" },
+              {
+                x: bx,
+                rotation: b,
+                duration: 1.1,
+                ease: "elastic.out(1, 0.55)",
+              },
               "+=0.5",
             );
         };
@@ -226,9 +263,14 @@ export default function ExperienceSection() {
             duration: 0.25,
             ease: "power2.out",
           });
+          // Inertia's x target is this card's own permanent stick-out
+          // offset, not 0 — a throw now boomerangs home to its resting
+          // position in the fan, matching where it visually lives at
+          // rest, instead of snapping back to dead-center.
+          const restX = baseXs.get(card) ?? 0;
           return Draggable.create(card, {
             type: "x,y",
-            inertia: { x: { end: 0 }, y: { end: 0 } },
+            inertia: { x: { end: restX }, y: { end: 0 } },
             // Snap tuning: default inertia lets a hard throw glide for
             // well over a second before wandering home. Higher resistance
             // + a capped duration + near-zero overshoot slack means every
@@ -262,18 +304,23 @@ export default function ExperienceSection() {
                 ease: "power3.out",
                 overwrite: "auto",
               });
-              others.forEach((o, oi) => {
+              others.forEach((o) => {
+                // Push FURTHER out along each card's own permanent
+                // stick-out side (not a fresh alternating pattern) — the
+                // press accentuates the resting fan instead of
+                // overriding it, so cards never contradict where they
+                // just were. The sideways push is decorative flourish;
+                // the scale step-back alone still communicates press
+                // state under reduced motion.
+                const bx = baseXs.get(o) ?? 0;
+                const xDir = bx === 0 ? 1 : Math.sign(bx);
                 gsap.to(o, {
                   scale: 0.98,
-                  // The sideways fan is decorative flourish; the scale
-                  // step-back alone still communicates press state under
-                  // reduced motion.
                   ...(reduceMotion
                     ? {}
                     : {
-                        x: (oi % 2 ? 1 : -1) * 24,
-                        rotation:
-                          (baseRots.get(o) ?? 0) + (oi % 2 ? 1.3 : -1.3),
+                        x: bx + 18 * xDir,
+                        rotation: (baseRots.get(o) ?? 0) + 1.3 * xDir,
                       }),
                   duration: 0.45,
                   ease: "power3.out",
@@ -295,11 +342,17 @@ export default function ExperienceSection() {
                 ease: "back.out(2)",
                 overwrite: "auto",
               });
-              // Deck tucks back in…
+              // Deck tucks back to its permanent resting fan — NOT to
+              // center. This is the fix for the whole complaint: the
+              // stick-out used to be a press-only reaction that squared
+              // itself away the instant you let go, leaving a uniform
+              // stack again. Now "tuck back" means "return to the
+              // stagger that was already there," so the sides stay
+              // grabbable at rest, always.
               others.forEach((o) => {
                 gsap.to(o, {
                   scale: 1,
-                  x: 0,
+                  x: baseXs.get(o) ?? 0,
                   rotation: baseRots.get(o) ?? 0,
                   duration: 0.5,
                   ease: "power3.out",

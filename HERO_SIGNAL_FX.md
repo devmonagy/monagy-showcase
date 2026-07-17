@@ -597,3 +597,63 @@ overflow; 393px (the exact reported iPhone 16 Pro) → 33.4px, zero
 overflow; 428px → 36.4px, zero overflow; 639px (the sm: boundary, where
 the desktop nav takes over) → the full original 48px restored, still
 zero overflow. tsc + eslint clean.
+
+---
+
+## Ninth pass — permanent left/right deck stagger (fixing the "squares back in" complaint)
+
+Owner liked the press-time fan-out from the sixth pass but flagged that
+it was only ever a REACTION: cards stuck out to the sides while held,
+then "squared back in" to a uniform stack the instant you let go — so
+outside of an active grab, the deck read as flush-stacked again with no
+visible affordance for what's grabbable underneath.
+
+Fixed by making the stick-out a permanent property of the deck's resting
+layout instead of a press-only animation, and having every existing
+interaction (press-fan, release tuck-back, throw-boomerang, buried-card
+peek) target that resting offset instead of a hardcoded center/zero:
+
+- **`baseXs`** (new map, built alongside the existing `baseRots`): each
+  card's permanent horizontal offset, computed from its **depth** — how
+  many cards are stacked in front of it, counting from the natural
+  front (the deck's own paint order already puts the LAST card on top
+  with no z-index needed, same logic the vertical `PIN_STEP` stagger
+  already relies on). Depth 0 (the front card) gets 0 — it's already
+  fully visible, no reason to offset it. Each step back alternates side
+  and grows the magnitude (`REST_X_BASE=18, REST_X_STEP=10`, so with 3
+  cards: front=0, middle=-18, back=+28), so a buried card's edge clears
+  the one directly in front of it. Applied via one `gsap.set` at init —
+  unconditional, not gated behind `reduceMotion`, because this is a
+  static layout choice (same category as `CARD_LOOKS`' own static
+  `rotate()`), not motion.
+- **Press fan** now pushes each "other" card FURTHER along its own
+  `baseX` side (`bx + 18*sign(bx)`) instead of overwriting with a fresh
+  alternating pattern keyed to array position — the press accentuates
+  the existing fan rather than contradicting it.
+- **Release tuck-back** targets `baseXs.get(o)`, not `0` — this is the
+  actual fix. "Letting go" now means "return to the permanent stagger,"
+  so the sides stay grabbable at rest, always, not just mid-gesture.
+- **`peekBuried`** leans from and returns to the buried card's own
+  `baseX` (`bx + 30*sign(bx)` → back to `bx`), not `0`/`34*dir` off
+  center.
+- **Draggable's inertia `x.end`** is now each card's own `baseX`
+  (captured per-instance at `Draggable.create` time, since each card
+  gets its own call), not a shared `0` — a thrown card now boomerangs
+  home to where it visually lives in the fan, not to dead-center.
+
+Nothing about the pin offsets, hit-testing (wraps/spacers still
+pointer-events:none, cards still the only hit targets), z-order
+renormalization, or throw tuning from the sixth/eighth passes changed —
+this pass only redefines what "center" means for the deck's resting
+and returning states.
+
+Verified via synthetic pointer sequences + screenshot-pumped frames
+(this pane throttles rAF between bare `setTimeout` waits — GSAP tweens
+don't advance without pumped frames, which produced a false "tuck-back
+isn't animating" reading before frames were pumped; see the rAF-
+throttling memory note): resting transforms measured at exactly
+`x: 28px / -18px / 0px` (back/middle/front) before any interaction;
+press-fan pushed the non-grabbed cards further along their own sides;
+release landed back on the EXACT resting values; dragging and throwing
+the middle card boomeranged it back to precisely `x: -18px`, its own
+permanent slot — not zero. Console clean, tsc + eslint clean.
