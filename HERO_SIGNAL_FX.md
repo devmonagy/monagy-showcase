@@ -767,3 +767,65 @@ tsc + eslint clean. Live browser verification was unavailable this round
 page issue) — the fix follows the exact bounded-range + null-fallback
 pattern already proven correct for About/Experience earlier in the same
 file, but a real scroll-past-Contact check is worth a glance next visit.
+
+---
+
+## Eleventh pass — flashlight tuning, mobile marquee jank, project image breakpoint cliff
+
+Three owner-reported issues, all fixed:
+
+- **Flashlight beam tightened + reversed onto the outside text.** `--drr`'s
+  lit radius 52px → 36px, reading as focused on the one word instead of
+  washing over its neighbors (by request). New: hovering a word INSIDE
+  the popover now also color-highlights the SAME word OUTSIDE (in the
+  clamped text) — a plain `gsap.to(word, {color: accent})`, deliberately
+  NOT the circular beam treatment (explicit ask: "not in that circular
+  highlight, a simple smooth coloring"). Implemented as a small
+  `litOutside(i)` helper inside the same beam engine, called from
+  `move()` regardless of which side triggered it (outside-hover already
+  drove the inside beam; this closes the loop both directions) and
+  reverted in `release()`. Verified live: beam measured at exactly
+  `--drr: 36px`; the outside word "platforms" picked up the accent color
+  `rgb(214,255,63)` purely from hovering its twin inside the popover, and
+  reverted to `var(--text)` (`rgb(154,154,165)`) on release.
+- **Marquee mobile jank.** `Marquee.tsx`'s scroll-velocity feedback (fast-
+  scroll speedup + skew, plus its persistent per-frame `gsap.ticker`
+  decay loop) was running unconditionally on every device — three marquee
+  instances each writing on every single scroll tick, for the site's
+  entire mobile lifetime, for a flourish that reads as a desktop
+  scroll-wheel nicety. Moved both inside the existing fine-pointer
+  `gsap.matchMedia` block (same block that already gates the punch-in
+  entrance). The base infinite loop tween — the marquee itself — stays
+  completely unconditional on every device; only the reactive layer on
+  top is now desktop-only.
+- **Project image collapsing at the 900px breakpoint.** Measured, not
+  guessed: at 899px the image frame was 664×432 (single-column, full
+  width); at 901px — TWO pixels wider — it collapsed to 281×183, a 58%
+  drop, because the grid flips from one full-width column to a
+  `[1.15fr_1fr]` split of an ALSO-narrower container (`w-[64vw]`) at the
+  exact same breakpoint. Tried the obvious fix first (delay the
+  grid-cols breakpoint to 1100px) and it was WRONG: measured 1024×768
+  with that change and the "Launch App" button landed 162px below the
+  viewport — single-column stacking at that width is too tall for the
+  pinned section's height budget, which is exactly the failure mode
+  `RESOLUTION_FIXES.md` fought to fix originally. Reverted that.
+  Actual fix: leave the grid-cols breakpoint exactly at 900px (preserving
+  the verified-safe height-fit timing) and instead widen the container
+  itself at that same breakpoint — `min-[900px]:w-[64vw]` →
+  `min-[900px]:w-[86vw]`. This doesn't touch the 1.15:1 split ratio
+  (preserving the already-safe text column proportions) or the transition
+  timing (preserving the height fit); it just gives both columns more
+  absolute pixels from a wider shared container, and the existing
+  `max-w-[60rem]` cap still caps the plateau at the identical final size
+  as before — just reached at a more modest viewport (~1231px instead of
+  ~1500px). Verified: cliff reduced from 58% to 40% (664→399, was
+  664→281); 1024×768 and 1280×720 (the historically fragile short-laptop
+  resolutions) both measured IDENTICAL button slack to the unmodified
+  baseline (104px and 80px respectively) — widening only ever helps
+  height here, since a wider image column is shorter (aspect-locked) and
+  a wider text column wraps less, never more. 1920px+ plateau confirmed
+  unchanged (501×326, `max-w-60rem` engaging correctly). No horizontal
+  scroll introduced at any tested width.
+
+tsc + eslint clean. All three verified live (not eyeballed) via DOM
+measurement and screenshots.

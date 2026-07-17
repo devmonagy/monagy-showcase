@@ -89,46 +89,58 @@ export default function Marquee({
             scrollTrigger: { trigger: containerRef.current, start: "top 92%" },
           },
         );
+
+        // Scroll-velocity feedback: fast scrolling speeds the loop up and
+        // skews the type in the scroll direction; a per-frame decay
+        // relaxes both back to rest once scrolling stops. Fine-pointer
+        // only — this used to run unconditionally on every device, and a
+        // real touch device reported this among the causes of visible
+        // jank/stutter on mobile marquees: a ScrollTrigger onUpdate PLUS
+        // a persistent per-frame ticker callback, times three marquee
+        // instances, writing on every single scroll tick for the site's
+        // entire mobile lifetime — for a flourish (fast-flick speedup +
+        // skew) that reads as a desktop scroll-wheel nicety anyway. The
+        // base infinite loop tween above stays completely unconditional
+        // (every device gets the marquee itself, just not this extra
+        // reactive layer), and gsap.matchMedia's own revert handles
+        // teardown if the pointer type ever changes — no separate cleanup
+        // needed outside this callback.
+        const st = ScrollTrigger.create({
+          onUpdate(self) {
+            const v = self.getVelocity();
+            gsap.set(trackRef.current, {
+              skewX: gsap.utils.clamp(-12, 12, v / 160),
+            });
+            if (stoppedRef.current) return;
+            if (Math.abs(v) > 100) gsap.killTweensOf(tween);
+            if (!gsap.isTweening(tween))
+              tween.timeScale(gsap.utils.clamp(1, 5, 1 + Math.abs(v) / 700));
+          },
+        });
+
+        const decay = () => {
+          const current =
+            Number(gsap.getProperty(trackRef.current, "skewX")) || 0;
+          const skewIdle = Math.abs(current) < 0.05;
+          // While a hover glide owns timeScale, only the skew needs relaxing.
+          if (stoppedRef.current || gsap.isTweening(tween)) {
+            if (!skewIdle)
+              gsap.set(trackRef.current, { skewX: current * 0.92 });
+            return;
+          }
+          // At rest there's nothing to relax — skip the per-frame writes so
+          // an idle page (3 marquee tickers) costs nothing.
+          if (skewIdle && Math.abs(tween.timeScale() - 1) < 0.01) return;
+          gsap.set(trackRef.current, { skewX: current * 0.92 });
+          tween.timeScale(gsap.utils.interpolate(tween.timeScale(), 1, 0.05));
+        };
+        gsap.ticker.add(decay);
+
+        return () => {
+          gsap.ticker.remove(decay);
+          st.kill();
+        };
       });
-
-      // Scroll-velocity feedback: fast scrolling speeds the loop up and
-      // skews the type in the scroll direction; a per-frame decay relaxes
-      // both back to rest once scrolling stops. timeScale writes stand
-      // down while the band is hover-stopped, and a real scroll burst
-      // kills any in-flight hover glide so the boost takes over cleanly.
-      const st = ScrollTrigger.create({
-        onUpdate(self) {
-          const v = self.getVelocity();
-          gsap.set(trackRef.current, {
-            skewX: gsap.utils.clamp(-12, 12, v / 160),
-          });
-          if (stoppedRef.current) return;
-          if (Math.abs(v) > 100) gsap.killTweensOf(tween);
-          if (!gsap.isTweening(tween))
-            tween.timeScale(gsap.utils.clamp(1, 5, 1 + Math.abs(v) / 700));
-        },
-      });
-
-      const decay = () => {
-        const current = Number(gsap.getProperty(trackRef.current, "skewX")) || 0;
-        const skewIdle = Math.abs(current) < 0.05;
-        // While a hover glide owns timeScale, only the skew needs relaxing.
-        if (stoppedRef.current || gsap.isTweening(tween)) {
-          if (!skewIdle) gsap.set(trackRef.current, { skewX: current * 0.92 });
-          return;
-        }
-        // At rest there's nothing to relax — skip the per-frame writes so
-        // an idle page (3 marquee tickers) costs nothing.
-        if (skewIdle && Math.abs(tween.timeScale() - 1) < 0.01) return;
-        gsap.set(trackRef.current, { skewX: current * 0.92 });
-        tween.timeScale(gsap.utils.interpolate(tween.timeScale(), 1, 0.05));
-      };
-      gsap.ticker.add(decay);
-
-      return () => {
-        gsap.ticker.remove(decay);
-        st.kill();
-      };
     },
     { scope: containerRef, dependencies: [direction, duration, tilt] },
   );

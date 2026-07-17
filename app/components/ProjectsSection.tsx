@@ -169,7 +169,7 @@ export default function ProjectsSection() {
           return (
             <article
               key={project.id}
-              className="project-slide relative shrink-0 w-[88vw] sm:w-[72vw] min-[900px]:w-[64vw] max-w-[60rem]"
+              className="project-slide relative shrink-0 w-[88vw] sm:w-[72vw] min-[900px]:w-[86vw] max-w-[60rem]"
             >
               {/* Ghost slide index — z-20 floats the hollow numeral OVER the
                   image corner (outline-only, so nothing underneath is
