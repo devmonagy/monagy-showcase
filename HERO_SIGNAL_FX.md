@@ -732,3 +732,38 @@ standard section-bounds trigger pattern. First real-browser session
 should feel-check: drop a card onto another (covered card fans out and
 stays, no inward snap), and scroll fully past then back (deck flush
 again).
+
+---
+
+## Tenth pass — Contact nav link staying lit past the section
+
+Owner report: "CONTACT" in the nav kept glowing after scrolling past the
+Contact section into Telemetry/Footer, instead of turning off.
+
+Root cause was two-fold in `Navbar.tsx`'s active-section tracker:
+
+1. `contactBounds` was deliberately built with `end: "max"` (document
+   end) by an earlier design choice — "Contact should stay lit through
+   the trailing sections, like a last nav item conventionally does." The
+   owner wants the opposite: lit ONLY while Contact itself is in view,
+   matching About/Experience/Projects' own bounded behavior.
+2. Even bounding it to `end: "bottom top"` (Contact's own extent, same
+   pattern as every other section) wasn't sufficient alone: the
+   `onUpdate` handler's `hit = ranges.find(...)` line only ever called
+   `setActiveHref(hit.href)` when a range matched — on a miss (`hit`
+   undefined, e.g. scrolled past every section's bounds) it did nothing,
+   leaving `activeHref` parked on whatever last matched. Once Contact was
+   properly bounded, scrolling past it would hit exactly this fallthrough
+   and keep "#contact" lit forever after.
+
+Fixed both: `contactBounds.end` is now `"bottom top"` like every other
+section, and the assignment is unconditional —
+`setActiveHref(hit ? hit.href : null)` — so scrolling past the last
+section's bounds now correctly clears the active link (the magic-line
+underline already hides on `null`, per its own existing handling).
+
+tsc + eslint clean. Live browser verification was unavailable this round
+(the verification tool's safety classifier was down site-wide, not a
+page issue) — the fix follows the exact bounded-range + null-fallback
+pattern already proven correct for About/Experience earlier in the same
+file, but a real scroll-past-Contact check is worth a glance next visit.

@@ -104,14 +104,17 @@ export default function Navbar() {
         start: "top top",
         end: "bottom top",
       });
-      // Contact has no upper bound short of the document end — it (and
-      // the nav's last-visited state) should read as "current" through
-      // the trailing Telemetry/Footer sections too, matching how a last
-      // nav item conventionally stays lit to the bottom of the page.
+      // Bounded to the section itself, same as About/Experience above —
+      // by request, Contact should light up ONLY while it's actually in
+      // view, not keep glowing through the trailing Telemetry/Footer
+      // sections once scrolled past. `hit` below simply finds nothing
+      // once scroll passes contactBounds.end, so activeHref falls through
+      // to whatever it was last set to... which is why this alone isn't
+      // enough — see the fallthrough-clear below.
       const contactBounds = ScrollTrigger.create({
         trigger: "#contact",
         start: "top top",
-        end: "max",
+        end: "bottom top",
       });
 
       ScrollTrigger.create({
@@ -158,7 +161,14 @@ export default function Navbar() {
             },
           ];
           const hit = ranges.find((r) => s >= r.start && s < r.end);
-          if (hit) setActiveHref(hit.href);
+          // Past Contact's own end (into Telemetry/Footer), `hit` is
+          // undefined — clear activeHref instead of leaving it parked on
+          // whatever last matched, or Contact would keep reading as
+          // "current" for the rest of the page (the whole bug this
+          // change fixes; bounding contactBounds to the section alone
+          // isn't sufficient on its own, since this line previously only
+          // ever SET activeHref, never cleared it on a miss).
+          setActiveHref(hit ? hit.href : null);
         },
       });
 
