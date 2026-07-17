@@ -568,3 +568,32 @@ card that's painted there; fan/tuck/peek tweens fire with correct
 targets and directions (peek observed mid-flight on the exact card
 deck.prev names). tsc + eslint clean. Feel-tuning (fan amplitude, peek
 timing) awaits the owner's real-browser pass.
+
+---
+
+## Seventh pass — mobile nav overlay label overflow (real-device bug report)
+
+Owner reported "Experience" not fully showing in the mobile fullscreen
+nav on a real iPhone 16 Pro. Measured, not guessed: at 393px viewport the
+fixed `text-5xl` (48px) label needed 436px but the `li` (the stagger
+mask, `overflow-hidden`) only had 345px — a 91px overflow silently
+clipped by the same wrapper that makes the entrance animation work,
+which is why it read as "cut off" rather than wrapping or visibly
+breaking.
+
+Fixed with the same hard-fit pattern as the hero name's mobile fix:
+`text-[min(clamp(1.5rem,8.5vw,3rem),calc((100vw-5rem)/8.6))]`. The clamp
+gives a normal-feeling fluid size across ordinary phones; the `calc` term
+is a measured hard cap (8.6 = "Experience"'s width-per-font-size ratio in
+Syne extrabold/tracking-tighter, with buffer; 5rem = the reserved space
+for the container's px-6 padding + numeral + gap) that makes overflow
+structurally impossible at ANY width this sm:hidden overlay can render
+at — not just the one device it was reported on.
+
+Verified by measurement (scrollWidth vs the li's clientWidth, all four
+labels) across the full range: 240px (feature-phone edge case) →
+27.2px→18.6px font, zero overflow; 320px (iPhone SE) → 27.2px, zero
+overflow; 393px (the exact reported iPhone 16 Pro) → 33.4px, zero
+overflow; 428px → 36.4px, zero overflow; 639px (the sm: boundary, where
+the desktop nav takes over) → the full original 48px restored, still
+zero overflow. tsc + eslint clean.

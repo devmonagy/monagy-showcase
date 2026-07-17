@@ -567,10 +567,28 @@ export default function Navbar() {
             <ul className="space-y-3">
               {NAV_LINKS.map((link, i) => (
                 <li key={link.href} className="overflow-hidden">
+                  {/* Fixed text-5xl (48px) clipped "Experience" — the
+                      longest label — by 91px on a real 393px-wide iPhone
+                      (measured: 436px needed vs 345px available), silently
+                      cut off by this li's own overflow-hidden (which
+                      exists for the stagger mask, not to hide overrun
+                      text). min(clamp(...), calc(...)) is the same
+                      hard-fit pattern as the hero name's mobile fix: the
+                      clamp gives a pleasant size across ordinary phones,
+                      and the calc term is a measured hard cap — 8.6 is
+                      "Experience" in Syne extrabold/tracking-tighter's
+                      width-per-font-size ratio (436px text portion ÷ 48px
+                      font, plus buffer), 5rem is the reserved width for
+                      the px-6 padding + numeral + gap, so the formula
+                      guarantees fit at ANY viewport this overlay can
+                      render at (sm:hidden, so up to ~640px) — including
+                      edge cases like a 240px feature-phone width or a
+                      280px folded-cover screen that were never explicitly
+                      tested before. */}
                   <a
                     href={link.href}
                     onClick={(e) => handleClick(e, link.href)}
-                    className="mnav-link flex items-baseline gap-4 font-[family-name:var(--font-syne)] font-extrabold text-5xl tracking-tighter text-[var(--text-contrast)]"
+                    className="mnav-link flex items-baseline gap-4 font-[family-name:var(--font-syne)] font-extrabold text-[min(clamp(1.5rem,8.5vw,3rem),calc((100vw-5rem)/8.6))] tracking-tighter text-[var(--text-contrast)]"
                   >
                     <span className="font-mono text-xs font-bold text-[var(--accent-volt)]">
                       0{i + 1}
