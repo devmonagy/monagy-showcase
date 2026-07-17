@@ -156,10 +156,6 @@ export default function DescriptionReveal({
   const popupTextRef = useRef<HTMLParagraphElement>(null);
   const brightRef = useRef<HTMLParagraphElement>(null);
   const glowRef = useRef<HTMLDivElement>(null);
-  // The outside word currently color-highlighted (see the beam engine's
-  // move/release below) — tracked outside React state since it's driven
-  // straight off GSAP/pointer events, same reasoning as flashRef.
-  const outsideHotRef = useRef<HTMLElement | null>(null);
   const flashRef = useRef<{
     move: (i: number) => void;
     release: () => void;
@@ -189,10 +185,12 @@ export default function DescriptionReveal({
   // (desktop, popover open) glides an accent-colored beam onto the SAME
   // word inside the popover — so when the eye hits the clamp's last
   // visible word, the light shows exactly where to carry on reading.
-  // The outside text itself gets NO styling at all (by request — it
-  // reads as plain text under the pointer); the popover carries the whole
-  // show. The pointer handlers only forward a word index; everything
-  // visual lives in the GSAP engine below.
+  // ONE-DIRECTIONAL by request: the outside text itself gets no styling
+  // (plain hover, nothing highlights out there), and hovering INSIDE the
+  // popover does nothing either — only outside-hover drives the beam.
+  // These handlers are wired to the outside paragraph only. The pointer
+  // handler only forwards a word index; everything visual lives in the
+  // GSAP engine below.
   const onWordsOver = (e: React.PointerEvent<HTMLParagraphElement>) => {
     if (!open || !flashRef.current) return;
     const w = (e.target as HTMLElement).closest?.(
@@ -256,37 +254,6 @@ export default function DescriptionReveal({
       });
       let lit = false;
 
-      // The OUTSIDE word matching whatever's lit gets a plain color swap —
-      // no circle, no clip-path, just the word itself reading in the
-      // accent color while its twin glows inside the popover. Deliberately
-      // a separate, much simpler animation from the beam: the ask was for
-      // a "simple smooth coloring," not a second spotlight. Swapping the
-      // target on every move() (rather than only at first contact) is what
-      // makes it track a fast sweep across several words correctly.
-      const litOutside = (i: number) => {
-        const next = textRef.current?.querySelector<HTMLElement>(
-          `[data-w="${i}"]`,
-        );
-        if (next === outsideHotRef.current) return;
-        if (outsideHotRef.current) {
-          gsap.to(outsideHotRef.current, {
-            color: "var(--text)",
-            duration: 0.3,
-            ease: "power2.out",
-            overwrite: "auto",
-          });
-        }
-        if (next) {
-          gsap.to(next, {
-            color: accent,
-            duration: 0.3,
-            ease: "power2.out",
-            overwrite: "auto",
-          });
-        }
-        outsideHotRef.current = next ?? null;
-      };
-
       flashRef.current = {
         move(i) {
           // Measure the bright twin's own span — the clip circle's `at`
@@ -297,7 +264,6 @@ export default function DescriptionReveal({
           if (!w) return;
           const x = w.offsetLeft + w.offsetWidth / 2;
           const y = w.offsetTop + w.offsetHeight / 2;
-          litOutside(i);
           if (!lit) {
             lit = true;
             // First contact: snap the position (quickTo's second arg sets
@@ -337,15 +303,6 @@ export default function DescriptionReveal({
           }
         },
         release() {
-          if (outsideHotRef.current) {
-            gsap.to(outsideHotRef.current, {
-              color: "var(--text)",
-              duration: 0.35,
-              ease: "power2.out",
-              overwrite: "auto",
-            });
-            outsideHotRef.current = null;
-          }
           if (!lit) return;
           lit = false;
           gsap.to(bright, {
@@ -372,7 +329,6 @@ export default function DescriptionReveal({
 
       return () => {
         flashRef.current = null;
-        outsideHotRef.current = null;
       };
     },
     { scope: wrapperRef },
@@ -612,15 +568,14 @@ export default function DescriptionReveal({
             Base and twin render the SAME indexed word spans with the same
             type classes, so they overlay glyph-for-glyph; the decode still
             churns through both (each span shows its slice of the
-            scrambling string), and the beam can land mid-decode. Hovering
-            words inside the popover drives the same beam as hovering the
-            clamped text outside. */}
+            scrambling string), and the beam can land mid-decode.
+            One-directional by request: this paragraph carries no hover
+            handlers of its own — only hovering the outside clamped text
+            drives the beam, hovering inside the popover does nothing. */}
         <div className="relative">
           <div ref={glowRef} aria-hidden="true" className="dr-flashlight-glow" />
           <p
             ref={popupTextRef}
-            onPointerOver={onWordsOver}
-            onPointerLeave={onWordsLeave}
             className="relative z-[1] text-xs sm:text-sm leading-relaxed text-[var(--text)]"
           >
             {popupWords}

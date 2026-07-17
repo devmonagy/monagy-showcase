@@ -829,3 +829,27 @@ Three owner-reported issues, all fixed:
 
 tsc + eslint clean. All three verified live (not eyeballed) via DOM
 measurement and screenshots.
+
+---
+
+## Twelfth pass — flashlight simplified to one-directional, outside-plain
+
+Owner feedback on the previous round: reverted the outside-word color
+highlight entirely and removed the ability to hover inside the popover to
+drive the beam — down to exactly one interaction. `DescriptionReveal.tsx`:
+
+- Removed `outsideHotRef` and the `litOutside()` helper (and its calls in
+  `move()`/`release()`) entirely — the outside clamped text now has zero
+  hover styling, plain text under the pointer, full stop.
+- Removed `onPointerOver`/`onPointerLeave` from the popover's own `<p>`
+  (`popupTextRef`) — hovering a word inside the popover now does nothing;
+  only the outside paragraph's handlers remain wired to `flashRef`.
+- The circular beam itself (36px, from the eleventh pass) is unchanged —
+  it still only fires from hovering the OUTSIDE clamped text.
+
+Verified live: hovering outside still lights the beam (36px) with the
+outside word's own color untouched (`rgb(154,154,165)` = `var(--text)`,
+never swaps to accent); releasing the outside hover drops the beam back
+to `0px`; hovering a word directly inside the open popover afterward does
+nothing at all — beam stays `0px`, glow stays `opacity: 0`. tsc + eslint
+clean.
