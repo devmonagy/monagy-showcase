@@ -91,16 +91,21 @@ export default function ExperienceSection() {
       const mm = gsap.matchMedia();
       mm.add(FINE_POINTER_QUERY, () => {
         const wraps = gsap.utils.toArray<HTMLElement>(".exp-card-wrap");
-        // Wraps stay position:static in their resting state on purpose —
-        // do NOT force position:relative here. Each wrap carries an inline
-        // `top` offset meant to apply only once GSAP switches it to
-        // position:fixed on pin; forcing relative beforehand makes that
-        // same top value shift the element WHILE static too (relative
-        // honors top/left, static ignores them), pulling the whole
-        // pre-pin deck up under the fixed header. z-index bring-to-front
-        // (onPress below) still works without this: a card is only
-        // grabbable once its wrap is already on-screen and pinned
-        // (fixed — a positioned value z-index already honors).
+        // Every wrap must be POSITIONED at all times, not just while
+        // pinned: inside ScrollSmoother the pins are transform-based, and
+        // a transformed element paints above still-static siblings while
+        // z-index on a static element is silently IGNORED — so without
+        // this, later cards slid up BEHIND already-pinned ones and the
+        // drag's bring-to-front zIndex (onPress below) was completely
+        // dead. But plain `position: relative` alone is what once buried
+        // the deck under the fixed header: each wrap carries an inline
+        // `top` that exists solely for the TOUCH path's position:sticky
+        // (globals.css), and relative honors it as a layout shift. The
+        // desktop pins get their offsets from the trigger start strings
+        // below instead, so top:0 here costs nothing — positioned wraps,
+        // zero shift. (Reverted by this matchMedia context if the
+        // pointer condition ever flips, so sticky's inline top survives.)
+        gsap.set(wraps, { position: "relative", top: 0 });
         const lastOffset = 84 + (wraps.length - 1) * 18;
         wraps.forEach((wrap, i) => {
           ScrollTrigger.create({

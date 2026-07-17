@@ -226,6 +226,29 @@ h4 {
   color: transparent;
 }
 
+/* Project title hover fill (ProjectsSection): an accent-colored twin of
+   the title sits on top of the white text and floods in behind a slanted
+   clip edge on hover — the diagonal leading edge makes it read as a
+   signal sweeping through the glyphs, not a color crossfade. Retracts the
+   same way on leave. clip-path only (the approved animatable set — never
+   filter/text-shadow, see the .otc notes below); the accent comes from a
+   per-card --proj-accent custom property so volt and cyan cards each
+   flood with their own color. Vertical bounds overshoot the box (-6% /
+   106%) so descenders at the tight title leading are never shaved.
+   Pairs with the GlitchText hover burst on the same title — RGB tear
+   plus accent flood, one gesture. */
+.proj-title-fill {
+  position: absolute;
+  inset: 0;
+  color: var(--proj-accent);
+  clip-path: polygon(-8% -6%, -8% -6%, -22% 106%, -22% 106%);
+  transition: clip-path 0.6s cubic-bezier(0.76, 0, 0.24, 1);
+  pointer-events: none;
+}
+.proj-title:hover .proj-title-fill {
+  clip-path: polygon(-8% -6%, 122% -6%, 108% 106%, -22% 106%);
+}
+
 /* ---- Backdrop 3D shape animations (transform-only, compositor-friendly) ---- */
 
 @keyframes spinCube {
@@ -539,5 +562,11 @@ h4 {
   .weather-bolt,
   .weather-fog {
     animation: none;
+  }
+
+  /* Hover feedback stays (the accent fill still communicates), it just
+     lands instantly instead of sweeping. */
+  .proj-title-fill {
+    transition: none;
   }
 }

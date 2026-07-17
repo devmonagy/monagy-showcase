@@ -335,3 +335,51 @@ gated by the pane's throttled rAF, so checking DOM state immediately
 after a programmatic scroll reads the OLD position. Same fix as always:
 either wait for the lerp (several seconds) or fire back-to-back
 screenshots to keep rAF alive and re-check.
+
+---
+
+## Third follow-up pass — feedback round on the second pass
+
+- **Deck drag regression root-caused for real.** The second pass's fix
+  (dropping the forced `position:relative` on `.exp-card-wrap`) restored
+  the top space but silently killed the drag's z-order: inside
+  ScrollSmoother the pins are TRANSFORM-based (the wrap never becomes
+  position:fixed), and `z-index` on a static element is ignored while a
+  transformed element paints above static siblings — so bring-to-front
+  was dead AND later cards slid up BEHIND pinned ones. Correct fix:
+  `gsap.set(wraps, { position: "relative", top: 0 })` — positioned at all
+  times (paint order + z-index work in every pin state) with the inline
+  `top` (which exists only for the touch path's position:sticky) zeroed
+  out so the resting layout never shifts. Desktop pin offsets come from
+  the trigger start strings, not the inline top. Verified: pins at
+  84/102/120px below the viewport top, drag + throw + persistent
+  bring-to-front all working.
+- **Hero name replays on scroll-return**: a `start: "top -25%"`
+  ScrollTrigger's onLeaveBack re-runs the char flip-up (yPercent/
+  rotationX only — composes with the scatter scrub which owns
+  x/y/rotation/opacity), re-clipping the SplitText masks for the flight
+  and unclipping after, ending on a glitch burst. The continuous
+  sway/interference loop is untouched. Guarded by `entrancePlayed` and a
+  1.5s throttle; chars/masks read from closure refs updated per re-split.
+- **Nav top-of-page rule hardened**: a second, independent check in the
+  native `scroll` listener (the one that sets the `scrolled` header
+  style) forces activeHref null at scrollY <= 2 — two separate systems
+  agreeing is what makes "nothing lit at the very top, always" true.
+- **Header hairline's Projects segment removed** per feedback (kept only
+  the plain overall-progress hairline). The `projects-pin` ScrollTrigger
+  id stays — active-link tracking still reads it.
+- **Project title hover fill**: `.proj-title-fill` (globals.css) — an
+  accent-colored twin of the title floods in behind a SLANTED clip-path
+  edge on hover (per-card `--proj-accent`), paired with the GlitchText
+  hover burst on the same title. clip-path only; instant (no sweep) under
+  reduced motion.
+- **Contact kicker + "Got a project?" smoothing**: the kicker's decode
+  was a self-triggered `<ScrambleLabel trigger="enter">` whose own
+  trigger fired well before the master reveal — the decode finished
+  behind an invisible parent, then the parent faded in over settled text
+  ("it's just there"). Now the kicker rises through an overflow mask
+  and its ScrambleText decode is a child of the master timeline; the
+  outline line got a slower, longer rise; the master trigger moved from
+  72% to 62% so the first beats play where they can actually be seen.
+  Touch path: the kicker decode rides the same enter/enterBack callback
+  as the punch line's materialize burst.

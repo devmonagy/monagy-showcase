@@ -5,15 +5,21 @@ import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { SplitText } from "gsap/SplitText";
 import { CustomEase } from "gsap/CustomEase";
+import { ScrambleTextPlugin } from "gsap/ScrambleTextPlugin";
 import { useGSAP } from "@gsap/react";
 import { SITE, SOCIALS } from "../data/content";
 import { FINE_POINTER_QUERY } from "./SmoothScroll";
 import GlitchText, { playGlitchBurst } from "./fx/GlitchText";
-import ScrambleLabel from "./fx/ScrambleLabel";
-import { SIGNAL_LOCK_EASE } from "./fx/constants";
+import { SCRAMBLE_CHARS, SIGNAL_LOCK_EASE } from "./fx/constants";
 
 if (typeof window !== "undefined") {
-  gsap.registerPlugin(ScrollTrigger, SplitText, CustomEase, useGSAP);
+  gsap.registerPlugin(
+    ScrollTrigger,
+    SplitText,
+    CustomEase,
+    ScrambleTextPlugin,
+    useGSAP,
+  );
   CustomEase.create("signalLock", SIGNAL_LOCK_EASE);
 }
 
@@ -22,6 +28,8 @@ const RAYS = Array.from({ length: 12 }, (_, i) => i * 30);
 
 export default function ContactSection() {
   const sectionRef = useRef<HTMLDivElement>(null);
+  const kickerRef = useRef<HTMLSpanElement>(null);
+  const kickerLabelRef = useRef<HTMLSpanElement>(null);
   const outlineRef = useRef<HTMLSpanElement>(null);
   const punchRealRef = useRef<HTMLSpanElement>(null);
   const punchCyanRef = useRef<HTMLSpanElement>(null);
@@ -53,18 +61,28 @@ export default function ContactSection() {
         // restores each target's PRE-TWEEN state — these sets are that
         // state, so the content stays hidden across rebuilds. Same
         // pattern (and reason) as HeroSection's mount-time sets.
-        gsap.set(".contact-reveal-pre", { opacity: 0, y: 24 });
+        gsap.set(kickerRef.current, { yPercent: 112 });
         gsap.set(outlineRef.current, { yPercent: 112 });
         gsap.set(".contact-reveal", { opacity: 0, y: 44 });
 
         // The section ARRIVES as one continuous transmission instead of
-        // fading in over already-visible text: kicker decodes, the outline
-        // line slides up through its mask, then "Let's Talk." flips up
-        // char-by-char on the hero's own signalLock snap and a full
-        // interference burst punctuates the landing while the supporting
-        // content rises in its wake. toggleActions restarts the whole
-        // choreography every time the section returns to view — same
-        // repeat-on-enter language as the heading glitches site-wide.
+        // fading in over already-visible text: kicker rises through its
+        // mask while its label decodes, the outline line slides up, then
+        // "Let's Talk." flips up char-by-char on the hero's own
+        // signalLock snap and a full interference burst punctuates the
+        // landing while the supporting content rises in its wake.
+        // toggleActions restarts the whole choreography every time the
+        // section returns to view — same repeat-on-enter language as the
+        // heading glitches site-wide.
+        //
+        // The kicker's decode is a child of THIS timeline, not a
+        // <ScrambleLabel trigger="enter"> — that component's own trigger
+        // sat lower in the viewport than this master one, so its decode
+        // had already finished behind an invisible parent by the time the
+        // old fade brought the kicker in: the "it's just there" bug. Same
+        // idea for the start position — 72% fired while these first beats
+        // were still below the fold, so the kicker/outline finished
+        // unseen and only the later punch line read as animated.
         SplitText.create(real, {
           type: "chars",
           mask: "chars",
@@ -73,7 +91,7 @@ export default function ContactSection() {
             const tl = gsap.timeline({
               scrollTrigger: {
                 trigger: sectionRef.current,
-                start: "top 72%",
+                start: "top 62%",
                 toggleActions: "restart none restart none",
               },
             });
@@ -82,27 +100,39 @@ export default function ContactSection() {
             // section is reached — desktop only, this whole branch is
             // fine-pointer), not at first play.
             tl.fromTo(
-              ".contact-reveal-pre",
-              { opacity: 0, y: 24 },
+              kickerRef.current,
+              { yPercent: 112 },
               {
-                opacity: 1,
-                y: 0,
-                duration: 0.7,
-                ease: "power3.out",
+                yPercent: 0,
+                duration: 0.8,
+                ease: "power4.out",
                 immediateRender: true,
               },
               0,
             )
+              .to(
+                kickerLabelRef.current,
+                {
+                  duration: 0.7,
+                  ease: "none",
+                  scrambleText: {
+                    text: "Get In Touch",
+                    chars: SCRAMBLE_CHARS,
+                    speed: 1,
+                  },
+                },
+                0.15,
+              )
               .fromTo(
                 outlineRef.current,
                 { yPercent: 112 },
                 {
                   yPercent: 0,
-                  duration: 0.9,
+                  duration: 1.05,
                   ease: "power4.out",
                   immediateRender: true,
                 },
-                0.08,
+                0.14,
               )
               .fromTo(
                 self.chars,
@@ -119,7 +149,7 @@ export default function ContactSection() {
                   stagger: 0.04,
                   immediateRender: true,
                 },
-                0.22,
+                0.34,
               )
               .call(
                 () => {
@@ -127,7 +157,7 @@ export default function ContactSection() {
                 },
                 undefined,
                 // Right as the last char locks in.
-                0.22 + (self.chars.length - 1) * 0.04 + 0.8 * 0.75,
+                0.34 + (self.chars.length - 1) * 0.04 + 0.8 * 0.75,
               )
               .fromTo(
                 ".contact-reveal",
@@ -140,7 +170,7 @@ export default function ContactSection() {
                   stagger: 0.1,
                   immediateRender: true,
                 },
-                0.7,
+                0.82,
               );
             return tl;
           },
@@ -148,9 +178,9 @@ export default function ContactSection() {
       });
 
       // Touch: content never hides, but the punch line still gets the full
-      // interference burst on every pass into view — burst end-state is
-      // always fully visible, so a late/missed trigger costs a beat of
-      // flair, never content.
+      // interference burst — and the kicker its decode — on every pass
+      // into view. Both effects end fully visible, so a late/missed
+      // trigger costs a beat of flair, never content.
       mm.add("(hover: none), (pointer: coarse)", () => {
         if (reduceMotion || !real || !cyan || !violet) return;
         let last = 0;
@@ -159,6 +189,17 @@ export default function ContactSection() {
           if (now - last < 900) return;
           last = now;
           playGlitchBurst(real, cyan, violet, { power: 2, materialize: true });
+          if (kickerLabelRef.current) {
+            gsap.to(kickerLabelRef.current, {
+              duration: 0.7,
+              ease: "none",
+              scrambleText: {
+                text: "Get In Touch",
+                chars: SCRAMBLE_CHARS,
+                speed: 1,
+              },
+            });
+          }
         };
         ScrollTrigger.create({
           trigger: sectionRef.current,
@@ -223,10 +264,25 @@ export default function ContactSection() {
       <div className="ambient-orb absolute bottom-[-10%] left-[-10%] w-[40vw] h-[40vw] max-w-[30rem] max-h-[30rem] rounded-full bg-[var(--accent-volt)] opacity-[0.08] blur-[120px] pointer-events-none" />
 
       <div className="relative z-10 flex flex-col items-center text-center px-5 sm:px-6">
-        <span className="contact-reveal-pre inline-flex items-center gap-3 font-mono text-xs sm:text-sm text-[var(--accent-volt)] tracking-widest uppercase font-semibold mb-6">
-          <span className="w-8 h-px bg-[var(--accent-volt)]" />
-          <ScrambleLabel text="Get In Touch" trigger="enter" />
-          <span className="w-8 h-px bg-[var(--accent-volt)]" />
+        {/* Kicker rises through this mask while its label decodes — both
+            driven by the master timeline above so they land exactly when
+            the section does (a self-triggered ScrambleLabel here fired at
+            its own, earlier scroll position and was long finished behind
+            the old fade — the "it's just there" bug). sr-only twin keeps
+            the real text for screen readers while the visible copy churns
+            scramble glyphs. */}
+        <span className="block overflow-hidden mb-6">
+          <span
+            ref={kickerRef}
+            className="inline-flex items-center gap-3 font-mono text-xs sm:text-sm text-[var(--accent-volt)] tracking-widest uppercase font-semibold"
+          >
+            <span className="w-8 h-px bg-[var(--accent-volt)]" />
+            <span className="sr-only">Get In Touch</span>
+            <span ref={kickerLabelRef} aria-hidden="true">
+              Get In Touch
+            </span>
+            <span className="w-8 h-px bg-[var(--accent-volt)]" />
+          </span>
         </span>
 
         {/* The heading is its own choreography (see useGSAP above), not part
