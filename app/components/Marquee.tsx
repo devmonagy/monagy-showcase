@@ -163,17 +163,22 @@ export default function Marquee({
 
   return (
     // Outer wrapper reserves vertical room so the tilted band's corners
-    // don't clip against neighboring sections.
+    // don't clip against neighboring sections. pointer-events-none on the
+    // wrapper / auto on the band: the wrapper is 110vw wide with real
+    // padding and z-20, so its transparent margins hovered OVER the
+    // experience deck's bottom edge and swallowed pointer events meant
+    // for a grabbable card sliver — only the painted band itself should
+    // ever take hits.
     <div
       ref={containerRef}
-      className={`relative z-20 py-8 sm:py-10 overflow-visible ${className}`}
+      className={`relative z-20 py-8 sm:py-10 overflow-visible pointer-events-none ${className}`}
     >
       <div
         ref={bandRef}
         onMouseEnter={glideStop}
         onMouseLeave={glideStart}
         onTouchStart={togglePlay}
-        className="relative w-[110vw] ml-[-5vw] overflow-hidden select-none py-4 sm:py-6 shadow-[0_18px_50px_rgba(0,0,0,0.45)]"
+        className="pointer-events-auto relative w-[110vw] ml-[-5vw] overflow-hidden select-none py-4 sm:py-6 shadow-[0_18px_50px_rgba(0,0,0,0.45)]"
         style={{ backgroundColor: bg, transform: `rotate(${tilt}deg)` }}
       >
         <div ref={trackRef} className="flex whitespace-nowrap w-max">

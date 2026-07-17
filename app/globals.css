@@ -146,6 +146,21 @@ h4 {
   }
 }
 
+/* Deck pin-spacers are hit-transparent. ScrollTrigger clones the wraps'
+   position:relative onto the spacers it creates around them, turning each
+   into a POSITIONED, invisible, full-width flow box that paints (and
+   hit-tests) above every earlier sibling wrap — wrap2's spacer measured
+   as covering card1's whole peeking strip, silently eating every pointer
+   event on it ("sometimes a card just can't be grabbed"). Declared in CSS
+   (not gsap.set in the component) because the spacers don't exist yet
+   when the pin-creating effect runs — a rule can't race element creation.
+   The wraps/cards inside carry their own inline pointer-events (none /
+   auto — see ExperienceSection), so hits still land on painted cards.
+   Scoped to #experience: Projects' pin-spacer is untouched. */
+#experience .pin-spacer {
+  pointer-events: none;
+}
+
 /* Outlined ghost typography — transparent fill, hairline stroke.
    Lighthouse's contrast audit samples the actual painted stroke pixels
    even though `color` itself is transparent, and flags real headline

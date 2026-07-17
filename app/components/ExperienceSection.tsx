@@ -106,16 +106,28 @@ export default function ExperienceSection() {
         // zero shift. (Reverted by this matchMedia context if the
         // pointer condition ever flips, so sticky's inline top survives.)
         gsap.set(wraps, { position: "relative", top: 0 });
-        // 104, not the 84 the inline `top` uses: that value was tuned for
-        // the TOUCH path's sticky under mobile's h-16 (64px) header —
-        // 20px of daylight. The desktop header is h-20 (80px), so pinning
-        // at 84px tucked the cards' rounded tops 4px under its blurred
-        // bar, reading as "buried". Fixed HERE in the trigger start
-        // strings only — position/top on the wraps stays exactly as
-        // above; the last time this clearance was "fixed" by touching the
-        // wraps' positioning it killed the drag z-order (see the comment
-        // above), and the two knobs were never actually coupled.
-        const PIN_TOP = 104;
+        // Wraps are hit-TRANSPARENT; only the cards themselves take
+        // pointer events. Each wrap carries 48px of bottom padding
+        // (pb-8/12 — pinned-deck breathing room) plus whatever area its
+        // rotated card doesn't cover, and once a wrap has been
+        // bring-to-fronted its zIndex keeps it above later siblings
+        // FOREVER — from then on its invisible padding band floated over
+        // the next card's peeking strip and swallowed every pointer event
+        // there. That was the "sometimes a card just can't be grabbed"
+        // bug: a dead rectangle you could see straight through. With
+        // wraps out of hit-testing entirely, hits land on whatever card
+        // is actually PAINTED under the cursor — if an edge is visible,
+        // it's grabbable, by construction.
+        gsap.set(wraps, { pointerEvents: "none" });
+        // 140 (was 104, was 84): the inline `top` values are tuned for
+        // the TOUCH path's sticky under mobile's h-16 (64px) header. The
+        // desktop header is h-20 (80px), and the owner wants real
+        // daylight between it and the stack — 140 gives 60px of air.
+        // Fixed HERE in the trigger start strings only — position/top on
+        // the wraps stays exactly as above; the time this clearance was
+        // "fixed" by touching the wraps' positioning it killed the drag
+        // z-order, and the two knobs were never actually coupled.
+        const PIN_TOP = 140;
         const PIN_STEP = 18;
         const lastOffset = PIN_TOP + (wraps.length - 1) * PIN_STEP;
         wraps.forEach((wrap, i) => {
@@ -128,6 +140,19 @@ export default function ExperienceSection() {
             pinSpacing: false,
           });
         });
+        // The pin-SPACERS get the same hit-transparency as the wraps via
+        // a CSS rule (`#experience .pin-spacer` in globals.css) rather
+        // than a JS set here: the spacers don't exist yet at this point
+        // in the effect (ScrollTrigger materializes them on its first
+        // refresh), so an imperative set raced their creation and
+        // silently no-oped. Why they must be hit-transparent at all:
+        // ScrollTrigger clones the wrap's layout styles onto its spacer,
+        // so our position:relative makes each spacer a POSITIONED,
+        // transparent, full-width flow box — later in DOM than every
+        // earlier wrap, therefore painting (and hit-testing) ABOVE them.
+        // Measured live: wrap2's spacer covered the viewport down to
+        // exactly card1's peeking strip and swallowed every pointer
+        // event on it.
 
         // The deck is a hands-on toy: every card is grabbable at any
         // scroll position (fully stacked or barely peeking), rides the
@@ -156,10 +181,47 @@ export default function ExperienceSection() {
           gsap.set(wrap, { zIndex: ++zTop });
         };
         const cards = gsap.utils.toArray<HTMLElement>(".exp-card");
+        // Cards re-opt into hit-testing (their wraps are pointer-events:
+        // none — see above), and their resting rotations are captured
+        // once up front: the fan/peek below tween rotation, so reading it
+        // live mid-gesture would capture a fanned value as "base".
+        gsap.set(cards, { pointerEvents: "auto" });
+        const baseRots = new Map<HTMLElement, number>();
+        cards.forEach((c) =>
+          baseRots.set(c, Number(gsap.getProperty(c, "rotation")) || 0),
+        );
+        // Front-of-deck history: releasing a grab peeks the card that was
+        // JUST covered (the previous front), not everything.
+        const deck: { front: HTMLElement | null; prev: HTMLElement | null } = {
+          front: null,
+          prev: null,
+        };
+        // The newly-buried card leans out from behind the stack, holds a
+        // beat, then elastically tucks back — "I'm still back here, grab
+        // me." Direction follows the card's own resting tilt so the wave
+        // reads as the deck's existing geometry, not a random shove.
+        const peekBuried = (c: HTMLElement) => {
+          const b = baseRots.get(c) ?? 0;
+          const dir = b >= 0 ? 1 : -1;
+          gsap
+            .timeline()
+            .to(c, {
+              x: 34 * dir,
+              rotation: b + 2.2 * dir,
+              duration: 0.4,
+              ease: "power3.out",
+              overwrite: "auto",
+            })
+            .to(
+              c,
+              { x: 0, rotation: b, duration: 1.1, ease: "elastic.out(1, 0.55)" },
+              "+=0.5",
+            );
+        };
         const draggables = cards.map((card) => {
           const wrap = card.closest<HTMLElement>(".exp-card-wrap");
           const others = cards.filter((c) => c !== card);
-          const baseRot = Number(gsap.getProperty(card, "rotation")) || 0;
+          const baseRot = baseRots.get(card) ?? 0;
           const rotTo = gsap.quickTo(card, "rotation", {
             duration: 0.25,
             ease: "power2.out",
@@ -184,21 +246,39 @@ export default function ExperienceSection() {
             activeCursor: "none",
             onPress() {
               if (wrap) bringToFront(wrap);
-              // Grabbed card lifts, the REST of the deck steps back — the
-              // press state is readable at a glance (which card is live,
-              // which are passive), not just from the cursor badge.
-              // Transform-only on all of it.
+              deck.prev = deck.front;
+              deck.front = card;
+              // Grabbed card lifts; the REST of the deck FANS OUT —
+              // alternating sideways slides with a touch of extra tilt,
+              // like spreading a hand of cards with your thumb. Every
+              // buried card's side edge slides clear of the front card's
+              // silhouette, which is both the "press is live" state and a
+              // literal display of everything that can be grabbed next
+              // (any painted sliver is a hit target — see the wraps'
+              // pointer-events comment above). Transform-only.
               gsap.to(card, {
                 scale: 1.035,
                 duration: 0.2,
                 ease: "power3.out",
                 overwrite: "auto",
               });
-              gsap.to(others, {
-                scale: 0.98,
-                duration: 0.35,
-                ease: "power2.out",
-                overwrite: "auto",
+              others.forEach((o, oi) => {
+                gsap.to(o, {
+                  scale: 0.98,
+                  // The sideways fan is decorative flourish; the scale
+                  // step-back alone still communicates press state under
+                  // reduced motion.
+                  ...(reduceMotion
+                    ? {}
+                    : {
+                        x: (oi % 2 ? 1 : -1) * 24,
+                        rotation:
+                          (baseRots.get(o) ?? 0) + (oi % 2 ? 1.3 : -1.3),
+                      }),
+                  duration: 0.45,
+                  ease: "power3.out",
+                  overwrite: "auto",
+                });
               });
             },
             onDrag(this: Draggable) {
@@ -215,12 +295,23 @@ export default function ExperienceSection() {
                 ease: "back.out(2)",
                 overwrite: "auto",
               });
-              gsap.to(others, {
-                scale: 1,
-                duration: 0.45,
-                ease: "power2.out",
-                overwrite: "auto",
+              // Deck tucks back in…
+              others.forEach((o) => {
+                gsap.to(o, {
+                  scale: 1,
+                  x: 0,
+                  rotation: baseRots.get(o) ?? 0,
+                  duration: 0.5,
+                  ease: "power3.out",
+                  overwrite: "auto",
+                });
               });
+              // …except the card this grab just covered, which peeks out
+              // once before settling (created after the tuck tween so its
+              // overwrite wins for that one card). Decorative — skipped
+              // under reduced motion.
+              if (!reduceMotion && deck.prev && deck.prev !== card)
+                peekBuried(deck.prev);
             },
           })[0];
         });

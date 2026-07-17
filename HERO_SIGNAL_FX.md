@@ -517,3 +517,54 @@ root font-size), full sweep: 240×320, 280×653, 320×568, 390×844,
 (boundary continuity), 2545 + 2560 ×1440 (the Edge/Chrome pair), and
 3840×2160 — zero overflow, single-line name, and agreeing browsers at
 every width. tsc + eslint clean.
+
+---
+
+## Sixth pass — deck breathing room, the invisible hit-shield, fan + peek
+
+Owner feedback round on the experience deck. Three changes, one real
+discovery:
+
+- **Header daylight restored**: desktop pin starts 104 → 140 (`PIN_TOP`),
+  60px of air under the h-20 header. As established twice now: trigger
+  start strings ONLY — the wraps' position/top (drag z-order machinery)
+  untouched.
+- **THE "sometimes a card just can't be grabbed" BUG, actually found.**
+  Two stacked causes, both invisible rectangles eating pointer events
+  over visible card edges:
+  1. Each wrap carries 48px of bottom padding + whatever its rotated card
+     doesn't cover, and a bring-to-fronted wrap's zIndex keeps it above
+     later siblings forever — its transparent regions shadowed the next
+     card's peeking strip. Fixed: wraps are `pointer-events: none`, cards
+     re-opt in with `auto` — hit-testing now follows exactly what's
+     PAINTED. If you can see a sliver, you can grab it, by construction.
+  2. Deeper: ScrollTrigger clones the wraps' `position: relative` onto
+     the pin-SPACERS it creates around them, making each spacer a
+     positioned, transparent, full-width flow box that paints (and
+     hit-tests) above every earlier wrap — wrap2's spacer measured as
+     covering card1's entire strip. Fixed with a CSS rule
+     (`#experience .pin-spacer { pointer-events: none }` in globals.css)
+     rather than a JS set, because the spacers don't exist yet when the
+     pin-creating effect runs — a stylesheet rule can't race element
+     creation (the gsap.set version silently no-oped; measured).
+- **Fan + peek affordances** (fine pointer, skipped under reduced
+  motion): while a card is held, the rest of the deck FANS OUT —
+  alternating x ±24px with ±1.3° extra tilt, like spreading a hand of
+  cards — exposing every buried edge as a visibly grabbable target
+  (which, per the hit-testing fix, they literally are). On release the
+  deck tucks back, and the card the grab just buried (tracked
+  `deck.prev`) does a one-shot PEEK: leans out 34px along its own resting
+  tilt, holds half a beat, elastic-tucks home. Base rotations are
+  captured once at init (`baseRots` map) — reading them live mid-gesture
+  would capture a fanned value as "base".
+- Marquee wrappers are hit-transparent too (band keeps its own
+  pointer-events): the 110vw z-20 container's padding hovered over the
+  deck's bottom edge.
+
+Verified: pins measured at exactly 140/158/176; the old dead-zone
+reproduction (press card2 → probe card1's strip) now hits card1 (was
+`pin-spacer`); hits over a fronted card's coverage correctly go to the
+card that's painted there; fan/tuck/peek tweens fire with correct
+targets and directions (peek observed mid-flight on the exact card
+deck.prev names). tsc + eslint clean. Feel-tuning (fan amplitude, peek
+timing) awaits the owner's real-browser pass.
