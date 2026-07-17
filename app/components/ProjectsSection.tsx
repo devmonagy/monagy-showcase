@@ -186,7 +186,22 @@ export default function ProjectsSection() {
                 0{i + 1}
               </span>
 
-              <div className="relative z-10 grid min-[900px]:grid-cols-[1.15fr_1fr] gap-6 min-[900px]:gap-12 items-start">
+              {/* minmax(0, ...) on BOTH tracks, not bare 1.15fr/1fr: a plain
+                  fr track's automatic minimum is its own content's
+                  min-content size (effectively its longest unbreakable
+                  word at this font-size), not 0 — so a longer project
+                  title/tag forced its OWN text column to claim more than
+                  its fr-share, stealing width from the image column next
+                  to it. Measured live: at an identical 920px viewport,
+                  "Blog Engine" rendered its image at 408px while "APA Tax
+                  Accounting Inc" (longest word "Accounting", wider at
+                  text-5xl bold) rendered the SAME image column at only
+                  327px — different projects at the same viewport,
+                  purely from title-length differences. minmax(0, Nfr)
+                  disables that content-based floor, so every slide's
+                  columns are sized by the fr RATIO alone and text wraps
+                  instead of pushing the image column around. */}
+              <div className="relative z-10 grid min-[900px]:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)] gap-6 min-[900px]:gap-12 items-start">
                 {/* Tilted screenshot frame. min-[900px]:max-h ties its
                     height to the viewport rather than purely to the
                     column's own vw-based width: at that breakpoint the

@@ -853,3 +853,53 @@ never swaps to accent); releasing the outside hover drops the beam back
 to `0px`; hovering a word directly inside the open popover afterward does
 nothing at all — beam stays `0px`, glow stays `opacity: 0`. tsc + eslint
 clean.
+
+---
+
+## Thirteenth pass — the REAL root cause of the image inconsistency: fr tracks without minmax(0,...)
+
+Owner reported the "shrinking and looking weird" issue was STILL happening
+after the eleventh pass's breakpoint-cliff fix, and pointed at ~920×840 as
+where to look. Checked the LIVE site (monagy.com, not localhost) at that
+exact viewport first — confirmed the eleventh pass's fix was already
+deployed there (article width matched the 86vw formula exactly) and the
+image at 920×840 measured a reasonable 408×266. Not a stale-deployment
+red herring, and not (only) a breakpoint issue: measuring EVERY slide's
+image frame at that SAME identical viewport revealed real inconsistency
+BETWEEN projects — slide 0 ("Blog Engine") rendered at 408×266, but
+slides 1 and 2 ("APA Tax Accounting Inc" / "Fusion Apothecary Dubai")
+rendered the identical grid structure at only 327×213 and 311×202.
+
+Root cause: `grid-template-columns: 1.15fr 1fr` (bare, no `minmax`). A
+plain `fr` track's automatic minimum width is its own content's
+min-content size — effectively its longest unbreakable word at the
+current font-size — not zero. "APA Tax Accounting Inc" and "Fusion
+Apothecary Dubai" both contain a longer single word ("Accounting" /
+"Apothecary") than "Blog Engine" does, and at `text-5xl` bold that
+word's min-content width forced the TEXT column to claim more than its
+fr-share, which — since the two tracks share one grid row — silently
+stole width from the IMAGE column right next to it. Same viewport,
+same markup, different image size, purely from title length. This is
+the actual, complete explanation for "some project images look smaller
+than others" from the very first report — the breakpoint-cliff work
+in the eleventh pass was real and worth doing, but it was fixing a
+second, independent problem, not this one.
+
+Fix: `grid-cols-[1.15fr_1fr]` → `grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)]`
+— the standard, well-known CSS Grid idiom for exactly this gotcha.
+`minmax(0, Nfr)` disables the content-based automatic minimum entirely,
+so both columns are sized by the fr RATIO alone regardless of what's
+inside them, and long titles/tags now WRAP instead of pushing the image
+column around.
+
+Verified live (localhost, matching what's already deployed): all 5
+slides now measure IDENTICALLY at every tested width — 408×266 at
+920×840 (was 408/327/311 — three different sizes), 399×260 at the 901px
+pinch point, 457×297 at 1024×768. Confirmed the two long titles now
+correctly wrap to 2-3 lines (measured h3 height 144px vs 96px for
+one-line titles) instead of distorting the grid, and re-verified NO
+height-budget regression at both historically fragile resolutions:
+1024×768 and 1280×720 both keep every "Launch App" button comfortably
+inside the viewport (max measured `bottom`: 696px and 656px respectively,
+against 768px/720px budgets) even with the wrapped 2-line titles. No
+horizontal scroll introduced. tsc + eslint clean.
