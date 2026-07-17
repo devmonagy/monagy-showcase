@@ -150,8 +150,8 @@ export default function Preloader({
       className="fixed inset-0 z-[999] overflow-hidden touch-none overscroll-contain bg-[var(--bg)]"
       aria-hidden="true"
     >
-      {/* Texture */}
-      <div className="grain absolute inset-0 opacity-[0.06] pointer-events-none" />
+      {/* Texture — same living-grain treatment as the site-wide layer */}
+      <div className="grain grain-animated absolute inset-[-25%] opacity-[0.06] pointer-events-none" />
       <div
         className="absolute inset-0 opacity-[0.08] pointer-events-none"
         style={{

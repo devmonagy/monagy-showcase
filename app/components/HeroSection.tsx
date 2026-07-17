@@ -3,62 +3,328 @@
 import { useRef } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
+import { SplitText } from "gsap/SplitText";
+import { CustomEase } from "gsap/CustomEase";
 import { useGSAP } from "@gsap/react";
 import { BIO_PARAGRAPHS, SITE, TECH_STACK } from "../data/content";
 import MagneticLink from "./MagneticLink";
+import ScrambleLabel from "./fx/ScrambleLabel";
+import GlitchText, { playGlitchBurst } from "./fx/GlitchText";
+import { FINE_POINTER_QUERY } from "./SmoothScroll";
 
 if (typeof window !== "undefined") {
-  gsap.registerPlugin(ScrollTrigger, useGSAP);
+  gsap.registerPlugin(ScrollTrigger, SplitText, CustomEase, useGSAP);
+  // Fast attack, ~11% overshoot around 40%, long settle — each name char
+  // snaps up past its resting pose and locks back, reading as a mechanical
+  // "click into place" that power4 can't produce.
+  CustomEase.create("signalLock", "M0,0 C0.19,0.62 0.26,1.1 0.42,1.11 0.61,1.12 0.79,1 1,1");
+}
+
+// When the hero's visible choreography begins, in seconds after mount.
+// The preloader's exit starts sliding at ~2.37s and fully clears by ~3.27s
+// (1.5s counter + 0.24s color punch + overlapped 0.5s wipes + 0.1s gap +
+// 0.9s slide — see Preloader.tsx), revealing the page bottom-up. Starting
+// at 2.75s puts the name chars mid-flight exactly as the curtain edge
+// passes the viewport center, so the entrance is SEEN — the previous
+// version auto-played at 0.15s and had always fully settled behind the
+// curtain, meaning no visitor ever actually watched it. Still a plain
+// mount-time delay, no cross-component "preloader done" signal: that
+// pattern was tried and sometimes never fired on real mobile devices,
+// leaving the hero permanently invisible (see git history). Worst case
+// today — a stalled preloader riding the 6s safety net — the choreography
+// finishes unseen and the curtain lifts on a settled hero, which is
+// exactly the old behavior, never a hidden one.
+const ENTRANCE_AT = 2.75;
+
+// Depth-stack tilt limits (degrees). ±5° is enough for the translateZ
+// echoes to slide against the solid name under perspective; more starts
+// to skew the glyphs themselves.
+const TILT_MAX = 5;
+
+// The name rendered identically for the real h1, the two depth echoes, and
+// the two glitch clones — five copies, one source of truth. All typography
+// classes live on the shared wrapper (font metrics inherit), so the copies
+// can never drift out of alignment.
+function NameLines() {
+  return (
+    <>
+      <span className="block">Mohamed</span>
+      <span className="block">
+        Nagy<span className="text-[var(--accent-volt)]">.</span>
+      </span>
+    </>
+  );
 }
 
 export default function HeroSection() {
   const sectionRef = useRef<HTMLDivElement>(null);
+  const nameRef = useRef<HTMLHeadingElement>(null);
+  const tiltRef = useRef<HTMLDivElement>(null);
+  const echoVoltRef = useRef<HTMLDivElement>(null);
+  const echoWhiteRef = useRef<HTMLDivElement>(null);
+  const glitchCyanRef = useRef<HTMLDivElement>(null);
+  const glitchVioletRef = useRef<HTMLDivElement>(null);
 
   useGSAP(
     () => {
-      // Entrance slide/fade, the infinite ghost-strip drift, and the
-      // scroll-parallax depth cue are all non-essential motion — under
-      // reduced-motion, land every element in its resting state instantly
-      // instead of animating into it, and skip the perpetual drift/parallax
-      // entirely rather than just slowing it down.
+      const nameEl = nameRef.current;
+      const cyan = glitchCyanRef.current;
+      const violet = glitchVioletRef.current;
+      const echoes = [echoVoltRef.current, echoWhiteRef.current].filter(
+        Boolean,
+      ) as HTMLDivElement[];
+      const echoRest = [0.35, 0.18];
+
+      // Entrance, glitch loop, tilt, and scroll de-rez are all non-essential
+      // motion — under reduced-motion, land everything in its resting state
+      // instantly. The name is never SplitText-split in this branch, so it
+      // stays one static block of real text.
       if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
         gsap.set(".hero-line", { yPercent: 0 });
         gsap.set(".hero-fade", { opacity: 1, y: 0 });
         gsap.set(".hero-badge", { scale: 1, rotate: 0 });
+        echoes.forEach((el, i) => gsap.set(el, { opacity: echoRest[i] }));
         return;
       }
 
-      // Plays immediately on mount, delay and all — the preloader covers
-      // the page for ~2.85s (1.3s counter + 0.55s curtain + 0.9s slide),
-      // comfortably longer than this ~2s timeline, so it's already fully
-      // settled by the time the curtain lifts. A previous version built
-      // this paused and released it via a `play` prop tied to the
-      // preloader's onComplete — one more cross-component signal that had
-      // to fire correctly, and on real mobile devices it sometimes didn't,
-      // leaving the hero permanently invisible. Auto-playing here has no
-      // such dependency.
+      // ---- Initial states, set immediately at mount ----
+      // The choreography is delayed until the curtain lifts (ENTRANCE_AT),
+      // so start states must be applied NOW — a fromTo's start values only
+      // land when its tween begins, which would leave everything visible in
+      // its resting pose during the bottom-up curtain reveal and then snap
+      // hidden to animate in.
+      gsap.set(".hero-line", { yPercent: 110 });
+      gsap.set(".hero-fade", { opacity: 0, y: 26 });
+      gsap.set(".hero-badge", { scale: 0, rotate: -40 });
+      gsap.set(echoes, { opacity: 0 });
+
+      const mountedAt = performance.now();
+      let entrancePlayed = false;
+      let scatterTween: gsap.core.Tween | null = null;
+      let scatterProgress = 0;
+      let glitchCall: gsap.core.Tween | null = null;
+
+      // Act 4 — scroll de-rez: the name's chars scatter and dissolve as the
+      // hero releases into the page, then reassemble scrolling back up.
+      // Function-based values are evaluated once per char at creation, so
+      // every char keeps its own stable scatter target across the scrub.
+      // x/y/rotation/opacity never collide with the entrance's
+      // yPercent/rotationX — the two compose. Rebuilt on every re-split
+      // (font load / resize) because the char elements are replaced.
+      const buildScatter = (chars: Element[]) => {
+        scatterTween?.scrollTrigger?.kill();
+        scatterTween?.kill();
+        scatterTween = gsap.to(chars, {
+          x: () => gsap.utils.random(-40, 40),
+          y: () => gsap.utils.random(-140, -50),
+          rotation: () => gsap.utils.random(-30, 30),
+          opacity: 0,
+          ease: "power1.in",
+          stagger: 0.02,
+          scrollTrigger: {
+            trigger: sectionRef.current,
+            start: "top top",
+            end: "bottom top",
+            scrub: 0.8,
+            onUpdate: (self) => {
+              scatterProgress = self.progress;
+            },
+          },
+        });
+        // The outline echoes dissolve early in the same scroll span —
+        // ghosts fade first, then the signal itself breaks apart.
+        gsap.to(echoes, {
+          opacity: 0,
+          ease: "none",
+          scrollTrigger: {
+            trigger: sectionRef.current,
+            start: "top top",
+            end: "40% top",
+            scrub: 0.8,
+          },
+        });
+      };
+
+      // Act 3 — interference: a ~220ms RGB-split burst on the name every
+      // 6–9s, re-armed with a fresh random delay each cycle so it never
+      // reads as a metronome. Skipped while the name is de-rezzed (the
+      // plain-text clones would flash a fully assembled name over the
+      // scattered chars) and while the tab is hidden.
+      const armGlitchLoop = () => {
+        glitchCall = gsap.delayedCall(gsap.utils.random(6, 9), () => {
+          if (
+            nameEl &&
+            cyan &&
+            violet &&
+            scatterProgress < 0.05 &&
+            document.visibilityState === "visible"
+          ) {
+            playGlitchBurst(nameEl, cyan, violet);
+          }
+          armGlitchLoop();
+        });
+      };
+
+      // Act 1 — entrance: chars flip up through their masks from a flat
+      // -85° pose, hollow-outlined, and "lock" to solid fill as each one
+      // lands (class toggle at ~55% of each char's flight — a one-time
+      // paint, not a per-frame color tween). autoSplit re-splits on font
+      // load and resize; onSplit is the documented home for the animation
+      // so SplitText can revert/rebuild it cleanly each time.
+      if (nameEl && cyan && violet) {
+        SplitText.create(nameEl, {
+          type: "chars",
+          mask: "chars",
+          autoSplit: true,
+          charsClass: "hero-char",
+          onSplit(self) {
+            // SplitText's aria:auto labels the h1 with its raw textContent,
+            // which concatenates the two block lines into "MohamedNagy." —
+            // pin the properly spaced name instead (re-applied per split;
+            // autoSplit re-runs this on font load / resize).
+            nameEl.setAttribute("aria-label", "Mohamed Nagy.");
+            if (entrancePlayed) {
+              // Re-split after the show (viewport resize, late font swap):
+              // land chars in their final pose, unclip the fresh masks so
+              // the scroll scatter can fly chars out of them, and rebuild
+              // the scatter against the replacement char elements.
+              gsap.set(self.chars, { yPercent: 0, rotationX: 0, opacity: 1 });
+              (self.masks as HTMLElement[]).forEach(
+                (m) => (m.style.overflow = "visible"),
+              );
+              buildScatter(self.chars);
+              return;
+            }
+
+            self.chars.forEach((c) => c.classList.add("char-hollow"));
+
+            const STAGGER = 0.045;
+            const CHAR_DUR = 0.85;
+            // Absolute wall-clock anchor, not a fixed delay: if a font-load
+            // re-split rebuilds this timeline mid-wait, a fixed delay would
+            // push the entrance later by the elapsed time.
+            const startIn = Math.max(
+              0.1,
+              ENTRANCE_AT - (performance.now() - mountedAt) / 1000,
+            );
+
+            const tl = gsap.timeline({ delay: startIn });
+            tl.fromTo(
+              self.chars,
+              { yPercent: 120, rotationX: -85, transformOrigin: "50% 100%" },
+              {
+                yPercent: 0,
+                rotationX: 0,
+                duration: CHAR_DUR,
+                ease: "signalLock",
+                stagger: STAGGER,
+              },
+            );
+            // Fill-lock moment per char, timed into each one's flight.
+            self.chars.forEach((c, i) => {
+              tl.call(
+                () => c.classList.remove("char-hollow"),
+                undefined,
+                i * STAGGER + CHAR_DUR * 0.55,
+              );
+            });
+            // "Signal acquired" punctuation the instant the last char
+            // settles, then the depth echoes breathe in behind the name
+            // and the interference loop arms.
+            tl.call(() => {
+              playGlitchBurst(nameEl, cyan, violet);
+            });
+            tl.to(
+              echoes,
+              {
+                opacity: (i) => echoRest[i],
+                duration: 0.9,
+                ease: "power2.out",
+                stagger: 0.12,
+              },
+              "+=0.15",
+            );
+            tl.call(() => {
+              entrancePlayed = true;
+              (self.masks as HTMLElement[]).forEach(
+                (m) => (m.style.overflow = "visible"),
+              );
+              buildScatter(self.chars);
+              armGlitchLoop();
+            });
+            return tl;
+          },
+        });
+      }
+
+      // Supporting cast — kicker line, tagline, bio/tags/button fades, badge
+      // pop — sequenced around the name build. (The kicker's text decode is
+      // ScrambleLabel's own mount-delayed tween; this just runs its mask
+      // slide.)
       const tl = gsap.timeline({
         defaults: { ease: "power4.out" },
-        delay: 0.15,
+        delay: ENTRANCE_AT,
       });
-
-      tl.fromTo(
-        ".hero-line",
-        { yPercent: 110 },
-        { yPercent: 0, duration: 1.2, stagger: 0.12 },
-      )
-        .fromTo(
+      tl.to(".hero-line", { yPercent: 0, duration: 1.2, stagger: 0.12 }, 0.05)
+        .to(
           ".hero-fade",
-          { opacity: 0, y: 26 },
           { opacity: 1, y: 0, duration: 0.9, stagger: 0.08 },
-          "-=0.7",
+          0.55,
         )
-        .fromTo(
+        .to(
           ".hero-badge",
-          { scale: 0, rotate: -40 },
           { scale: 1, rotate: 0, duration: 0.8, ease: "back.out(1.6)" },
-          "-=0.6",
+          0.85,
         );
+
+      // Act 2 — live hologram: the whole name stack (solid + translateZ
+      // echoes) tilts toward the cursor under real perspective, so the
+      // echoes slide against the name and the depth reads as physical.
+      // Cursor position is normalized against the VIEWPORT — no
+      // getBoundingClientRect anywhere near mousemove (house rule), and at
+      // the top of the page the hero effectively is the viewport.
+      const mm = gsap.matchMedia();
+      mm.add(FINE_POINTER_QUERY, () => {
+        const tilt = tiltRef.current;
+        const section = sectionRef.current;
+        if (!tilt || !section) return;
+        const rx = gsap.quickTo(tilt, "rotationX", {
+          duration: 0.9,
+          ease: "power3.out",
+        });
+        const ry = gsap.quickTo(tilt, "rotationY", {
+          duration: 0.9,
+          ease: "power3.out",
+        });
+        const onMove = (e: MouseEvent) => {
+          const nx = (e.clientX / window.innerWidth - 0.5) * 2;
+          const ny = (e.clientY / window.innerHeight - 0.5) * 2;
+          ry(nx * TILT_MAX);
+          rx(-ny * TILT_MAX);
+        };
+        const onLeave = () => {
+          rx(0);
+          ry(0);
+        };
+        section.addEventListener("mousemove", onMove);
+        section.addEventListener("mouseleave", onLeave);
+        return () => {
+          section.removeEventListener("mousemove", onMove);
+          section.removeEventListener("mouseleave", onLeave);
+        };
+      });
+      // Touch devices get no pointer, so a slow perpetual sway keeps the
+      // depth stack readable as 3D instead of freezing it flat.
+      mm.add("(hover: none), (pointer: coarse)", () => {
+        gsap.to(tiltRef.current, {
+          rotationY: 2,
+          rotationX: -1.5,
+          duration: 5,
+          ease: "sine.inOut",
+          yoyo: true,
+          repeat: -1,
+        });
+      });
 
       // Ghost strip drifts forever — full words stay readable as they roll
       // through, instead of one oversized word clipping to "DEVE".
@@ -91,6 +357,13 @@ export default function HeroSection() {
           scrub: 0.8,
         },
       });
+
+      // delayedCalls re-armed from inside their own callbacks are created
+      // outside this context's synchronous capture — kill the live one by
+      // hand.
+      return () => {
+        glitchCall?.kill();
+      };
     },
     { scope: sectionRef },
   );
@@ -213,11 +486,31 @@ export default function HeroSection() {
         <div className="overflow-hidden mb-0 [@media(min-height:620px)]:mb-3">
           <span className="hero-line inline-flex items-center gap-3 font-mono text-xs sm:text-sm text-[var(--accent-volt)] tracking-widest uppercase font-semibold">
             <span className="w-8 h-px bg-[var(--accent-volt)]" />
-            Software Developer
+            {/* Decodes as the curtain clears — timed just after the mask
+                slide above starts, so the label slides up already mid-
+                scramble. */}
+            <ScrambleLabel
+              text="Software Developer"
+              trigger="mount"
+              delay={ENTRANCE_AT + 0.25}
+            />
           </span>
         </div>
 
-        {/* clamp() keeps the longest line ("Mohamed") narrower than the
+        {/* THE NAME — a five-layer 3D stack under real perspective:
+              · two aria-hidden outline echoes at translateZ(-3rem/-6rem),
+                the "depth shadow" that slides against the solid name as
+                the stack tilts toward the cursor,
+              · two aria-hidden glitch clones (cyan/violet — the preloader
+                counter's chromatic pair) that flash during interference
+                bursts,
+              · the real h1, SplitText-split into masked chars for the
+                flip-up entrance and the scroll de-rez scatter.
+            All typography classes live HERE on the shared wrapper so every
+            copy inherits identical metrics and can never drift out of
+            alignment. rem-based z-offsets ride the fluid root scale.
+
+            clamp() keeps the longest line ("Mohamed") narrower than the
             max-w-4xl column at every viewport — fixed sizes clipped the
             final letters behind the reveal masks. The 11.2vw term is
             purely width-driven, so on a wide-but-short viewport it can
@@ -229,16 +522,52 @@ export default function HeroSection() {
             everywhere shorter than the "full content" 620px tier) swaps
             in a smaller clamp so the name stays legible without
             dominating a tight budget. */}
-        <h1 className="font-[family-name:var(--font-syne)] font-extrabold text-[clamp(2.4rem,11.2vw,6.75rem)] [@media(max-height:619px)]:text-[clamp(1.75rem,7vw,3.5rem)] [@media(max-height:269px)]:!text-[clamp(1.25rem,5vw,2rem)] leading-[0.95] tracking-tighter text-[var(--text-contrast)]">
-          <span className="overflow-hidden block">
-            <span className="hero-line block">Mohamed</span>
-          </span>
-          <span className="overflow-hidden block">
-            <span className="hero-line block">
-              Nagy<span className="text-[var(--accent-volt)]">.</span>
-            </span>
-          </span>
-        </h1>
+        <div
+          className="relative font-[family-name:var(--font-syne)] font-extrabold text-[clamp(2.4rem,11.2vw,6.75rem)] [@media(max-height:619px)]:text-[clamp(1.75rem,7vw,3.5rem)] [@media(max-height:269px)]:!text-[clamp(1.25rem,5vw,2rem)] leading-[0.95] tracking-tighter"
+          style={{ perspective: "56.25rem" }}
+        >
+          <div
+            ref={tiltRef}
+            className="relative"
+            style={{ transformStyle: "preserve-3d" }}
+          >
+            <div
+              ref={echoVoltRef}
+              aria-hidden="true"
+              className="text-outline-volt absolute inset-0 opacity-0 pointer-events-none select-none"
+              style={{ transform: "translateZ(-3rem)" }}
+            >
+              <NameLines />
+            </div>
+            <div
+              ref={echoWhiteRef}
+              aria-hidden="true"
+              className="text-outline absolute inset-0 opacity-0 pointer-events-none select-none"
+              style={{ transform: "translateZ(-6rem)" }}
+            >
+              <NameLines />
+            </div>
+            <div
+              ref={glitchCyanRef}
+              aria-hidden="true"
+              className="glitch-clone absolute inset-0 opacity-0 pointer-events-none select-none"
+              style={{ color: "var(--accent-cyan)" }}
+            >
+              <NameLines />
+            </div>
+            <div
+              ref={glitchVioletRef}
+              aria-hidden="true"
+              className="glitch-clone absolute inset-0 opacity-0 pointer-events-none select-none"
+              style={{ color: "var(--accent-violet)" }}
+            >
+              <NameLines />
+            </div>
+            <h1 ref={nameRef} className="relative text-[var(--text-contrast)]">
+              <NameLines />
+            </h1>
+          </div>
+        </div>
 
         <div className="overflow-hidden mt-2 [@media(min-height:620px)]:mt-3 sm:[@media(min-height:900px)]:!mt-6">
           {/* max-height:399px drops to text-sm: at the default text-xl,
@@ -325,7 +654,9 @@ export default function HeroSection() {
             rel="noopener noreferrer"
             className="inline-flex items-center gap-3 rounded-full bg-[var(--accent-volt)] text-[var(--accent-volt-ink)] px-6 py-3.5 font-mono text-xs font-bold uppercase tracking-widest"
           >
-            Download Resume
+            {/* Hover glitch rides the label span, not the anchor —
+                MagneticLink owns the anchor's transform entirely. */}
+            <GlitchText trigger="hover">Download Resume</GlitchText>
             <span aria-hidden="true">↓</span>
           </MagneticLink>
         </div>

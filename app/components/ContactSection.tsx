@@ -6,6 +6,8 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { useGSAP } from "@gsap/react";
 import { SITE, SOCIALS } from "../data/content";
 import { FINE_POINTER_QUERY } from "./SmoothScroll";
+import GlitchText from "./fx/GlitchText";
+import ScrambleLabel from "./fx/ScrambleLabel";
 
 if (typeof window !== "undefined") {
   gsap.registerPlugin(ScrollTrigger, useGSAP);
@@ -118,7 +120,7 @@ export default function ContactSection() {
       <div className="relative z-10 flex flex-col items-center text-center px-5 sm:px-6">
         <span className="contact-reveal inline-flex items-center gap-3 font-mono text-xs sm:text-sm text-[var(--accent-volt)] tracking-widest uppercase font-semibold mb-6">
           <span className="w-8 h-px bg-[var(--accent-volt)]" />
-          Get In Touch
+          <ScrambleLabel text="Get In Touch" trigger="enter" />
           <span className="w-8 h-px bg-[var(--accent-volt)]" />
         </span>
 
@@ -133,7 +135,11 @@ export default function ContactSection() {
             Got a project?
           </span>
           <span className="contact-punch block text-[clamp(3.4rem,13vw,10rem)] text-[var(--accent-volt)] uppercase">
-            Let&rsquo;s Talk<span className="text-[var(--accent-cyan)]">.</span>
+            {/* One interference burst as the punch line lands — same signal
+                language as the hero name's glitch loop. */}
+            <GlitchText trigger="enter">
+              Let&rsquo;s Talk<span className="text-[var(--accent-cyan)]">.</span>
+            </GlitchText>
           </span>
         </h2>
 
@@ -154,7 +160,9 @@ export default function ContactSection() {
               "linear-gradient(135deg, var(--accent-volt), var(--accent-cyan))",
           }}
         >
-          {SITE.email}
+          {/* Hover glitch rides the label span, not the anchor — the
+              anchor's transform belongs to its own magnetic handlers. */}
+          <GlitchText trigger="hover">{SITE.email}</GlitchText>
           <span className="flex items-center justify-center w-11 h-11 sm:w-16 sm:h-16 rounded-full bg-[var(--bg)] text-[var(--accent-volt)] text-lg sm:text-2xl rotate-45 group-hover:rotate-0 transition-transform duration-300">
             ↑
           </span>

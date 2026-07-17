@@ -10,15 +10,11 @@ import {
 } from "react";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
+import { SCRAMBLE_CHARS } from "./fx/constants";
 
 if (typeof window !== "undefined") {
   gsap.registerPlugin(useGSAP);
 }
-
-// Glyphs cycled during the scramble reveal — deliberately terminal/HUD
-// flavored (brackets, slashes, binary) rather than plain alphanumerics, to
-// read as "decoding a transmission" instead of a generic shuffle animation.
-const SCRAMBLE_CHARS = "!<>-_\\/[]{}=+*^?#01";
 
 /**
  * Progressively reveals `text` left-to-right, showing scrambled glyphs for

@@ -8,6 +8,8 @@ import { useGSAP } from "@gsap/react";
 import { PROJECTS } from "../data/content";
 import MagneticLink from "./MagneticLink";
 import DescriptionReveal from "./DescriptionReveal";
+import GlitchText from "./fx/GlitchText";
+import ScrambleLabel from "./fx/ScrambleLabel";
 
 if (typeof window !== "undefined") {
   gsap.registerPlugin(ScrollTrigger, useGSAP);
@@ -155,12 +157,16 @@ export default function ProjectsSection() {
           side of it on any real 1920+ display. */}
       <div className="px-5 sm:px-6 md:px-8 min-[900px]:px-10 mb-16 sm:mb-24 min-[900px]:mb-8 min-[1800px]:mb-32 flex items-end justify-between gap-6 max-w-content min-[900px]:max-w-none mx-auto min-[900px]:mx-0 w-full">
         <h2 className="font-[family-name:var(--font-syne)] font-extrabold text-4xl sm:text-6xl md:text-7xl tracking-tighter text-[var(--text-contrast)] leading-none">
-          Selected
-          <br />
-          <span className="text-outline-volt">Works</span>
+          {/* One interference burst as the heading lands in view — same
+              signal language as the hero name's glitch loop. */}
+          <GlitchText trigger="enter">
+            Selected
+            <br />
+            <span className="text-outline-volt">Works</span>
+          </GlitchText>
         </h2>
         <span className="hidden sm:flex items-center gap-2 font-mono text-[0.625rem] uppercase tracking-[0.3em] text-[var(--text)] opacity-80 pb-2">
-          Scroll
+          <ScrambleLabel text="Scroll" trigger="enter" />
           <span aria-hidden="true">→</span>
         </span>
       </div>
@@ -335,7 +341,9 @@ export default function ProjectsSection() {
                     className="mt-2 inline-flex w-max items-center gap-2 rounded-full px-5 py-3 font-mono text-[0.6875rem] font-bold uppercase tracking-widest"
                     style={{ backgroundColor: tone.accent, color: tone.ink }}
                   >
-                    Launch App
+                    {/* Hover glitch rides the label span, not the anchor —
+                        MagneticLink owns the anchor's transform entirely. */}
+                    <GlitchText trigger="hover">Launch App</GlitchText>
                     <span aria-hidden="true">↗</span>
                   </MagneticLink>
                 </div>

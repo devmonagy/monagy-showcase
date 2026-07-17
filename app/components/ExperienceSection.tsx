@@ -6,6 +6,8 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { useGSAP } from "@gsap/react";
 import { EXPERIENCES } from "../data/content";
 import { FINE_POINTER_QUERY } from "./SmoothScroll";
+import GlitchText from "./fx/GlitchText";
+import ScrambleLabel from "./fx/ScrambleLabel";
 
 if (typeof window !== "undefined") {
   gsap.registerPlugin(ScrollTrigger, useGSAP);
@@ -112,13 +114,19 @@ export default function ExperienceSection() {
       <div className="max-w-6xl mx-auto">
         <div className="flex items-end justify-between gap-4 mb-12 sm:mb-16">
           <h2 className="font-[family-name:var(--font-syne)] font-extrabold text-4xl sm:text-6xl md:text-7xl tracking-tighter text-[var(--text-contrast)] leading-none">
-            Where I&rsquo;ve
-            <br />
-            <span className="text-outline-volt">Worked</span>
+            {/* One interference burst as the heading lands in view — same
+                signal language as the hero name's glitch loop. */}
+            <GlitchText trigger="enter">
+              Where I&rsquo;ve
+              <br />
+              <span className="text-outline-volt">Worked</span>
+            </GlitchText>
           </h2>
-          <span className="hidden sm:block font-mono text-[0.625rem] uppercase tracking-[0.3em] text-[var(--text)] opacity-80 pb-2">
-            2018 — Present
-          </span>
+          <ScrambleLabel
+            text="2018 — Present"
+            trigger="enter"
+            className="hidden sm:block font-mono text-[0.625rem] uppercase tracking-[0.3em] text-[var(--text)] opacity-80 pb-2"
+          />
         </div>
 
         {/* Sticky stack: each card pins near the top and the next one slides

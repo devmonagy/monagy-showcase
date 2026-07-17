@@ -47,8 +47,11 @@ export default function Home() {
     <div className="min-h-screen bg-[var(--bg)] text-[var(--text)]">
       <CustomCursor />
 
-      {/* Site-wide film grain — above content, below the cursor */}
-      <div className="grain pointer-events-none fixed inset-0 z-[100] opacity-[0.05]" />
+      {/* Site-wide film grain — above content, below the cursor. Oversized
+          (inset:-25%) + .grain-animated so the grain churns like real film
+          stock instead of sitting frozen; see globals.css for why transform
+          steps, not background-position. */}
+      <div className="grain grain-animated pointer-events-none fixed inset-[-25%] z-[100] opacity-[0.06]" />
 
       {!isLoaded && (
         <Preloader
@@ -62,9 +65,11 @@ export default function Home() {
       {/* The page mounts immediately UNDER the preloader (z-999), so slow
           devices pay the layout/hydration cost while the counter runs —
           the curtain then reveals a finished page instead of a blank
-          frame. The hero plays its own entrance immediately (see
-          HeroSection), so it's already settled by the time the curtain
-          lifts without needing a cross-component signal to release it. */}
+          frame. The hero delays its choreography to a mount-time constant
+          matched to the preloader's exit (~2.75s — see ENTRANCE_AT in
+          HeroSection) so the entrance plays right as the curtain clears,
+          still without any cross-component "preloader done" signal, which
+          proved unreliable on real mobile devices. */}
 
       {/* Fixed 3D depth layer behind everything. Rendered outside the
           ScrollSmoother wrapper below: #smooth-content is moved via a

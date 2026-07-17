@@ -8,6 +8,8 @@ import Image from "next/image";
 import { CONDITION_LABEL, orbGradient, WeatherIcon } from "./WeatherVisuals";
 import type { WeatherData } from "../api/weather/route";
 import { FINE_POINTER_QUERY } from "./SmoothScroll";
+import GlitchText from "./fx/GlitchText";
+import ScrambleLabel from "./fx/ScrambleLabel";
 
 if (typeof window !== "undefined") {
   gsap.registerPlugin(ScrollTrigger, useGSAP);
@@ -671,9 +673,13 @@ export default function PersonalTelemetrySection() {
         <div className="telemetry-reveal flex items-end justify-between gap-4 mb-14 sm:mb-24">
           <div className="relative">
             <h2 className="font-[family-name:var(--font-syne)] font-extrabold text-4xl sm:text-6xl md:text-7xl tracking-tighter text-[var(--text-contrast)] leading-none">
-              Off The
-              <br />
-              <span className="text-outline-volt">Clock</span>
+              {/* One interference burst as the heading lands in view — same
+                  signal language as the hero name's glitch loop. */}
+              <GlitchText trigger="enter">
+                Off The
+                <br />
+                <span className="text-outline-volt">Clock</span>
+              </GlitchText>
             </h2>
             {/* Shadow-only duplicate — see .otc-title-glow in globals.css */}
             <div
@@ -688,7 +694,7 @@ export default function PersonalTelemetrySection() {
           </div>
           <span className="hidden sm:flex items-center gap-2 font-mono text-[0.625rem] uppercase tracking-[0.3em] text-[var(--text)] opacity-80 pb-2">
             <span className="w-1.5 h-1.5 rounded-full bg-[var(--accent-volt)] animate-pulse" />
-            Live feeds
+            <ScrambleLabel text="Live feeds" trigger="enter" />
           </span>
         </div>
 
