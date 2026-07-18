@@ -530,20 +530,25 @@ export default function TimeMachine() {
             </p>
           </div>
 
-          <button
-            ref={closeBtnRef}
-            type="button"
-            onClick={close}
-            aria-label="Close the Timeback Machine"
-            className="tm-ui group/close fixed top-5 right-5 sm:top-7 sm:right-7 z-20 flex items-center gap-3"
-          >
+          <div className="tm-ui group/close fixed top-5 right-5 sm:top-7 sm:right-7 z-20 flex items-center gap-3">
+            {/* Decorative hint, not part of the focusable control — kept
+                as a plain sibling span rather than nested inside the
+                button so the button's own focus outline (globals.css)
+                hugs just the round icon below, not a wide label+icon
+                rectangle. */}
             <span
               aria-hidden="true"
               className="hidden sm:block font-mono text-[0.625rem] uppercase tracking-[0.25em] text-[var(--text)] opacity-0 transition-opacity duration-300 group-hover/close:opacity-80"
             >
               Esc
             </span>
-            <span className="w-11 h-11 rounded-full border border-[var(--border-color)] bg-[rgba(13,13,16,0.7)] grid place-items-center transition-colors duration-300 group-hover/close:border-[var(--accent-volt)]">
+            <button
+              ref={closeBtnRef}
+              type="button"
+              onClick={close}
+              aria-label="Close the Timeback Machine"
+              className="w-11 h-11 rounded-full border border-[var(--border-color)] bg-[rgba(13,13,16,0.7)] grid place-items-center transition-colors duration-300 group-hover/close:border-[var(--accent-volt)]"
+            >
               <svg viewBox="0 0 16 16" className="w-4 h-4" aria-hidden="true">
                 <path
                   d="M3 3 L13 13 M13 3 L3 13"
@@ -552,8 +557,8 @@ export default function TimeMachine() {
                   strokeLinecap="round"
                 />
               </svg>
-            </span>
-          </button>
+            </button>
+          </div>
         </div>
       )}
     </>

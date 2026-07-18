@@ -35,6 +35,33 @@
   box-sizing: border-box;
 }
 
+/* Global focus outline reset. With no rule at all, every <a>/<button> on
+   the site falls back to the browser's own default focus ring — which on
+   WebKit (especially mobile Safari) renders as a stark, unstyled blue/
+   cyan rectangle around whatever was just tapped or clicked, on desktop
+   too. `:focus-visible` is safely within this project's browserslist
+   floor (Safari 15.4+, Chrome/Firefox/Edge 96+), so pointer-triggered
+   focus (a plain tap or click) gets no outline at all, while real
+   keyboard navigation still gets a clear, on-brand indicator instead of
+   the default rectangle. `.tm-cardwrap:focus-visible` (Timeback Machine
+   version cards) already overrides this with its own larger offset via
+   normal CSS specificity — this is just the sane default everywhere
+   else, including the Timeback Machine's trigger/close buttons. */
+:focus {
+  outline: none;
+}
+:focus-visible {
+  outline: 2px solid var(--accent-volt);
+  outline-offset: 3px;
+}
+
+/* Kills the transient gray/blue tap-flash WebKit paints under a finger on
+   tap, independent of the focus-ring fix above (one is a lingering focus
+   state, this is a momentary paint on touch-start). */
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
 html {
   background-color: var(--bg);
   scrollbar-width: thin;
