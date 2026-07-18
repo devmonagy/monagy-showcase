@@ -1,0 +1,4 @@
+# graphify writes into the workspace on every extract/update; ignoring these
+# keeps Claude Code's prompt cache from invalidating on every regeneration.
+graph.json
+graphify-out/

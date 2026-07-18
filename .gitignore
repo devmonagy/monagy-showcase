@@ -39,3 +39,8 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# graphify — regenerated knowledge graph + Obsidian vault (run `graphify update .`
+# to rebuild). The skill setup itself (.claude/skills/graphify/, CLAUDE.md, etc.)
+# is committed; this derived output is not.
+/graphify-out/
