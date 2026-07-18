@@ -152,6 +152,7 @@ const COUNTRIES = [
     coords: "30.0° N, 31.2° E",
     lat: 30.0,
     lon: 31.2,
+    hint: "Home Turf",
   },
   {
     code: "mx",
@@ -583,9 +584,13 @@ export default function PersonalTelemetrySection() {
           // Position only on the button (fixed 48/56px hit area, per the
           // touch-target minimum) — the 3D depth scale goes on the flag
           // image alone, so the perspective shrink-when-facing-away cue
-          // never shrinks the actual tappable region below spec.
+          // never shrinks the actual tappable region below spec. Queried
+          // by tag rather than firstElementChild: the hover/tap bump
+          // indicator now sits between the button and the image as its
+          // own CSS-transitioned layer (never the same element as either
+          // per-frame JS transform below).
           el.style.transform = `translate(${p.x * pinRadius}px, ${p.y * pinRadius}px)`;
-          const flag = el.firstElementChild as HTMLElement | null;
+          const flag = el.querySelector("img");
           if (flag) flag.style.transform = `scale(${0.55 + 0.55 * depth})`;
           el.style.opacity = visible ? String(0.35 + 0.65 * depth) : "0";
           el.style.pointerEvents = visible ? "auto" : "none";
@@ -689,6 +694,16 @@ export default function PersonalTelemetrySection() {
   const handlePinLeave = () => {
     setHoveredCountry(null);
     hoverPauseRef.current = false;
+  };
+  // Touch has no hover — a tap toggles the same info/pause state instead
+  // (tap again, or tap a different flag, to swap; same tap-to-toggle
+  // pattern the marquee bands already use for touch). Bound to
+  // onTouchStart specifically (see the pins below) rather than onClick so
+  // it never fires for a desktop mouse click, which would otherwise
+  // immediately toggle OFF whatever the cursor is already hovering.
+  const handlePinTap = (country: (typeof COUNTRIES)[number]) => {
+    if (hoveredCountry?.code === country.code) handlePinLeave();
+    else handlePinEnter(country);
   };
 
   return (
@@ -1020,37 +1035,64 @@ export default function PersonalTelemetrySection() {
                         ))}
                       </svg>
 
-                      {COUNTRIES.map((country, i) => (
-                        <button
-                          key={country.code}
-                          type="button"
-                          ref={(el) => {
-                            pinRefs.current[i] = el;
-                          }}
-                          onMouseEnter={() => handlePinEnter(country)}
-                          onMouseLeave={handlePinLeave}
-                          onFocus={() => handlePinEnter(country)}
-                          onBlur={handlePinLeave}
-                          title={country.name}
-                          // Hit area is 48px (56px desktop) — the WCAG/
-                          // Lighthouse touch-target minimum — while the
-                          // visible flag stays its original 24px (28px)
-                          // size, centered inside via flex. Sizing up the
-                          // visible flag itself to 48px would look
-                          // oversized against this small globe; growing
-                          // only the invisible tappable region keeps the
-                          // design and fixes the target-size flag.
-                          className="absolute left-1/2 top-1/2 flex items-center justify-center w-12 h-12 sm:w-14 sm:h-14 -ml-6 -mt-6 sm:-ml-7 sm:-mt-7 rounded-full"
-                        >
-                          {/* eslint-disable-next-line @next/next/no-img-element -- tiny fixed external SVG from a static CDN */}
-                          <img
-                            src={`https://flagcdn.com/${country.code}.svg`}
-                            alt={country.name}
-                            draggable={false}
-                            className="w-6 h-6 sm:w-7 sm:h-7 rounded-full object-cover border-2 border-[var(--card-bg)] shadow-[0_6px_16px_rgba(0,0,0,0.6)]"
-                          />
-                        </button>
-                      ))}
+                      {COUNTRIES.map((country, i) => {
+                        const active = hoveredCountry?.code === country.code;
+                        return (
+                          <button
+                            key={country.code}
+                            type="button"
+                            ref={(el) => {
+                              pinRefs.current[i] = el;
+                            }}
+                            onMouseEnter={() => handlePinEnter(country)}
+                            onMouseLeave={handlePinLeave}
+                            onFocus={() => handlePinEnter(country)}
+                            onBlur={handlePinLeave}
+                            onTouchStart={() => handlePinTap(country)}
+                            title={country.name}
+                            // Hit area is 48px (56px desktop) — the WCAG/
+                            // Lighthouse touch-target minimum — while the
+                            // visible flag stays its original 24px (28px)
+                            // size, centered inside via flex. Sizing up the
+                            // visible flag itself to 48px would look
+                            // oversized against this small globe; growing
+                            // only the invisible tappable region keeps the
+                            // design and fixes the target-size flag.
+                            className="absolute left-1/2 top-1/2 flex items-center justify-center w-12 h-12 sm:w-14 sm:h-14 -ml-6 -mt-6 sm:-ml-7 sm:-mt-7 rounded-full"
+                          >
+                            {/* Hover/tap indicator — a THIRD layer, never
+                                sharing an element with either per-frame
+                                JS transform (the button's own position
+                                above, the flag image's depth-scale below):
+                                a plain CSS transition on this wrapper's
+                                scale/shadow can't fight either one. Driven
+                                by the same hoveredCountry state for both
+                                desktop hover and mobile tap, so the two
+                                input paths get identical feedback. */}
+                            <span
+                              className={`flex items-center justify-center rounded-full transition-all duration-300 ease-out ${
+                                active ? "scale-[1.35]" : "scale-100"
+                              }`}
+                              style={
+                                active
+                                  ? {
+                                      boxShadow:
+                                        "0 0 0 3px var(--accent-cyan), 0 0 14px rgba(51, 232, 255, 0.6)",
+                                    }
+                                  : undefined
+                              }
+                            >
+                              {/* eslint-disable-next-line @next/next/no-img-element -- tiny fixed external SVG from a static CDN */}
+                              <img
+                                src={`https://flagcdn.com/${country.code}.svg`}
+                                alt={country.name}
+                                draggable={false}
+                                className="w-6 h-6 sm:w-7 sm:h-7 rounded-full object-cover border-2 border-[var(--card-bg)] shadow-[0_6px_16px_rgba(0,0,0,0.6)]"
+                              />
+                            </span>
+                          </button>
+                        );
+                      })}
                     </div>
 
                     <div className="min-w-0">
@@ -1061,6 +1103,7 @@ export default function PersonalTelemetrySection() {
                         {hoveredCountry ? (
                           <span style={{ color: "var(--accent-cyan)" }}>
                             {hoveredCountry.name} — {hoveredCountry.coords}
+                            {hoveredCountry.hint ? ` · ${hoveredCountry.hint}` : ""}
                           </span>
                         ) : (
                           <span className="opacity-80">Drag the globe · hover a flag</span>
