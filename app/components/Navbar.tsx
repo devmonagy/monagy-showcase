@@ -517,7 +517,6 @@ export default function Navbar() {
           <div className="flex items-center gap-3">
             <MagneticLink
               href={SITE.resumeUrl}
-              download
               target="_blank"
               rel="noopener noreferrer"
               className="nav-item hidden sm:inline-flex items-center gap-2 rounded-full bg-[var(--accent-volt)] text-[var(--accent-volt-ink)] px-4 py-2 font-mono text-[0.6875rem] font-bold uppercase tracking-widest"
@@ -613,12 +612,11 @@ export default function Navbar() {
           <div className="space-y-4">
             <a
               href={SITE.resumeUrl}
-              download
               target="_blank"
               rel="noopener noreferrer"
               className="mnav-meta inline-flex items-center gap-3 rounded-full bg-[var(--accent-volt)] text-[var(--accent-volt-ink)] px-6 py-3 font-mono text-xs font-bold uppercase tracking-widest"
             >
-              Download Resume <span aria-hidden="true">↓</span>
+              View Resume <span aria-hidden="true">↗</span>
             </a>
             <div className="mnav-meta flex flex-wrap gap-x-6 gap-y-2 font-mono text-[0.625rem] uppercase tracking-widest text-[var(--text)]">
               {SOCIALS.map((s) => (

@@ -102,11 +102,11 @@ export const EXPERIENCES: Experience[] = [
   {
     id: "webdefinitely",
     role: "Founder & Freelance Developer",
-    company: "webDefinitely",
-    url: "#",
+    company: "WeAreFlux Studio",
+    url: "https://weareflux.studio",
     range: "2018 — Present",
     summary:
-      "Partnered with local clients to build custom websites and brand identities, managing everything from domain setup to SEO to deliver polished, user-friendly digital experiences.",
+      "Partner with local clients to build custom websites and brand identities, managing everything from domain setup to SEO to deliver polished, user-friendly digital experiences.",
     skills: [
       "Full Stack",
       "React",
@@ -114,13 +114,13 @@ export const EXPERIENCES: Experience[] = [
       "SEO",
       "Client Strategy",
       "Deployments",
-      "DNS Hosting",
+      "Managed Web Hosting",
     ],
     details: [
-      "Delivered full-stack solutions with JS/React/Node/PHP, improving delivery speed by ~25%.",
-      "Built reusable UI components, cutting dev time by ~30%.",
-      "Handled hosting, DNS, and deployments, reducing launch issues by ~40%.",
-      "Led projects end-to-end, increasing on-time delivery and client satisfaction by ~20%.",
+      "Deliver full-stack solutions with JS/React/Node/PHP, improving delivery speed by ~25%.",
+      "Build reusable UI components, cutting dev time by ~30%.",
+      "Handle hosting, DNS, and deployments, reducing launch issues by ~40%.",
+      "Lead projects end-to-end, increasing on-time delivery and client satisfaction by ~20%.",
     ],
   },
 ];
@@ -224,7 +224,7 @@ export const SITE_VERSIONS: SiteVersion[] = [
   {
     id: "v2",
     version: "V2",
-    name: "MoNAGY",
+    name: "Afterglow",
     tag: "Second Transmission",
     host: "v2.monagy.com",
     url: "https://v2.monagy.com",
@@ -236,7 +236,7 @@ export const SITE_VERSIONS: SiteVersion[] = [
   {
     id: "v1",
     version: "V1",
-    name: "MoLight",
+    name: "First Light",
     tag: "First Transmission",
     host: "v1.monagy.com",
     url: "https://v1.monagy.com",

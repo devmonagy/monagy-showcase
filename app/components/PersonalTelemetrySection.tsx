@@ -3,6 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
+import { Draggable } from "gsap/Draggable";
+import { InertiaPlugin } from "gsap/InertiaPlugin";
 import { useGSAP } from "@gsap/react";
 import Image from "next/image";
 import { CONDITION_LABEL, orbGradient, WeatherIcon } from "./WeatherVisuals";
@@ -12,7 +14,7 @@ import GlitchText from "./fx/GlitchText";
 import ScrambleLabel from "./fx/ScrambleLabel";
 
 if (typeof window !== "undefined") {
-  gsap.registerPlugin(ScrollTrigger, useGSAP);
+  gsap.registerPlugin(ScrollTrigger, Draggable, InertiaPlugin, useGSAP);
 }
 
 /* ------------------------------------------------------------------ */
@@ -258,6 +260,13 @@ export default function PersonalTelemetrySection() {
   const titleTrackRef = useRef<HTMLDivElement>(null);
   const titleCopyRef = useRef<HTMLSpanElement>(null);
   const globeStageRef = useRef<HTMLDivElement>(null);
+  // Invisible Draggable target — never painted, never positioned on
+  // screen. The globe's rotation is a hand-rolled projection (no real
+  // DOM transform to drag), so this proxy exists purely to hand its x
+  // motion to GSAP's Draggable + InertiaPlugin: real velocity capture on
+  // release and a natural, physically-decaying spin, the same engine the
+  // Experience deck's cards already throw with (see ExperienceSection).
+  const globeProxyRef = useRef<HTMLDivElement>(null);
   const pinRefs = useRef<(HTMLButtonElement | null)[]>([]);
   const continentRefs = useRef<(SVGPathElement | null)[]>([]);
   // Plain ref (not state) so hovering a pin can pause the globe's ticker
@@ -585,38 +594,67 @@ export default function PersonalTelemetrySection() {
       };
       paint();
 
-      let dragging = false;
-      let lastClientX = 0;
+      // Degrees of yaw per px of proxy travel — same feel as the old
+      // hand-rolled 0.45 drag sensitivity, now driving BOTH the manual
+      // drag and (via the same delta math) the inertial coast after
+      // release.
+      const ROTATION_PER_PX = 0.45;
+      // true for the whole gesture: physical press-drag AND, if released
+      // with real velocity, the momentum coast that follows. Either way
+      // it's the single gate that suppresses idle auto-spin so a flick's
+      // momentum is never fighting the idle ticker's own rotation.
+      let throwing = false;
+      let baseX = 0;
 
-      const onPointerDown = (e: PointerEvent) => {
-        dragging = true;
-        lastClientX = e.clientX;
-        stage.style.cursor = "grabbing";
-        stage.setPointerCapture(e.pointerId);
-      };
-      const onPointerMove = (e: PointerEvent) => {
-        if (!dragging) return;
-        const dx = e.clientX - lastClientX;
-        lastClientX = e.clientX;
-        rotationY += dx * 0.45;
-        paint();
-      };
-      const onPointerUp = () => {
-        dragging = false;
-        stage.style.cursor = "grab";
-      };
-
-      stage.addEventListener("pointerdown", onPointerDown);
-      window.addEventListener("pointermove", onPointerMove);
-      window.addEventListener("pointerup", onPointerUp);
+      const proxy = globeProxyRef.current;
+      const draggables = proxy
+        ? Draggable.create(proxy, {
+            type: "x",
+            trigger: stage,
+            inertia: true,
+            // A real desk globe spun hard keeps drifting for a couple of
+            // seconds before friction wins — low resistance + a generous
+            // maxDuration let a hard flick actually carry, while
+            // minDuration keeps even a gentle release feeling alive
+            // rather than stopping dead like a plain click.
+            throwResistance: 1400,
+            maxDuration: 3,
+            minDuration: 0.4,
+            onPress(this: Draggable) {
+              throwing = true;
+              baseX = this.x;
+              stage.style.cursor = "grabbing";
+            },
+            onDrag(this: Draggable) {
+              rotationY += (this.x - baseX) * ROTATION_PER_PX;
+              baseX = this.x;
+              paint();
+            },
+            onRelease(this: Draggable) {
+              stage.style.cursor = "grab";
+              // Released too slowly for InertiaPlugin to bother throwing
+              // — no onThrowUpdate/onThrowComplete is coming, so this is
+              // the only place left to hand control back to idle spin.
+              if (!this.isThrowing) throwing = false;
+            },
+            onThrowUpdate(this: Draggable) {
+              rotationY += (this.x - baseX) * ROTATION_PER_PX;
+              baseX = this.x;
+              paint();
+            },
+            onThrowComplete() {
+              throwing = false;
+            },
+          })
+        : [];
 
       let st: ScrollTrigger | undefined;
       if (!window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
         let speed = 1;
         const tick = (_t: number, delta: number) => {
-          const target = dragging || hoverPauseRef.current ? 0 : 1;
+          const target = throwing || hoverPauseRef.current ? 0 : 1;
           speed += (target - speed) * 0.05;
-          if (!dragging) {
+          if (!throwing) {
             rotationY += (GLOBE_IDLE_DEG_PER_SEC * speed * delta) / 1000;
             paint();
           }
@@ -633,16 +671,12 @@ export default function PersonalTelemetrySection() {
         return () => {
           st?.kill();
           gsap.ticker.remove(tick);
-          stage.removeEventListener("pointerdown", onPointerDown);
-          window.removeEventListener("pointermove", onPointerMove);
-          window.removeEventListener("pointerup", onPointerUp);
+          draggables.forEach((d) => d.kill());
         };
       }
 
       return () => {
-        stage.removeEventListener("pointerdown", onPointerDown);
-        window.removeEventListener("pointermove", onPointerMove);
-        window.removeEventListener("pointerup", onPointerUp);
+        draggables.forEach((d) => d.kill());
       };
     },
     { scope: sectionRef },
@@ -954,6 +988,13 @@ export default function PersonalTelemetrySection() {
                           "inset 0 0 40px rgba(0,0,0,0.6), 0 0 50px rgba(51,232,255,0.1)",
                       }}
                     >
+                      {/* Draggable's physics proxy — never painted, never
+                          laid out; see globeProxyRef's declaration. */}
+                      <div
+                        ref={globeProxyRef}
+                        aria-hidden="true"
+                        className="absolute w-0 h-0 opacity-0 pointer-events-none"
+                      />
                       <div className="absolute inset-0 rounded-full border border-white/10" />
                       <div className="absolute inset-[10%] rounded-full border border-white/[0.06]" />
                       <div className="absolute inset-[22%] rounded-full border border-white/[0.05]" />

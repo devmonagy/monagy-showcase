@@ -670,15 +670,14 @@ export default function HeroSection() {
         <div className="hero-fade mt-2 [@media(min-height:620px)]:mt-3 sm:[@media(min-height:900px)]:!mt-8">
           <MagneticLink
             href={SITE.resumeUrl}
-            download
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center gap-3 rounded-full bg-[var(--accent-volt)] text-[var(--accent-volt-ink)] px-6 py-3.5 font-mono text-xs font-bold uppercase tracking-widest"
           >
             {/* Hover glitch rides the label span, not the anchor —
                 MagneticLink owns the anchor's transform entirely. */}
-            <GlitchText trigger="hover">Download Resume</GlitchText>
-            <span aria-hidden="true">↓</span>
+            <GlitchText trigger="hover">View Resume</GlitchText>
+            <span aria-hidden="true">↗</span>
           </MagneticLink>
         </div>
       </div>
