@@ -144,6 +144,10 @@ export type Project = {
   status?: string;
 };
 
+// Order is meaningful: it's the exact left-to-right order the Projects
+// deck scrolls through, and each slide's ghost index number (01, 02, ...)
+// is derived from array position — reordering this array reorders the
+// deck and renumbers every slide.
 export const PROJECTS: Project[] = [
   {
     id: "blog-engine",
