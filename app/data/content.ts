@@ -131,7 +131,15 @@ export type Project = {
   subtitle: string;
   description: string;
   tech: string[];
-  image: string;
+  // Optional: projects with no live screenshot yet (pre-launch) render the
+  // generated ComingSoonArt tile in ProjectsSection instead of an <Image>.
+  image?: string;
+  // "contain" for a square/padded brand mark (e.g. a logo on its own solid
+  // background) — object-cover's default crop-to-fill would zoom past the
+  // mark's edges on the deck's wide 16:10 frame. Omit (cover) for real
+  // 16:10-ish site screenshots, which should still fill the frame edge to
+  // edge.
+  imageFit?: "cover" | "contain";
   liveUrl: string;
   status?: string;
 };
@@ -149,6 +157,18 @@ export const PROJECTS: Project[] = [
     status: "In Development",
   },
   {
+    id: "namman-flooring",
+    title: "Namman Flooring",
+    subtitle: "Professional Tile Installer",
+    description:
+      "An upcoming brand site for a professional tile installer specializing in bathroom and kitchen renovations. Built on React, Next.js, TypeScript, and GSAP, styled with Tailwind CSS, and shipping on Cloudflare Pages.",
+    tech: ["React", "Next.js", "TypeScript", "GSAP", "Tailwind CSS", "Cloudflare Pages"],
+    image: "/assets/NammanLogo.webp",
+    imageFit: "contain",
+    liveUrl: "https://www.nammanflooring.com/",
+    status: "In Development",
+  },
+  {
     id: "apa-tax",
     title: "APA Tax Accounting Inc",
     subtitle: "Website Development & Edits",
@@ -157,16 +177,6 @@ export const PROJECTS: Project[] = [
     tech: ["PHP", "Bootstrap", "JavaScript", "jQuery", "HTML5", "CSS3"],
     image: "/assets/APATax.webp",
     liveUrl: "https://apatax.com/",
-  },
-  {
-    id: "fusion-rx",
-    title: "Fusion Apothecary Dubai",
-    subtitle: "WordPress Development",
-    description:
-      "A tailored architectural WordPress theme for a premium medical compounding pharmacy and luxury wellness lab in Dubai. A clean, high-contrast interface showcasing specialized lab facilities and clinical IV drip therapies.",
-    tech: ["WordPress", "PHP", "JavaScript", "HTML5", "CSS3", "Elementor"],
-    image: "/assets/FusionRXDubai.webp",
-    liveUrl: "https://fusionrxdubai.com/",
   },
   {
     id: "shp-lawyers",
@@ -179,14 +189,57 @@ export const PROJECTS: Project[] = [
     liveUrl: "https://shplawyers.com",
   },
   {
-    id: "v1-portfolio",
-    title: "Portfolio Archive",
-    subtitle: "Version 1 of Personal Portfolio",
+    id: "fusion-rx",
+    title: "Fusion Apothecary Dubai",
+    subtitle: "WordPress Development",
     description:
-      "The initial layout iteration of my personal portfolio platform. Focused heavily on high-performance raw web assets, smooth DOM responsiveness, and micro-interactions built using componentized architectures.",
-    tech: ["React", "TypeScript", "Tailwind CSS", "Next.js", "Vercel"],
+      "A tailored architectural WordPress theme for a premium medical compounding pharmacy and luxury wellness lab in Dubai. A clean, high-contrast interface showcasing specialized lab facilities and clinical IV drip therapies.",
+    tech: ["WordPress", "PHP", "JavaScript", "HTML5", "CSS3", "Elementor"],
+    image: "/assets/FusionRXDubai.webp",
+    liveUrl: "https://fusionrxdubai.com/",
+  },
+];
+
+export type SiteVersion = {
+  id: string;
+  version: string;
+  name: string;
+  tag: string;
+  host: string;
+  url: string;
+  image: string;
+  width: number;
+  height: number;
+  accent: "volt" | "cyan";
+};
+
+// Timeback Machine archive — newest era first, walking backwards from the
+// present. width/height are the real intrinsic px of each webp so
+// next/image reserves the correct aspect box inside the tilted cards.
+export const SITE_VERSIONS: SiteVersion[] = [
+  {
+    id: "v2",
+    version: "V2",
+    name: "MoNAGY",
+    tag: "Second Transmission",
+    host: "v2.monagy.com",
+    url: "https://v2.monagy.com",
+    image: "/assets/MoNAGYv2.webp",
+    width: 2559,
+    height: 1302,
+    accent: "cyan",
+  },
+  {
+    id: "v1",
+    version: "V1",
+    name: "MoLight",
+    tag: "First Transmission",
+    host: "v1.monagy.com",
+    url: "https://v1.monagy.com",
     image: "/assets/MoLightv1.webp",
-    liveUrl: "https://v1.monagy.com",
+    width: 1902,
+    height: 940,
+    accent: "volt",
   },
 ];
 

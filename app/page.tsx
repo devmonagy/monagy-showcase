@@ -7,6 +7,7 @@ import CustomCursor from "./components/CustomCursor";
 import Backdrop3D from "./components/Backdrop3D";
 import Navbar from "./components/Navbar";
 import SmoothScroll from "./components/SmoothScroll";
+import TimeMachine from "./components/TimeMachine";
 import HeroSection from "./components/HeroSection";
 import Marquee from "./components/Marquee";
 import ExperienceSection from "./components/ExperienceSection";
@@ -77,6 +78,11 @@ export default function Home() {
           block for these `fixed` layers and break them. */}
       <Backdrop3D />
       <Navbar />
+      {/* Timeback Machine — fixed chrono-dial trigger + full-screen portal
+          overlay. Lives out here with the other fixed layers for the same
+          reason they do: #smooth-content's transform would become its
+          containing block and break position:fixed. */}
+      <TimeMachine />
 
       {/* ScrollSmoother's required DOM shape — only the actual
           scrollable page lives inside #smooth-content. */}

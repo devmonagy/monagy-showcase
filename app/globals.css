@@ -271,6 +271,51 @@ h4 {
   clip-path: polygon(-8% -6%, 122% -6%, 108% 106%, -22% 106%);
 }
 
+/* Pre-launch project tile (ProjectsSection's ComingSoonArt) — grout-line
+   crosshatch standing in for a floor/tile texture (the client is a tile
+   installer), plus a diagonal light sweep scanning across the badge. The
+   sweep is a translateX+skew on a gradient-painted layer, never a
+   background-position animation — same compositor-only rule as the site's
+   other ambient loops. */
+.proj-art-floor {
+  background-color: var(--card-bg);
+  background-image: repeating-linear-gradient(
+      45deg,
+      rgba(255, 255, 255, 0.035) 0 2px,
+      transparent 2px 26px
+    ),
+    repeating-linear-gradient(
+      -45deg,
+      rgba(255, 255, 255, 0.035) 0 2px,
+      transparent 2px 26px
+    );
+}
+
+.proj-art-scan {
+  background: linear-gradient(
+    100deg,
+    transparent 40%,
+    rgba(255, 255, 255, 0.12) 50%,
+    transparent 60%
+  );
+  animation: projArtScan 5s ease-in-out infinite;
+}
+@keyframes projArtScan {
+  0% {
+    transform: translateX(-120%) skewX(-12deg);
+    opacity: 0;
+  }
+  8%,
+  35% {
+    opacity: 0.5;
+  }
+  50%,
+  100% {
+    transform: translateX(120%) skewX(-12deg);
+    opacity: 0;
+  }
+}
+
 /* Transmission flashlight (DescriptionReveal): with the Full Transmission
    popover open, hovering a word in the clamped outside description swings
    an accent light beam onto the SAME word inside the popover — the eye
@@ -606,6 +651,258 @@ h4 {
   }
 }
 
+/* ==========================================================================
+   TIMEBACK MACHINE — bottom-right chrono-dial trigger + full-screen
+   wormhole overlay (TimeMachine.tsx). Every loop here is transform/opacity
+   only — the WebKit rule that governs the rest of this file (never animate
+   filter/blur/text-shadow, no backdrop-filter) applies doubly inside a
+   full-screen overlay. GSAP owns entrance/exit on DIFFERENT elements than
+   these CSS loops (outer wrappers vs. inner spinners), so the two transform
+   systems never write to the same node — same split as the projects deck.
+   ========================================================================== */
+
+@keyframes tmSpinCW {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes tmSpinCCW {
+  to {
+    transform: rotate(-360deg);
+  }
+}
+
+/* --- Trigger: rewinding chrono-dial. Hands sweep COUNTER-clockwise (the
+   whole "time running backwards" read), dashed orbit counter-rotates.
+   transform-box: view-box pins the SVG groups' rotation to the clock's
+   center rather than each hand-line's own bounding box. --- */
+.tm-hand-hr {
+  transform-box: view-box;
+  transform-origin: center;
+  animation: tmSpinCCW 22s linear infinite;
+}
+.tm-hand-min {
+  transform-box: view-box;
+  transform-origin: center;
+  animation: tmSpinCCW 5s linear infinite;
+}
+.tm-orbit {
+  animation: tmSpinCCW 14s linear infinite;
+}
+
+@keyframes tmGlowPulse {
+  0%,
+  100% {
+    opacity: 0.35;
+  }
+  50% {
+    opacity: 0.85;
+  }
+}
+.tm-glowpulse {
+  animation: tmGlowPulse 4.5s ease-in-out infinite;
+}
+
+/* Entrance matches the site's choreography: the page mounts under the
+   preloader, so the trigger fades in at ~3.1s — right after the curtain
+   clears (~2.75s), same mount-time-constant pattern as HeroSection. The
+   hover scale lives on .tm-trigger-core (inner span), never here, so the
+   fill-mode transform and the hover transition can't fight. */
+@keyframes tmTriggerIn {
+  from {
+    opacity: 0;
+    transform: translateY(0.75rem);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.tm-trigger {
+  animation: tmTriggerIn 0.9s cubic-bezier(0.22, 1, 0.36, 1) 3.1s both;
+}
+
+/* --- Overlay portal gyroscope: partial-border rings rotating at mixed
+   speeds/directions read as neon energy sweeps without any conic masking
+   (a rotated static-paint texture is pure compositor work). --- */
+.tm-ring {
+  position: absolute;
+  border-radius: 9999px;
+  border: 2px solid transparent;
+}
+.tm-ring-a {
+  inset: 4%;
+  border-top-color: var(--accent-volt);
+  border-right-color: rgba(214, 255, 63, 0.25);
+  animation: tmSpinCW 8s linear infinite;
+}
+.tm-ring-b {
+  inset: 12%;
+  border-bottom-color: var(--accent-cyan);
+  border-left-color: rgba(51, 232, 255, 0.25);
+  animation: tmSpinCCW 13s linear infinite;
+}
+.tm-ring-c {
+  inset: 0;
+  border-width: 1px;
+  border-style: dashed;
+  border-color: rgba(139, 92, 246, 0.4);
+  animation: tmSpinCCW 50s linear infinite;
+}
+.tm-ring-d {
+  inset: 24%;
+  border-top-color: rgba(247, 247, 245, 0.35);
+  animation: tmSpinCW 5.5s linear infinite;
+}
+
+/* Energy wisps — a circular conic-gradient disc slowly rotating. The
+   gradient's own falloff supplies the softness; no blur anywhere. */
+.tm-swirl {
+  position: absolute;
+  inset: 6%;
+  border-radius: 9999px;
+  background: conic-gradient(
+    from 0deg,
+    transparent 0%,
+    rgba(51, 232, 255, 0.1) 12%,
+    transparent 26%,
+    rgba(214, 255, 63, 0.08) 45%,
+    transparent 60%,
+    rgba(139, 92, 246, 0.11) 78%,
+    transparent 95%
+  );
+  animation: tmSpinCW 26s linear infinite;
+}
+
+.tm-core {
+  position: absolute;
+  inset: 14%;
+  border-radius: 9999px;
+  background: radial-gradient(
+    circle,
+    rgba(51, 232, 255, 0.14) 0%,
+    rgba(139, 92, 246, 0.1) 38%,
+    transparent 68%
+  );
+  animation: tmGlowPulse 6s ease-in-out infinite;
+}
+
+/* --- Synthwave floor: an oversized grid texture rotated into a ground
+   plane, sliding one full grid cell per loop (period = 3.75rem = the
+   repeating-gradient cell) so the scroll is seamless. translateY sits
+   AFTER rotateX in the keyframe, so the texture travels along the tilted
+   plane — out of the portal horizon, toward the viewer. Both transforms
+   live in the same keyframe; GSAP only ever fades the WRAPPER. */
+.tm-floor-wrap {
+  perspective: 28rem;
+  perspective-origin: 50% 0%;
+  overflow: hidden;
+}
+.tm-floor {
+  position: absolute;
+  left: -55%;
+  top: 0;
+  width: 210%;
+  height: 250%;
+  transform-origin: 50% 0;
+  background-image: repeating-linear-gradient(
+      to right,
+      rgba(51, 232, 255, 0.14) 0 1px,
+      transparent 1px 3.75rem
+    ),
+    repeating-linear-gradient(
+      to bottom,
+      rgba(214, 255, 63, 0.1) 0 1px,
+      transparent 1px 3.75rem
+    );
+  animation: tmFloorScroll 2.6s linear infinite;
+  will-change: transform;
+}
+@keyframes tmFloorScroll {
+  from {
+    transform: rotateX(63deg) translateY(-3.75rem);
+  }
+  to {
+    transform: rotateX(63deg) translateY(0);
+  }
+}
+
+/* --- Flat-on-the-surface typography + version cards. The heading and the
+   card group each get their own perspective context; the static tilt lives
+   on wrappers GSAP never transforms (GSAP animates the INNER .tm-head-el /
+   .tm-card nodes), and the hover stand-up transition lives on
+   .tm-card-inner — a third layer, so the CSS transition and GSAP tweens
+   never share an element. preserve-3d down the chain keeps the hover
+   counter-rotation a true 3D "card stands up off the floor" rather than a
+   flattened fake. --- */
+.tm-head-flat {
+  perspective: 34rem;
+}
+.tm-head-plane {
+  transform: rotateX(24deg);
+  transform-style: preserve-3d;
+}
+
+.tm-stage {
+  perspective: 70rem;
+}
+.tm-cardwrap {
+  transform: rotateX(45deg);
+  transform-style: preserve-3d;
+}
+.tm-card,
+.tm-card-inner {
+  transform-style: preserve-3d;
+}
+.tm-card-inner {
+  transition: transform 0.55s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.tm-cardwrap:hover .tm-card-inner,
+.tm-cardwrap:focus-visible .tm-card-inner {
+  transform: rotateX(-33deg) translateZ(2rem);
+}
+.tm-cardwrap:focus-visible {
+  outline: 2px solid var(--tm-accent, var(--accent-volt));
+  outline-offset: 6px;
+}
+
+/* Stacked column below 900px: a single shared vanishing point would warp
+   the lower card absurdly, so each card carries its own perspective()
+   instead, with a gentler tilt that keeps the screenshots readable. */
+@media (max-width: 899px) {
+  .tm-stage {
+    perspective: none;
+  }
+  .tm-cardwrap {
+    transform: perspective(46rem) rotateX(32deg);
+  }
+}
+
+/* Giant flat ghost word lying deeper on the floor behind the cards. */
+.tm-ghost {
+  transform: translateX(-50%) rotateX(60deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tm-hand-hr,
+  .tm-hand-min,
+  .tm-orbit,
+  .tm-glowpulse,
+  .tm-trigger,
+  .tm-ring-a,
+  .tm-ring-b,
+  .tm-ring-c,
+  .tm-ring-d,
+  .tm-swirl,
+  .tm-core,
+  .tm-floor {
+    animation: none;
+  }
+  .tm-card-inner {
+    transition: none;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .grain-animated,
   .otc-bob,
@@ -618,7 +915,8 @@ h4 {
   .weather-drop,
   .weather-snow,
   .weather-bolt,
-  .weather-fog {
+  .weather-fog,
+  .proj-art-scan {
     animation: none;
   }
 

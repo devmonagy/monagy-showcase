@@ -20,6 +20,68 @@ const SLIDE_TONES = [
   { accent: "var(--accent-cyan)", ink: "var(--accent-cyan-ink)" },
 ];
 
+// Pre-launch project tile — stands in for a screenshot when a project has
+// no live site to capture yet. An interlocked N/M monogram (a stand-in for
+// Namman Flooring's real mark until that asset lands in /public/assets) on
+// a tiled-grout floor texture, since the client is a tile installer. Sits
+// inside the same .proj-img-parallax wrapper as a real <Image> would, so
+// the deck's scroll parallax and hover tone-wash treat it identically.
+function ComingSoonArt({ accent }: { accent: string }) {
+  return (
+    <div className="proj-art absolute inset-0 flex items-center justify-center">
+      <div className="proj-art-floor absolute inset-0" aria-hidden="true" />
+      <div
+        className="tm-glowpulse absolute w-[55%] aspect-square rounded-full pointer-events-none"
+        style={{
+          background: `radial-gradient(circle, ${accent}33 0%, transparent 70%)`,
+        }}
+        aria-hidden="true"
+      />
+      <div className="relative w-[32%] aspect-square transition-transform duration-700 ease-out group-hover:scale-110">
+        <svg viewBox="0 0 100 100" className="w-full h-full" aria-hidden="true">
+          <circle
+            cx="50"
+            cy="50"
+            r="47"
+            fill="#0a0a0c"
+            stroke={accent}
+            strokeWidth="1.5"
+          />
+          <circle
+            cx="50"
+            cy="50"
+            r="39"
+            fill="none"
+            stroke="rgba(247,247,245,0.55)"
+            strokeWidth="1.25"
+          />
+          <path
+            d="M 27 65 L 39 33 L 50 57 L 61 33 L 73 65"
+            fill="none"
+            stroke="var(--text-contrast)"
+            strokeWidth="5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+          <path
+            d="M 24 72 L 76 28"
+            stroke={accent}
+            strokeWidth="4"
+            strokeLinecap="round"
+          />
+        </svg>
+      </div>
+      <span className="proj-art-scan absolute inset-0" aria-hidden="true" />
+      <span
+        className="absolute bottom-[11%] left-1/2 -translate-x-1/2 font-mono text-[0.5625rem] sm:text-[0.625rem] font-bold uppercase tracking-[0.35em]"
+        style={{ color: accent }}
+      >
+        Coming Soon
+      </span>
+    </div>
+  );
+}
+
 export default function ProjectsSection() {
   const sectionRef = useRef<HTMLDivElement>(null);
   const trackRef = useRef<HTMLDivElement>(null);
@@ -238,13 +300,39 @@ export default function ProjectsSection() {
                       the Image keeps its CSS hover treatment on a separate
                       element so the two transform systems never meet. */}
                   <div className="proj-img-parallax absolute inset-0 will-change-transform">
-                    <Image
-                      src={project.image}
-                      alt={project.title}
-                      fill
-                      sizes="(min-width: 900px) 40vw, 88vw"
-                      className="object-cover object-center grayscale-[50%] opacity-90 group-hover:grayscale-0 group-hover:opacity-100 group-hover:scale-105 transition-all duration-700 ease-out"
-                    />
+                    {project.image ? (
+                      project.imageFit === "contain" ? (
+                        // Brand mark on its own solid background, not a
+                        // 16:10 screenshot — object-cover's crop-to-fill
+                        // zoomed straight past the ring into the wordmark
+                        // below it. #010101 samples the logo's own flat
+                        // background exactly, so the letterboxed sides
+                        // this produces (the frame is wider than the
+                        // square source) read as the mark's own canvas
+                        // continuing, not an empty bar.
+                        <div className="absolute inset-0 bg-[#010101] flex items-center justify-center">
+                          <div className="relative w-[68%] sm:w-[58%] aspect-square transition-transform duration-700 ease-out group-hover:scale-105">
+                            <Image
+                              src={project.image}
+                              alt={project.title}
+                              fill
+                              sizes="(min-width: 900px) 24vw, 60vw"
+                              className="object-contain opacity-90 group-hover:opacity-100 transition-opacity duration-700 ease-out"
+                            />
+                          </div>
+                        </div>
+                      ) : (
+                        <Image
+                          src={project.image}
+                          alt={project.title}
+                          fill
+                          sizes="(min-width: 900px) 40vw, 88vw"
+                          className="object-cover object-center grayscale-[50%] opacity-90 group-hover:grayscale-0 group-hover:opacity-100 group-hover:scale-105 transition-all duration-700 ease-out"
+                        />
+                      )
+                    ) : (
+                      <ComingSoonArt accent={tone.accent} />
+                    )}
                   </div>
                   <div
                     className="absolute inset-0 pointer-events-none mix-blend-color opacity-25 group-hover:opacity-0 transition-opacity duration-500"
