@@ -113,6 +113,22 @@ export default function SmoothScroll({
     smootherRef.current?.paused(locked);
 
     if (!locked) {
+      // Belt-and-suspenders scroll reset: page.tsx's normal preloader
+      // onComplete already does window.scrollTo(0, 0) before flipping
+      // isLoaded, but its 6s stall safety-net does not — it only sets
+      // isLoaded, with no path back through the preloader's own callback.
+      // A slow/busy device that hits that safety net could reveal at
+      // whatever scroll position accumulated during preload (wheel input
+      // does move window.scrollY even while the preloader covers the
+      // page). Resetting here instead guarantees it regardless of which
+      // of the two paths unlocked scrolling. smoother.scrollTop() is the
+      // GSAP-documented way to reset position through an active
+      // ScrollSmoother; touch devices have no smoother, so they fall back
+      // to the same native scrollTo the preloader path already uses.
+      const smoother = ScrollSmoother.get();
+      if (smoother) smoother.scrollTop(0);
+      else window.scrollTo(0, 0);
+
       // Every section's ScrollTrigger is created the instant it mounts —
       // which, now that the page renders behind the preloader, is before
       // fonts/layout have necessarily settled. Re-measure everything
