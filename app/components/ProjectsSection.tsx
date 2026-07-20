@@ -284,16 +284,7 @@ export default function ProjectsSection() {
                       : "rotate-[2.5deg] hover:rotate-0"
                   } hover:scale-[1.02]`}
                   style={{
-                    // Not a `border`: on real iOS Safari, a `border` on an
-                    // element that is both rounded AND itself transformed
-                    // (rotated + will-change-transform, so it's promoted to
-                    // its own composited layer) paints with square corners
-                    // even though the clipped content inside stays rounded —
-                    // the ring visibly pokes past the image's round corners.
-                    // An inset box-shadow is painted against the box's
-                    // border-radius regardless of compositing, so it never
-                    // hits that bug.
-                    boxShadow: `0 24px 70px rgba(0,0,0,0.5), inset 0 0 0 2px ${tone.accent}`,
+                    boxShadow: "0 24px 70px rgba(0,0,0,0.5)",
                   }}
                 >
                   {project.status && (
@@ -345,6 +336,21 @@ export default function ProjectsSection() {
                   <div
                     className="absolute inset-0 pointer-events-none mix-blend-color opacity-25 group-hover:opacity-0 transition-opacity duration-500"
                     style={{ backgroundColor: tone.accent }}
+                  />
+                  {/* Accent ring — its own overlay, not a `border` on the
+                      frame: on real iOS Safari a border on the rotated,
+                      layer-promoted frame paints with SQUARE corners,
+                      poking past the rounded clip. And not an inset shadow
+                      on the frame either: inset shadows paint under
+                      children, and the inset-0 image above would cover the
+                      ring entirely. This sits on top of everything (z-20,
+                      above the z-10 status badge) and carries its own
+                      radius, so the ring both survives WebKit compositing
+                      and stays visible over the image. */}
+                  <div
+                    aria-hidden="true"
+                    className="absolute inset-0 rounded-2xl pointer-events-none z-20"
+                    style={{ boxShadow: `inset 0 0 0 2px ${tone.accent}` }}
                   />
                 </a>
 
