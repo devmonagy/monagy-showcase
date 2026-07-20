@@ -168,10 +168,8 @@ export const PROJECTS: Project[] = [
     description:
       "An upcoming brand site for a professional tile installer specializing in bathroom and kitchen renovations. Built on React, Next.js, TypeScript, and GSAP, styled with Tailwind CSS, and shipping on Cloudflare Pages.",
     tech: ["React", "Next.js", "TypeScript", "GSAP", "Tailwind CSS", "Cloudflare Pages"],
-    image: "/assets/NammanLogo.webp",
-    imageFit: "contain",
+    image: "/assets/NammanFlooring.webp",
     liveUrl: "https://www.nammanflooring.com/",
-    status: "In Development",
   },
   {
     id: "apa-tax",
