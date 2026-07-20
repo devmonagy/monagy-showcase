@@ -298,6 +298,19 @@ h4 {
   clip-path: polygon(-8% -6%, 122% -6%, 108% 106%, -22% 106%);
 }
 
+/* Mobile WebKit/Chrome fails to clip a `will-change: transform` child
+   (its own composited layer) to the parent's border-radius, so the
+   rotated frame's square corners showed through past the rounded clip
+   under 900px, where the tilt is most visible. A mask forces the
+   compositor to respect the radius even for promoted children; desktop
+   never hit this so it's scoped to the same breakpoint as the tilt. */
+@media (max-width: 899px) {
+  .proj-frame-mask {
+    -webkit-mask-image: -webkit-radial-gradient(white, black);
+    mask-image: radial-gradient(white, black);
+  }
+}
+
 /* Pre-launch project tile (ProjectsSection's ComingSoonArt) — grout-line
    crosshatch standing in for a floor/tile texture (the client is a tile
    installer), plus a diagonal light sweep scanning across the badge. The

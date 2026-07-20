@@ -278,7 +278,7 @@ export default function ProjectsSection() {
                   href={project.liveUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className={`group relative block aspect-[16/10] min-[900px]:max-h-[46vh] rounded-2xl overflow-hidden border-2 transition-transform duration-500 ease-out will-change-transform ${
+                  className={`group relative block aspect-[16/10] min-[900px]:max-h-[46vh] rounded-2xl overflow-hidden border-2 proj-frame-mask transition-transform duration-500 ease-out will-change-transform ${
                     tiltEven
                       ? "rotate-[-2.5deg] hover:rotate-0"
                       : "rotate-[2.5deg] hover:rotate-0"

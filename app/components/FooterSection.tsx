@@ -4,7 +4,7 @@ import { useRef } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { useGSAP } from "@gsap/react";
-import { FOOTER_STACK, NAV_LINKS, SOCIALS } from "../data/content";
+import { FOOTER_STACK, NAV_LINKS, SOCIALS, SITE } from "../data/content";
 import { FINE_POINTER_QUERY, scrollToSection } from "./SmoothScroll";
 
 if (typeof window !== "undefined") {
@@ -155,7 +155,10 @@ export default function FooterSection() {
         </div>
 
         <div className="footer-reveal flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-t border-[var(--border-color)] pt-8 font-mono text-[0.625rem] tracking-wider text-[var(--text)] opacity-80">
-          <span>© {new Date().getFullYear()} Mohamed Nagy — All Rights Reserved</span>
+          <span className="flex items-center gap-3">
+            © {new Date().getFullYear()} Mohamed Nagy — All Rights Reserved
+            <span className="opacity-60">v{SITE.version}</span>
+          </span>
           <span className="flex items-center gap-2">
             <span className="w-1.5 h-1.5 rounded-full bg-[var(--accent-volt)] animate-pulse" />
             Built with Next.js &amp; GSAP

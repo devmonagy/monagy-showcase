@@ -2,7 +2,8 @@ export const SITE = {
   name: "Mohamed Nagy",
   tagline: "Engineering high-fidelity visual architectures.",
   resumeUrl: "/assets/Resume-MohamedNAGY.pdf",
-  email: "contactmonagy@gmail.com",
+  email: "hello@monagy.com",
+  version: "3.0.0",
 };
 
 export const BIO_PARAGRAPHS = [
