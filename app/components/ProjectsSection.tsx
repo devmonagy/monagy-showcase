@@ -278,14 +278,22 @@ export default function ProjectsSection() {
                   href={project.liveUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className={`group relative block aspect-[16/10] min-[900px]:max-h-[46vh] rounded-2xl overflow-hidden border-2 proj-frame-mask transition-transform duration-500 ease-out will-change-transform ${
+                  className={`group relative block aspect-[16/10] min-[900px]:max-h-[46vh] rounded-2xl overflow-hidden proj-frame-mask transition-transform duration-500 ease-out will-change-transform ${
                     tiltEven
                       ? "rotate-[-2.5deg] hover:rotate-0"
                       : "rotate-[2.5deg] hover:rotate-0"
                   } hover:scale-[1.02]`}
                   style={{
-                    borderColor: tone.accent,
-                    boxShadow: "0 24px 70px rgba(0,0,0,0.5)",
+                    // Not a `border`: on real iOS Safari, a `border` on an
+                    // element that is both rounded AND itself transformed
+                    // (rotated + will-change-transform, so it's promoted to
+                    // its own composited layer) paints with square corners
+                    // even though the clipped content inside stays rounded —
+                    // the ring visibly pokes past the image's round corners.
+                    // An inset box-shadow is painted against the box's
+                    // border-radius regardless of compositing, so it never
+                    // hits that bug.
+                    boxShadow: `0 24px 70px rgba(0,0,0,0.5), inset 0 0 0 2px ${tone.accent}`,
                   }}
                 >
                   {project.status && (
