@@ -64,11 +64,6 @@
 
 html {
   background-color: var(--bg);
-  scrollbar-width: thin;
-  /* Firefox's scrollbar-color only accepts flat colors, no gradient — cyan
-     stands in as the closest single-color match to the WebKit thumb
-     gradient below (volt -> cyan -> violet), since it's the midpoint. */
-  scrollbar-color: var(--accent-cyan) var(--bg);
   /* The tilted marquee bands are 110vw wide, so the page always has
      horizontal overflow to clip. body's overflow-x:hidden below handles
      desktop, but iOS lets horizontal panning/rubber-banding sneak past it
@@ -137,15 +132,24 @@ html {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: linear-gradient(
-    180deg,
-    var(--accent-volt),
-    var(--accent-cyan),
-    var(--accent-violet)
-  );
+  background: linear-gradient(180deg, var(--accent-volt), var(--accent-cyan));
   background-clip: padding-box;
   border: 2px solid var(--bg);
   border-radius: 999px;
+}
+
+/* Firefox has no ::-webkit-scrollbar support, so it needs the standard
+   scrollbar-color/-width properties — scoped behind this @supports check
+   so Chromium never sees them. Chromium now implements scrollbar-color
+   too, and lets it win over ::-webkit-scrollbar-thumb when both are
+   present, which flattened the thumb above to a solid color. scrollbar-
+   color also only accepts flat colors (no gradient), so cyan stands in as
+   the closest single-color match to the two-stop thumb gradient above. */
+@supports not selector(::-webkit-scrollbar) {
+  html {
+    scrollbar-width: thin;
+    scrollbar-color: var(--accent-cyan) var(--bg);
+  }
 }
 
 body {
