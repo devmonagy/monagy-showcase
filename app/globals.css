@@ -65,7 +65,10 @@
 html {
   background-color: var(--bg);
   scrollbar-width: thin;
-  scrollbar-color: var(--accent-volt) var(--bg);
+  /* Firefox's scrollbar-color only accepts flat colors, no gradient — cyan
+     stands in as the closest single-color match to the WebKit thumb
+     gradient below (volt -> cyan -> violet), since it's the midpoint. */
+  scrollbar-color: var(--accent-cyan) var(--bg);
   /* The tilted marquee bands are 110vw wide, so the page always has
      horizontal overflow to clip. body's overflow-x:hidden below handles
      desktop, but iOS lets horizontal panning/rubber-banding sneak past it
@@ -134,7 +137,12 @@ html {
 }
 
 ::-webkit-scrollbar-thumb {
-  background-color: var(--accent-volt);
+  background: linear-gradient(
+    180deg,
+    var(--accent-volt),
+    var(--accent-cyan),
+    var(--accent-violet)
+  );
   background-clip: padding-box;
   border: 2px solid var(--bg);
   border-radius: 999px;
