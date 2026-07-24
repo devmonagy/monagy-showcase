@@ -11,6 +11,7 @@ import MagneticLink from "./MagneticLink";
 import ScrambleLabel from "./fx/ScrambleLabel";
 import GlitchText, { playGlitchBurst } from "./fx/GlitchText";
 import { SIGNAL_LOCK_EASE } from "./fx/constants";
+import { FINE_POINTER_QUERY } from "./SmoothScroll";
 
 if (typeof window !== "undefined") {
   gsap.registerPlugin(ScrollTrigger, SplitText, CustomEase, useGSAP);
@@ -94,6 +95,20 @@ export default function HeroSection() {
         echoes.forEach((el, i) => gsap.set(el, { opacity: echoRest[i] }));
         return;
       }
+
+      // Touch devices get a compositor-only version of the name choreography.
+      // The two entrance costs that actually stutter on a phone are both
+      // WebKit-specific: (1) the char flip animates rotationX (real 3D under
+      // perspective) on every masked char, and (2) each char carries
+      // -webkit-text-stroke (.char-hollow) mid-flight — a 3D-rotated STROKED
+      // glyph can't be cached as a flat texture, so WebKit re-rasterizes
+      // every character every frame. Layered on top, the perpetual "hologram
+      // sway" is a forever-running 3D rotation of the whole five-copy name
+      // stack that the compositor must recompute for the entire session. All
+      // three are imperceptible at phone size; dropping them on coarse
+      // pointers keeps the same masked-rise reveal while making it pure
+      // transform/opacity. Desktop (fine pointer) keeps the full effect.
+      const coarse = !window.matchMedia(FINE_POINTER_QUERY).matches;
 
       // ---- Initial states, set immediately at mount ----
       // The choreography is delayed until the curtain lifts (ENTRANCE_AT),
@@ -204,7 +219,12 @@ export default function HeroSection() {
               return;
             }
 
-            self.chars.forEach((c) => c.classList.add("char-hollow"));
+            // Hollow→solid stroke lock is desktop-only — on touch the stroked
+            // glyph mid-flight is the expensive paint we're removing, so the
+            // chars simply rise already solid.
+            if (!coarse) {
+              self.chars.forEach((c) => c.classList.add("char-hollow"));
+            }
 
             const STAGGER = 0.045;
             const CHAR_DUR = 0.85;
@@ -217,25 +237,33 @@ export default function HeroSection() {
             );
 
             const tl = gsap.timeline({ delay: startIn });
+            // Same masked rise everywhere; the 3D flip (rotationX +
+            // transformOrigin) is desktop-only so touch stays a plain,
+            // compositor-cheap yPercent translate.
             tl.fromTo(
               self.chars,
-              { yPercent: 120, rotationX: -85, transformOrigin: "50% 100%" },
+              coarse
+                ? { yPercent: 120 }
+                : { yPercent: 120, rotationX: -85, transformOrigin: "50% 100%" },
               {
                 yPercent: 0,
-                rotationX: 0,
+                ...(coarse ? {} : { rotationX: 0 }),
                 duration: CHAR_DUR,
                 ease: "signalLock",
                 stagger: STAGGER,
               },
             );
-            // Fill-lock moment per char, timed into each one's flight.
-            self.chars.forEach((c, i) => {
-              tl.call(
-                () => c.classList.remove("char-hollow"),
-                undefined,
-                i * STAGGER + CHAR_DUR * 0.55,
-              );
-            });
+            // Fill-lock moment per char, timed into each one's flight
+            // (desktop only — touch never went hollow).
+            if (!coarse) {
+              self.chars.forEach((c, i) => {
+                tl.call(
+                  () => c.classList.remove("char-hollow"),
+                  undefined,
+                  i * STAGGER + CHAR_DUR * 0.55,
+                );
+              });
+            }
             // "Signal acquired" punctuation the instant the last char
             // settles, then the depth echoes breathe in behind the name
             // and the interference loop arms.
@@ -312,18 +340,22 @@ export default function HeroSection() {
 
       // Act 2 — live hologram: a slow perpetual sway on the whole name
       // stack (solid + translateZ echoes) keeps the depth readable as 3D.
-      // Autonomous on every device — the earlier cursor-following tilt was
-      // removed by request, and the depth echoes hide almost entirely
-      // behind the solid name without SOME rotation, so the sway is what
-      // keeps the hologram alive.
-      gsap.to(tiltRef.current, {
-        rotationY: 2,
-        rotationX: -1.5,
-        duration: 5,
-        ease: "sine.inOut",
-        yoyo: true,
-        repeat: -1,
-      });
+      // Desktop only — this is a forever-running 3D rotation of the entire
+      // five-layer preserve-3d stack, which WebKit must recomposite every
+      // frame for the whole session and is a real sustained cost on phones.
+      // Touch devices instead let the depth echoes rest at their static
+      // offset opacity (faded in by the entrance timeline above); the sway
+      // it exists to reveal is barely perceptible at phone size anyway.
+      if (!coarse) {
+        gsap.to(tiltRef.current, {
+          rotationY: 2,
+          rotationX: -1.5,
+          duration: 5,
+          ease: "sine.inOut",
+          yoyo: true,
+          repeat: -1,
+        });
+      }
 
       // Ghost strip drifts forever — full words stay readable as they roll
       // through, instead of one oversized word clipping to "DEVE".

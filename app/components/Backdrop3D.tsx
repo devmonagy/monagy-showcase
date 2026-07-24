@@ -344,9 +344,9 @@ export default function Backdrop3D() {
           responsive size difference is handled by --cube-size/--cube-half
           in globals.css instead (plain width/height, unaffected by that
           conflict). */}
-      <div className="bd-near absolute top-[6%] right-[2%] sm:top-[10%] sm:right-[10%] scale-[0.55] sm:scale-100 origin-top-right animate-[floatY_9s_ease-in-out_infinite]">
+      <div className="bd-anim bd-near absolute top-[6%] right-[2%] sm:top-[10%] sm:right-[10%] scale-[0.55] sm:scale-100 origin-top-right animate-[floatY_9s_ease-in-out_infinite]">
         <div
-          className="relative animate-[spinCube_32s_linear_infinite]"
+          className="bd-anim bd-cube-inner relative animate-[spinCube_32s_linear_infinite]"
           style={{
             width: "var(--cube-size)",
             height: "var(--cube-size)",
@@ -367,16 +367,16 @@ export default function Backdrop3D() {
           Sized in rem (like the cube above) so they ride the fluid root
           scale on 1920px+ instead of staying pinned to fixed pixels. */}
       <div className="bd-near absolute top-[52%] left-[-6%] sm:left-[2%]">
-        <div className="w-[18.75rem] h-[18.75rem] sm:w-[26.25rem] sm:h-[26.25rem] rounded-full border border-dashed border-[var(--accent-cyan)] opacity-20 animate-[ringSpin_22s_linear_infinite]" />
+        <div className="bd-anim w-[18.75rem] h-[18.75rem] sm:w-[26.25rem] sm:h-[26.25rem] rounded-full border border-dashed border-[var(--accent-cyan)] opacity-20 animate-[ringSpin_22s_linear_infinite]" />
       </div>
       <div className="bd-near absolute bottom-[6%] right-[2%] sm:right-[8%]">
-        <div className="w-[12.5rem] h-[12.5rem] sm:w-[17.5rem] sm:h-[17.5rem] rounded-full border border-dashed border-[var(--accent-violet)] opacity-25 animate-[ringSpinB_18s_linear_infinite]" />
+        <div className="bd-anim w-[12.5rem] h-[12.5rem] sm:w-[17.5rem] sm:h-[17.5rem] rounded-full border border-dashed border-[var(--accent-violet)] opacity-25 animate-[ringSpinB_18s_linear_infinite]" />
       </div>
 
       {/* Floating accent shards — small near-layer geometry */}
-      <div className="bd-near absolute top-[30%] left-[14%] w-3 h-3 bg-[var(--accent-volt)] opacity-40 rotate-45 animate-[floatY_7s_ease-in-out_infinite]" />
-      <div className="bd-near absolute top-[68%] right-[24%] w-2 h-2 bg-[var(--accent-cyan)] opacity-40 rounded-full animate-[floatY_11s_ease-in-out_infinite]" />
-      <div className="bd-near absolute top-[16%] left-[42%] w-2.5 h-10 bg-[var(--accent-violet)] opacity-25 rotate-[24deg] animate-[floatY_13s_ease-in-out_infinite]" />
+      <div className="bd-anim bd-near absolute top-[30%] left-[14%] w-3 h-3 bg-[var(--accent-volt)] opacity-40 rotate-45 animate-[floatY_7s_ease-in-out_infinite]" />
+      <div className="bd-anim bd-near absolute top-[68%] right-[24%] w-2 h-2 bg-[var(--accent-cyan)] opacity-40 rounded-full animate-[floatY_11s_ease-in-out_infinite]" />
+      <div className="bd-anim bd-near absolute top-[16%] left-[42%] w-2.5 h-10 bg-[var(--accent-violet)] opacity-25 rotate-[24deg] animate-[floatY_13s_ease-in-out_infinite]" />
     </div>
   );
 }

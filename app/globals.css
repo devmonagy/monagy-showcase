@@ -469,6 +469,26 @@ h4 {
   }
 }
 
+/* Backdrop3D decorative geometry — the wireframe cube (float + tumble),
+   two dashed orbit rings, and three floating shards each run a forever-
+   looping transform animation. On desktop that's cheap, but on a phone
+   they're half a dozen permanently-animating compositor layers behind the
+   ENTIRE page — recomputed every frame for the whole session, competing
+   with the hero entrance for the same GPU and draining battery long after.
+   Freeze them to a static pose on touch (the ambient orbs, dot grid,
+   perspective floor, and scroll-driven sparkles still carry the backdrop);
+   the cube gets a fixed isometric angle so it still reads as 3D rather than
+   collapsing to a flat square. Same touch-only, desktop-untouched split as
+   the orb-blur rule above. */
+@media (hover: none), (pointer: coarse) {
+  .bd-anim {
+    animation: none !important;
+  }
+  .bd-cube-inner {
+    transform: rotateX(-24deg) rotateY(32deg);
+  }
+}
+
 /* Section title — slow ambient glow breathing behind the heading.
    Animating text-shadow directly forces a main-thread repaint every frame
    (Lighthouse's "non-composited animations" audit flags this) — instead a
