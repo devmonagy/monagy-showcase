@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { useGSAP } from "@gsap/react";
+import { isLowPerf } from "../lib/perf";
 
 if (typeof window !== "undefined") {
   gsap.registerPlugin(ScrollTrigger, useGSAP);
@@ -82,6 +83,12 @@ export default function Backdrop3D() {
     if (!ctx) return;
 
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    // Canvas glints are pure decoration and they cost the most at exactly
+    // the wrong moment: they only draw WHILE SCROLLING, so on a device
+    // that's already struggling to hold a scroll frame this adds a
+    // shadowBlur'd radial-gradient fill per sparkle on top of it. The
+    // static dot grid, orbs, floor and cube still carry the backdrop.
+    if (isLowPerf()) return;
 
     // DPR capped at 2, not left uncapped: on a 3x-DPR phone or a wide 4K/8K
     // desktop monitor, the raw ratio would multiply the backing-store pixel
@@ -117,7 +124,24 @@ export default function Backdrop3D() {
     let rafId = 0;
     let running = false;
 
+    // Spawns are queued by the scroll handler and drained here, one frame
+    // later, for one reason: spawn() calls getBoundingClientRect() on a
+    // layer GSAP is actively transforming. Called straight from a scroll
+    // listener that is a forced synchronous layout — the browser must flush
+    // pending style and layout work mid-scroll before it can answer, on
+    // every qualifying scroll event, which is textbook scroll jank and hits
+    // hardest on the machines that can least afford it. Inside rAF the same
+    // read lands after style and layout have already settled for the frame,
+    // so it's close to free. The rect is at most one frame stale, which at
+    // this parallax speed moves a glint by a pixel or two.
+    let pendingSpawn = 0;
+
     const tick = () => {
+      if (pendingSpawn > 0) {
+        spawn(pendingSpawn);
+        pendingSpawn = 0;
+      }
+
       ctx.clearRect(0, 0, width, height);
       sparkles = sparkles.filter((s) => ++s.life < s.maxLife);
 
@@ -164,12 +188,18 @@ export default function Backdrop3D() {
         }
       }
 
-      if (sparkles.length) {
+      if (sparkles.length || pendingSpawn) {
         rafId = requestAnimationFrame(tick);
       } else {
         running = false;
         ctx.clearRect(0, 0, width, height);
       }
+    };
+
+    const ensureRunning = () => {
+      if (running) return;
+      running = true;
+      rafId = requestAnimationFrame(tick);
     };
 
     const spawn = (count: number) => {
@@ -213,10 +243,6 @@ export default function Backdrop3D() {
           line: Math.random() < 0.18,
         });
       }
-      if (!running && sparkles.length) {
-        running = true;
-        rafId = requestAnimationFrame(tick);
-      }
     };
 
     // Fractional spawn budget keyed to scroll velocity: slow scrolling
@@ -246,7 +272,8 @@ export default function Backdrop3D() {
       const whole = Math.floor(budget);
       if (whole > 0) {
         budget -= whole;
-        spawn(whole);
+        pendingSpawn += whole;
+        ensureRunning();
       }
     };
     window.addEventListener("scroll", onScroll, { passive: true });

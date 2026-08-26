@@ -12,6 +12,7 @@ import ScrambleLabel from "./fx/ScrambleLabel";
 import GlitchText, { playGlitchBurst } from "./fx/GlitchText";
 import { SIGNAL_LOCK_EASE } from "./fx/constants";
 import { FINE_POINTER_QUERY } from "./SmoothScroll";
+import { isLowPerf } from "../lib/perf";
 
 if (typeof window !== "undefined") {
   gsap.registerPlugin(ScrollTrigger, SplitText, CustomEase, useGSAP);
@@ -105,10 +106,18 @@ export default function HeroSection() {
       // every character every frame. Layered on top, the perpetual "hologram
       // sway" is a forever-running 3D rotation of the whole five-copy name
       // stack that the compositor must recompute for the entire session. All
-      // three are imperceptible at phone size; dropping them on coarse
-      // pointers keeps the same masked-rise reveal while making it pure
-      // transform/opacity. Desktop (fine pointer) keeps the full effect.
-      const coarse = !window.matchMedia(FINE_POINTER_QUERY).matches;
+      // three are imperceptible at phone size; dropping them keeps the same
+      // masked-rise reveal while making it pure transform/opacity.
+      //
+      // Originally gated on coarse pointers alone, which was the wrong
+      // question: the costs above are GPU costs, and a modest laptop on
+      // integrated graphics pays every one of them while answering
+      // `pointer: fine`. The entrance is the first thing a visitor sees, so
+      // it's the worst possible place to spend a frame budget that isn't
+      // there. Now any low-tier device gets the cheap path — phones as
+      // before, plus the weak desktops that were quietly running the full
+      // version. Machines with headroom are unchanged.
+      const lite = isLowPerf() || !window.matchMedia(FINE_POINTER_QUERY).matches;
 
       // ---- Initial states, set immediately at mount ----
       // The choreography is delayed until the curtain lifts (ENTRANCE_AT),
@@ -222,7 +231,7 @@ export default function HeroSection() {
             // Hollow→solid stroke lock is desktop-only — on touch the stroked
             // glyph mid-flight is the expensive paint we're removing, so the
             // chars simply rise already solid.
-            if (!coarse) {
+            if (!lite) {
               self.chars.forEach((c) => c.classList.add("char-hollow"));
             }
 
@@ -242,12 +251,12 @@ export default function HeroSection() {
             // compositor-cheap yPercent translate.
             tl.fromTo(
               self.chars,
-              coarse
+              lite
                 ? { yPercent: 120 }
                 : { yPercent: 120, rotationX: -85, transformOrigin: "50% 100%" },
               {
                 yPercent: 0,
-                ...(coarse ? {} : { rotationX: 0 }),
+                ...(lite ? {} : { rotationX: 0 }),
                 duration: CHAR_DUR,
                 ease: "signalLock",
                 stagger: STAGGER,
@@ -255,7 +264,7 @@ export default function HeroSection() {
             );
             // Fill-lock moment per char, timed into each one's flight
             // (desktop only — touch never went hollow).
-            if (!coarse) {
+            if (!lite) {
               self.chars.forEach((c, i) => {
                 tl.call(
                   () => c.classList.remove("char-hollow"),
@@ -346,7 +355,7 @@ export default function HeroSection() {
       // Touch devices instead let the depth echoes rest at their static
       // offset opacity (faded in by the entrance timeline above); the sway
       // it exists to reveal is barely perceptible at phone size anyway.
-      if (!coarse) {
+      if (!lite) {
         gsap.to(tiltRef.current, {
           rotationY: 2,
           rotationX: -1.5,

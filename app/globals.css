@@ -489,6 +489,88 @@ h4 {
   }
 }
 
+/* ==========================================================================
+   LOW PERFORMANCE TIER
+   ==========================================================================
+   The two rules above (and every JS device split in this codebase) keyed
+   off pointer type, which asks what the INPUT DEVICE is rather than what
+   the hardware can do. A modest laptop on integrated graphics reports
+   `pointer: fine` exactly like a desktop with a discrete GPU, so it matched
+   none of those mitigations and ran the full-cost desktop page: three
+   130-140px blur orbs re-composited under a scroll parallax, six perpetual
+   animations behind the entire document, a 10Hz full-viewport grain layer,
+   and a backdrop-filter across the navbar over all of it. That machine is
+   the one this whole section exists for.
+
+   `html[data-perf="low"]` is set before first paint by the inline script in
+   layout.tsx (static hints: coarse pointer, reduced-motion, save-data, low
+   deviceMemory/hardwareConcurrency) and can be set later by the frame-rate
+   watchdog in app/lib/perf.ts when a machine that passed those hints turns
+   out to drop frames anyway. Touch keeps its own @media rules above so the
+   mitigations still apply with JS disabled; these are the same reductions,
+   reachable by a mouse-driven device.
+
+   Deliberately NOT a reduced-motion clone: reduced-motion is a stated
+   preference and kills motion outright, while this is a budget. Everything
+   here is either invisible at a glance (blur radius, grain churn) or
+   permanently-looping background decoration. The scroll choreography and
+   entrance animations — the things actually worth watching — all still run.
+   ========================================================================== */
+
+/* Same reduction the touch rule makes, and for the same reason: these orbs
+   live in a `fixed` layer that GSAP re-transforms on every scroll frame, so
+   their blur radius is a per-frame compositor cost for the whole session,
+   not a one-time hit at load. */
+[data-perf="low"] .ambient-orb {
+  filter: blur(36px) !important;
+}
+
+/* Wireframe cube, orbit rings, floating shards — half a dozen forever-
+   looping compositor layers behind the ENTIRE page, recomputed every frame
+   whether or not anything else is happening. Frozen to a static pose; the
+   cube keeps a fixed isometric angle so it still reads as 3D. The orbs,
+   dot grid, perspective floor and scroll sparkles still carry the backdrop. */
+[data-perf="low"] .bd-anim {
+  animation: none !important;
+}
+[data-perf="low"] .bd-cube-inner {
+  transform: rotateX(-24deg) rotateY(32deg);
+}
+
+/* Film grain churn. The transform-stepping is compositor-only and cheap in
+   isolation, but the element is oversized to 150% of the viewport and sits
+   at z-100 ABOVE all content, so every step re-composites a full-viewport
+   texture 10 times a second and forces the whole page underneath it to stay
+   layer-promoted. The static grain texture — the part anyone actually
+   notices — is untouched; only the churn stops. */
+[data-perf="low"] .grain-animated {
+  animation: none !important;
+}
+
+/* Navbar. A backdrop-filter on a `fixed` full-width bar means the compositor
+   re-samples and re-blurs the content passing beneath it on every single
+   scroll frame — one of the most expensive things a page can do while
+   scrolling, and it's live for the entire session once the bar goes solid.
+   Dropping to an opaque background keeps the text/content separation the
+   blur was there to provide. Opaque, not the translucent /80: without the
+   blur, translucency reads as a smear of whatever is underneath. */
+/* Written as "apply the blur unless low", never "low unsets the blur": the
+   CSS optimizer in this build silently DROPS `backdrop-filter: none`
+   declarations from the emitted stylesheet (verified by walking
+   document.styleSheets on the running page — an override written that way
+   shipped with only its background-color left, and the blur stayed live on
+   the tier meant to be spared it). Nothing here depends on `none` surviving,
+   so the reduction can't be optimized away. It also degrades correctly with
+   JS disabled: no attribute means :not() matches and the blur applies, which
+   is the pre-existing behavior. */
+html:not([data-perf="low"]) .nav-solid {
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+}
+[data-perf="low"] .nav-solid {
+  background-color: var(--bg) !important;
+}
+
 /* Section title — slow ambient glow breathing behind the heading.
    Animating text-shadow directly forces a main-thread repaint every frame
    (Lighthouse's "non-composited animations" audit flags this) — instead a

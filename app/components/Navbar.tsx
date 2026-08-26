@@ -445,7 +445,15 @@ export default function Navbar() {
         // every GSAP transform write (house rule — see MagneticLink).
         className={`fixed top-0 left-0 w-full z-50 transition-colors duration-300 ${
           scrolled || menuOpen
-            ? "bg-[var(--bg)]/80 backdrop-blur-md border-b border-[var(--border-color)]"
+            ? // The blur itself lives on .nav-solid in globals.css rather
+              // than on a backdrop-blur-* utility here, because it has to be
+              // conditional: a backdrop-filter on a `fixed` full-width bar
+              // makes the compositor re-sample and re-blur the content
+              // passing underneath on every scroll frame, for the entire
+              // session. The low performance tier gets an opaque bar
+              // instead. Everything else about the scrolled state is
+              // unchanged.
+              "nav-solid bg-[var(--bg)]/80 border-b border-[var(--border-color)]"
             : "bg-transparent border-b border-transparent"
         }`}
       >

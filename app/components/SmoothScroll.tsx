@@ -5,6 +5,7 @@ import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { ScrollSmoother } from "gsap/ScrollSmoother";
 import { useGSAP } from "@gsap/react";
+import { isLowPerf } from "../lib/perf";
 
 if (typeof window !== "undefined") {
   // useGSAP registered alongside the rest: it accommodates cases where a
@@ -84,7 +85,19 @@ export default function SmoothScroll({
 
   useEffect(() => {
     isFineRef.current = window.matchMedia(FINE_POINTER_QUERY).matches;
-    if (!isFineRef.current) return;
+    // A fine pointer is no longer sufficient on its own. Smoothing works by
+    // translating #smooth-content — the ENTIRE page — on every frame, which
+    // forces the whole document into one enormous composited layer that the
+    // GPU repositions (and, wherever anything repaints, re-rasterizes) 60
+    // times a second. On a machine with headroom that's free and the result
+    // is the buttery scroll this site is built around. On a modest laptop
+    // with integrated graphics it is by a wide margin the most expensive
+    // thing on the page, and it degrades in the worst possible way: the
+    // frames it drops are scroll frames, so the smoothing meant to make
+    // scrolling feel better is exactly what makes it feel broken. Those
+    // machines get native scroll, which the compositor handles off the main
+    // thread and never drops.
+    if (!isFineRef.current || isLowPerf()) return;
 
     const smoother = ScrollSmoother.create({
       wrapper: "#smooth-wrapper",

@@ -714,8 +714,8 @@ export default function PersonalTelemetrySection() {
       {/* Ambient glow — static; all motion in this section belongs to the
           island bodies and the globe. */}
       <div aria-hidden="true" className="absolute inset-0 pointer-events-none">
-        <div className="absolute top-1/4 left-[-10%] w-[50vw] h-[50vw] max-w-[38rem] max-h-[38rem] rounded-full blur-[140px] bg-[var(--accent-volt)] opacity-[0.08]" />
-        <div className="absolute bottom-0 right-[-10%] w-[46vw] h-[46vw] max-w-[34rem] max-h-[34rem] rounded-full blur-[140px] bg-[var(--accent-cyan)] opacity-[0.07]" />
+        <div className="ambient-orb absolute top-1/4 left-[-10%] w-[50vw] h-[50vw] max-w-[38rem] max-h-[38rem] rounded-full blur-[140px] bg-[var(--accent-volt)] opacity-[0.08]" />
+        <div className="ambient-orb absolute bottom-0 right-[-10%] w-[46vw] h-[46vw] max-w-[34rem] max-h-[34rem] rounded-full blur-[140px] bg-[var(--accent-cyan)] opacity-[0.07]" />
       </div>
 
       <div className="relative z-10 max-w-6xl mx-auto">
