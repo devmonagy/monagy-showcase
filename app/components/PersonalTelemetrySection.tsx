@@ -268,7 +268,7 @@ export default function PersonalTelemetrySection() {
   // release and a natural, physically-decaying spin, the same engine the
   // Experience deck's cards already throw with (see ExperienceSection).
   const globeProxyRef = useRef<HTMLDivElement>(null);
-  const pinRefs = useRef<(HTMLButtonElement | null)[]>([]);
+  const pinRefs = useRef<(HTMLSpanElement | null)[]>([]);
   const continentRefs = useRef<(SVGPathElement | null)[]>([]);
   // Plain ref (not state) so hovering a pin can pause the globe's ticker
   // without re-running the whole rotation effect on every hover.
@@ -534,7 +534,7 @@ export default function PersonalTelemetrySection() {
       const stage = globeStageRef.current;
       if (!stage) return;
       const pins = pinRefs.current.filter(
-        (n): n is HTMLButtonElement => n !== null,
+        (n): n is HTMLSpanElement => n !== null,
       );
       const continents = continentRefs.current.filter(
         (n): n is SVGPathElement => n !== null,
@@ -581,14 +581,14 @@ export default function PersonalTelemetrySection() {
           const p = projectUnit(c.lat, c.lon);
           const depth = (p.z + 1) / 2;
           const visible = p.z > -0.12;
-          // Position only on the button (fixed 48/56px hit area, per the
-          // touch-target minimum) — the 3D depth scale goes on the flag
-          // image alone, so the perspective shrink-when-facing-away cue
-          // never shrinks the actual tappable region below spec. Queried
-          // by tag rather than firstElementChild: the hover/tap bump
-          // indicator now sits between the button and the image as its
-          // own CSS-transitioned layer (never the same element as either
-          // per-frame JS transform below).
+          // Position only on the pin wrapper (a fixed 48/56px box) — the
+          // 3D depth scale goes on the flag image alone, so the
+          // perspective shrink-when-facing-away cue never shrinks the
+          // hover/tap region it sits in. Queried by tag rather than
+          // firstElementChild: the hover/tap bump indicator sits between
+          // the wrapper and the image as its own CSS-transitioned layer
+          // (never the same element as either per-frame JS transform
+          // below).
           el.style.transform = `translate(${p.x * pinRadius}px, ${p.y * pinRadius}px)`;
           const flag = el.querySelector("img");
           if (flag) flag.style.transform = `scale(${0.55 + 0.55 * depth})`;
@@ -1038,31 +1038,55 @@ export default function PersonalTelemetrySection() {
                       {COUNTRIES.map((country, i) => {
                         const active = hoveredCountry?.code === country.code;
                         return (
-                          <button
+                          <span
                             key={country.code}
-                            type="button"
                             ref={(el) => {
                               pinRefs.current[i] = el;
                             }}
                             onMouseEnter={() => handlePinEnter(country)}
                             onMouseLeave={handlePinLeave}
-                            onFocus={() => handlePinEnter(country)}
-                            onBlur={handlePinLeave}
                             onTouchStart={() => handlePinTap(country)}
-                            title={country.name}
-                            // Hit area is 48px (56px desktop) — the WCAG/
-                            // Lighthouse touch-target minimum — while the
-                            // visible flag stays its original 24px (28px)
-                            // size, centered inside via flex. Sizing up the
-                            // visible flag itself to 48px would look
-                            // oversized against this small globe; growing
-                            // only the invisible tappable region keeps the
-                            // design and fixes the target-size flag.
+                            aria-hidden="true"
+                            // PRESENTATIONAL, not a control — and that is
+                            // what makes this pass WCAG 2.5.8 target size.
+                            //
+                            // These were <button>s with a 48px (56px
+                            // desktop) hit area, which satisfies the 24px
+                            // MINIMUM but not the spacing half of the rule:
+                            // targets must also not intrude on each other.
+                            // The pins cannot be spaced apart, because the
+                            // projection puts them where the countries
+                            // actually are. Rotation only moves longitude
+                            // (y = -sin(lat) in projectUnit above), so the
+                            // VERTICAL gap between two pins is a constant no
+                            // amount of spinning changes:
+                            //
+                            //   gap = globeWidth x 0.42 x |sin(lat1)-sin(lat2)|
+                            //
+                            // Washington (38.9N) and Santo Domingo (18.5N)
+                            // give globeWidth x 0.1305 — 20.9px on the 160px
+                            // mobile globe, 25.1px on the 192px desktop one,
+                            // and less again while the island is mid-assembly
+                            // and scaled below 1. Passing would need a globe
+                            // over 184px at every breakpoint AND hit areas
+                            // shrunk to 24px, i.e. a visibly bigger globe
+                            // with smaller tap targets than it has today.
+                            //
+                            // So the pins stop being targets instead. Mouse
+                            // hover and touch tap are unchanged (a span with
+                            // listeners is not a widget, so the rule does not
+                            // apply to it), and the real accessible surface
+                            // is the sr-only passport list rendered after the
+                            // globe — the standard text-alternative pattern
+                            // for a data visualisation. A screen reader now
+                            // gets all four countries and their coordinates
+                            // as one readable list rather than four buttons
+                            // scattered across a spinning sphere.
                             className="absolute left-1/2 top-1/2 flex items-center justify-center w-12 h-12 sm:w-14 sm:h-14 -ml-6 -mt-6 sm:-ml-7 sm:-mt-7 rounded-full"
                           >
                             {/* Hover/tap indicator — a THIRD layer, never
                                 sharing an element with either per-frame
-                                JS transform (the button's own position
+                                JS transform (the pin wrapper's own position
                                 above, the flag image's depth-scale below):
                                 a plain CSS transition on this wrapper's
                                 scale/shadow can't fight either one. Driven
@@ -1085,15 +1109,32 @@ export default function PersonalTelemetrySection() {
                               {/* eslint-disable-next-line @next/next/no-img-element -- tiny fixed external SVG from a static CDN */}
                               <img
                                 src={`https://flagcdn.com/${country.code}.svg`}
-                                alt={country.name}
+                                alt=""
                                 draggable={false}
                                 className="w-6 h-6 sm:w-7 sm:h-7 rounded-full object-cover border-2 border-[var(--card-bg)] shadow-[0_6px_16px_rgba(0,0,0,0.6)]"
                               />
                             </span>
-                          </button>
+                          </span>
                         );
                       })}
                     </div>
+
+                    {/* Text alternative for the globe above, which is now
+                        wholly presentational. Everything the pins convey
+                        visually — which countries, and where each one is —
+                        is stated here in reading order, so the data is not
+                        locked inside a drag-to-spin sphere. Visually hidden
+                        rather than aria-label'd onto the globe: a list is
+                        navigable item by item, whereas a single long label
+                        can only be heard as one run-on string. */}
+                    <ul className="sr-only">
+                      {COUNTRIES.map((country) => (
+                        <li key={country.code}>
+                          {country.name} — {country.coords}
+                          {country.hint ? ` · ${country.hint}` : ""}
+                        </li>
+                      ))}
+                    </ul>
 
                     <div className="min-w-0">
                       <span className="block font-[family-name:var(--font-syne)] font-extrabold text-6xl sm:text-7xl leading-none text-[var(--accent-cyan)] tabular-nums">
