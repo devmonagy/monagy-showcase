@@ -10,18 +10,25 @@ import MagneticLink from "./MagneticLink";
 import GlitchText, { playGlitchBurst } from "./fx/GlitchText";
 import { SCRAMBLE_CHARS } from "./fx/constants";
 import { FINE_POINTER_QUERY, scrollToSection } from "./SmoothScroll";
-import { ENTRANCE_AT } from "./HeroSection";
+import { entranceAt } from "./HeroSection";
 
 if (typeof window !== "undefined") {
   gsap.registerPlugin(ScrollTrigger, ScrambleTextPlugin, useGSAP);
 }
 
-// When the logo folds from "Mohamed Nagy." to "MN.", in seconds after
-// mount: the hero name's last char locks in around ENTRANCE_AT + 1.4 and
-// its depth echoes breathe in through ~+2.3 (see HeroSection) — starting
-// the fold at +2.1 reads as the big name taking over from the small one:
-// the navbar cedes the full name to the hero, keeping only the monogram.
-const LOGO_FOLD_AT = ENTRANCE_AT + 2.1;
+// When the logo folds from "Mohamed Nagy." to "MN.", relative to the hero
+// entrance: the hero name's last char locks in around +1.4 and its depth
+// echoes breathe in through ~+2.3 (see HeroSection) — starting the fold at
+// +2.1 reads as the big name taking over from the small one: the navbar
+// cedes the full name to the hero, keeping only the monogram.
+//
+// An OFFSET now, resolved against entranceAt() inside the effect, rather
+// than an absolute constant computed at module scope. The entrance time is
+// device-tier dependent (low-tier devices run it later, clear of the
+// preloader teardown — see ENTRANCE_AT_LOW), and the tier is only readable
+// in the browser, so a module-scope constant would freeze the SSR default
+// and silently desynchronise the logo fold from the name it hands off to.
+const LOGO_FOLD_AFTER_ENTRANCE = 2.1;
 
 export default function Navbar() {
   const rootRef = useRef<HTMLDivElement>(null);
@@ -222,7 +229,8 @@ export default function Navbar() {
       gsap.set(header, { yPercent: -110 });
       gsap.set(".nav-item", { opacity: 0, y: -12 });
 
-      const loadTl = gsap.timeline({ delay: ENTRANCE_AT - 0.05 });
+      const startAt = entranceAt();
+      const loadTl = gsap.timeline({ delay: startAt - 0.05 });
       loadTl
         .to(header, {
           yPercent: 0,
@@ -316,7 +324,9 @@ export default function Navbar() {
         });
       };
 
-      const foldCall = gsap.delayedCall(LOGO_FOLD_AT, () => fold(true));
+      const foldCall = gsap.delayedCall(startAt + LOGO_FOLD_AFTER_ENTRANCE, () =>
+        fold(true),
+      );
 
       // Desktop delight: hovering the monogram decodes the full name back
       // out; leaving folds it away again. Armed only after the first timed

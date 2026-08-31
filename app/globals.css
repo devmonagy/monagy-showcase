@@ -537,6 +537,58 @@ h4 {
   transform: rotateX(-24deg) rotateY(32deg);
 }
 
+/* Hero name stack — flattened out of 3D entirely. The five copies (solid
+   h1, two stroked depth echoes, two glitch clones) sit in a real 3D
+   rendering context: perspective on the wrapper, preserve-3d on the tilt
+   layer, translateZ on the echoes. That context exists to serve ONE
+   effect, the perpetual hologram sway, and the sway is already disabled on
+   this tier (see `lite` in HeroSection) — so the tier pays for a 3D
+   context it never uses, and pays for it in the worst place: the entrance
+   flips 12 masked glyphs INSIDE it, and WebKit cannot flatten a
+   preserve-3d subtree into a single cached texture, so every char
+   transform is resolved in 3D against five stacked layers, two of which
+   carry -webkit-text-stroke.
+
+   Flattening is pixel-identical rather than a downgrade, because a static
+   translateZ under a fixed perspective IS just a uniform scale about the
+   perspective origin: s = P / (P - z). Both are rem-based and the origins
+   coincide (the echoes are inset-0 of a wrapper that fills the perspective
+   element), so the ratios hold at every viewport and under the fluid root
+   scale — 900/948 = 0.9494 for the -3rem echo, 900/996 = 0.9036 for -6rem.
+   Same rendered size, same position, no 3D context.
+
+   !important because these properties are written as inline styles on the
+   elements (they always have been — they're structural to the effect, not
+   theme), and an inline style outranks any ordinary rule.
+
+   No `@media (hover: none), (pointer: coarse)` twin, unlike .ambient-orb
+   and .bd-anim above. Those two carry one so their mitigation survives
+   with JS disabled; here there would be nothing to mitigate, because with
+   JS disabled no entrance, sway or scatter ever runs and the stack is
+   inert. Touch is already covered — the boot script classifies every
+   coarse pointer as low. */
+[data-perf="low"] .hero-3d {
+  perspective: none !important;
+}
+[data-perf="low"] .hero-3d-stack {
+  transform-style: flat !important;
+}
+[data-perf="low"] .hero-echo-near {
+  transform: scale(0.9494) !important;
+}
+[data-perf="low"] .hero-echo-far {
+  transform: scale(0.9036) !important;
+}
+
+/* Timeback Machine trigger fade-in. Its 3.1s delay was chosen against the
+   2.75s entrance; on this tier the entrance moves to 3.45s (see
+   ENTRANCE_AT_LOW), and a fixed-position element fading and translating
+   itself into view mid-flight is exactly the competition the reschedule
+   exists to remove. Lands after the name instead. */
+[data-perf="low"] .tm-trigger {
+  animation-delay: 4.6s;
+}
+
 /* Film grain churn. The transform-stepping is compositor-only and cheap in
    isolation, but the element is oversized to 150% of the viewport and sits
    at z-100 ABOVE all content, so every step re-composites a full-viewport

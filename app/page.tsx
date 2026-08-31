@@ -67,10 +67,16 @@ export default function Home() {
           devices pay the layout/hydration cost while the counter runs —
           the curtain then reveals a finished page instead of a blank
           frame. The hero delays its choreography to a mount-time constant
-          matched to the preloader's exit (~2.75s — see ENTRANCE_AT in
-          HeroSection) so the entrance plays right as the curtain clears,
-          still without any cross-component "preloader done" signal, which
-          proved unreliable on real mobile devices. */}
+          matched to the preloader's exit (see entranceAt() in
+          HeroSection), still without any cross-component "preloader done"
+          signal, which proved unreliable on real mobile devices. Desktop
+          plays the entrance THROUGH the lifting curtain (~2.75s) so it's
+          seen; low-tier devices wait until the curtain is gone (~3.45s),
+          because the curtain slide and this component's own onComplete —
+          which unmounts the preloader subtree and sends SmoothScroll into
+          a full ScrollTrigger.refresh() — are the two heaviest main-thread
+          moments the page has, and running the entrance across them is
+          what made the hero name judder on phones. */}
 
       {/* Fixed 3D depth layer behind everything. Rendered outside the
           ScrollSmoother wrapper below: #smooth-content is moved via a

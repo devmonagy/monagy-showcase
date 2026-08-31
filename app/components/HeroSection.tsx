@@ -36,9 +36,43 @@ if (typeof window !== "undefined") {
 // today — a stalled preloader riding the 6s safety net — the choreography
 // finishes unseen and the curtain lifts on a settled hero, which is
 // exactly the old behavior, never a hidden one.
-// Exported: the navbar sequences its own load-in and logo morph against
-// the same curtain timing.
 export const ENTRANCE_AT = 2.75;
+
+// Low-tier devices deliberately do NOT overlap the curtain. Deliberate
+// overlap is the whole point of 2.75 above, and on a phone it is also the
+// single worst place the entrance could possibly sit, because the char
+// flight (2.75s → ~4.1s: 12 chars, 0.045 stagger, 0.85s each) straddles
+// the two most expensive moments the page ever has:
+//
+//   2.75–3.27  the full-viewport z-999 curtain slides off ON TOP of the
+//              animating name, so WebKit is rasterizing freshly-exposed
+//              tiles (Backdrop3D's blurred orbs, the dot grid, the
+//              rotateX perspective floor) in the same frames it is
+//              transforming 12 masked, stroked glyphs.
+//   3.27       the preloader's onComplete fires: React unmounts that
+//              entire subtree AND `locked` flips false, which sends
+//              SmoothScroll into ScrollTrigger.refresh() — a forced
+//              synchronous layout across every trigger on the page. Two
+//              more refreshes follow on document.fonts.ready and load.
+//
+// Desktop has the headroom to eat all of that mid-animation. A phone does
+// not, and it shows up exactly as reported: the name judders through its
+// own entrance. 3.45s puts the whole flight AFTER the curtain is gone and
+// after the unmount/refresh burst. The key property is that a main-thread
+// stall BEFORE a tween starts is invisible — the tween simply begins a few
+// milliseconds late — while the identical stall DURING it is a dropped
+// frame the eye reads as stutter. So this trades a deliberately-seen
+// overlap for a clean, empty-hero beat and then an uncontested animation.
+const ENTRANCE_AT_LOW = 3.45;
+
+// Resolved per device tier. A function, not a constant, because the tier
+// lives on <html data-perf> (written before first paint by the boot script
+// in layout.tsx) and is therefore only knowable in the browser — module
+// scope would bake in the SSR default. Exported: the navbar sequences its
+// own load-in and logo morph against the same curtain timing.
+export function entranceAt(): number {
+  return isLowPerf() ? ENTRANCE_AT_LOW : ENTRANCE_AT;
+}
 
 // The name rendered identically for the real h1, the two depth echoes, and
 // the two glitch clones — five copies, one source of truth. All typography
@@ -118,6 +152,9 @@ export default function HeroSection() {
       // before, plus the weak desktops that were quietly running the full
       // version. Machines with headroom are unchanged.
       const lite = isLowPerf() || !window.matchMedia(FINE_POINTER_QUERY).matches;
+      // Read once — every delay below must agree, and on the low tier this
+      // is what keeps the whole choreography clear of the curtain teardown.
+      const startAt = entranceAt();
 
       // ---- Initial states, set immediately at mount ----
       // The choreography is delayed until the curtain lifts (ENTRANCE_AT),
@@ -132,6 +169,7 @@ export default function HeroSection() {
 
       const mountedAt = performance.now();
       let entrancePlayed = false;
+      let entranceTl: gsap.core.Timeline | null = null;
       let scatterTween: gsap.core.Tween | null = null;
       let scatterProgress = 0;
       let glitchCall: gsap.core.Tween | null = null;
@@ -215,11 +253,37 @@ export default function HeroSection() {
             // pin the properly spaced name instead (re-applied per split;
             // autoSplit re-runs this on font load / resize).
             nameEl.setAttribute("aria-label", "Mohamed Nagy.");
-            if (entrancePlayed) {
-              // Re-split after the show (viewport resize, late font swap):
-              // land chars in their final pose, unclip the fresh masks so
-              // the scroll scatter can fly chars out of them, and rebuild
-              // the scatter against the replacement char elements.
+
+            // Re-split at or after the entrance's start time (viewport
+            // resize, late font swap): land chars in their final pose,
+            // unclip the fresh masks so the scroll scatter can fly chars
+            // out of them, and rebuild the scatter against the replacement
+            // char elements.
+            //
+            // The wall-clock test is what makes a re-split DURING the
+            // flight safe. `entrancePlayed` alone was not: it only flips
+            // in the timeline's final callback, so a font swap landing
+            // anywhere inside the ~1.35s char flight fell through to the
+            // build path below, where startIn floors at 0.1 — meaning the
+            // name would rise partway, snap back down, and rise again.
+            // Syne is display:"swap" and autoSplit re-splits precisely on
+            // font load, so on a phone (slow connection, and now an
+            // entrance deliberately pushed later to clear the curtain)
+            // that was a live restart, not a corner case. A swap arriving
+            // mid-show now simply settles the name where it was heading.
+            const elapsed = (performance.now() - mountedAt) / 1000;
+            if (entrancePlayed || elapsed >= startAt) {
+              if (!entrancePlayed) {
+                // Aborting mid-flight: adopt the end state the killed
+                // timeline was going to produce, including the beats that
+                // lived in its trailing callbacks.
+                entranceTl?.kill();
+                entranceTl = null;
+                entrancePlayed = true;
+                self.chars.forEach((c) => c.classList.remove("char-hollow"));
+                gsap.set(echoes, { opacity: (i) => echoRest[i] });
+                armGlitchLoop();
+              }
               gsap.set(self.chars, { yPercent: 0, rotationX: 0, opacity: 1 });
               (self.masks as HTMLElement[]).forEach(
                 (m) => (m.style.overflow = "visible"),
@@ -227,6 +291,11 @@ export default function HeroSection() {
               buildScatter(self.chars);
               return;
             }
+            // Re-split BEFORE the entrance was due to start (the common
+            // font-swap case): discard the pending timeline and rebuild it
+            // against the new chars. startIn below re-anchors to the same
+            // wall clock, so the show still begins exactly on time.
+            entranceTl?.kill();
 
             // Hollow→solid stroke lock is desktop-only — on touch the stroked
             // glyph mid-flight is the expensive paint we're removing, so the
@@ -240,12 +309,10 @@ export default function HeroSection() {
             // Absolute wall-clock anchor, not a fixed delay: if a font-load
             // re-split rebuilds this timeline mid-wait, a fixed delay would
             // push the entrance later by the elapsed time.
-            const startIn = Math.max(
-              0.1,
-              ENTRANCE_AT - (performance.now() - mountedAt) / 1000,
-            );
+            const startIn = Math.max(0.1, startAt - elapsed);
 
             const tl = gsap.timeline({ delay: startIn });
+            entranceTl = tl;
             // Same masked rise everywhere; the 3D flip (rotationX +
             // transformOrigin) is desktop-only so touch stays a plain,
             // compositor-cheap yPercent translate.
@@ -333,7 +400,7 @@ export default function HeroSection() {
       // slide.)
       const tl = gsap.timeline({
         defaults: { ease: "power4.out" },
-        delay: ENTRANCE_AT,
+        delay: startAt,
       });
       tl.to(".hero-line", { yPercent: 0, duration: 1.2, stagger: 0.12 }, 0.05)
         .to(
@@ -368,11 +435,20 @@ export default function HeroSection() {
 
       // Ghost strip drifts forever — full words stay readable as they roll
       // through, instead of one oversized word clipping to "DEVE".
+      //
+      // Held back until the name has landed on the low tier. This track is
+      // a viewport-wide run of -webkit-text-stroke glyphs at 16vw, and it
+      // otherwise starts translating at MOUNT — i.e. it is already burning
+      // compositor budget on stroked text through every frame of the
+      // entrance, behind the one element the visitor is actually looking
+      // at. Nobody can tell when an ambient background drift began, so
+      // deferring it is free; competing with the entrance is not.
       gsap.to(".hero-ghost-track", {
         xPercent: -50,
         ease: "none",
         duration: 28,
         repeat: -1,
+        delay: lite ? startAt + 1.5 : 0,
       });
 
       // Scroll parallax on top of the entrance: ghost strip sinks, content
@@ -532,7 +608,7 @@ export default function HeroSection() {
             <ScrambleLabel
               text="Software Developer"
               trigger="mount"
-              delay={ENTRANCE_AT + 0.25}
+              delay={entranceAt() + 0.25}
             />
           </span>
         </div>
@@ -585,18 +661,18 @@ export default function HeroSection() {
             content" 620px tier) swaps in a smaller clamp so the name
             stays legible without dominating a tight budget. */}
         <div
-          className="relative font-[family-name:var(--font-syne)] font-extrabold text-[min(clamp(2.4rem,10.8vw,6.75rem),calc((100vw-2.5rem)/8.45))] [@media(max-height:619px)]:text-[min(clamp(1.75rem,7vw,3.5rem),calc((100vw-2.5rem)/8.45))] [@media(max-height:269px)]:!text-[min(clamp(1.25rem,5vw,2rem),calc((100vw-2.5rem)/8.45))] leading-[0.95] tracking-tighter"
+          className="hero-3d relative font-[family-name:var(--font-syne)] font-extrabold text-[min(clamp(2.4rem,10.8vw,6.75rem),calc((100vw-2.5rem)/8.45))] [@media(max-height:619px)]:text-[min(clamp(1.75rem,7vw,3.5rem),calc((100vw-2.5rem)/8.45))] [@media(max-height:269px)]:!text-[min(clamp(1.25rem,5vw,2rem),calc((100vw-2.5rem)/8.45))] leading-[0.95] tracking-tighter"
           style={{ perspective: "56.25rem" }}
         >
           <div
             ref={tiltRef}
-            className="relative"
+            className="hero-3d-stack relative"
             style={{ transformStyle: "preserve-3d" }}
           >
             <div
               ref={echoVoltRef}
               aria-hidden="true"
-              className="text-outline-volt absolute inset-0 opacity-0 pointer-events-none select-none"
+              className="hero-echo-near text-outline-volt absolute inset-0 opacity-0 pointer-events-none select-none"
               style={{ transform: "translateZ(-3rem)" }}
             >
               <NameLines />
@@ -604,7 +680,7 @@ export default function HeroSection() {
             <div
               ref={echoWhiteRef}
               aria-hidden="true"
-              className="text-outline absolute inset-0 opacity-0 pointer-events-none select-none"
+              className="hero-echo-far text-outline absolute inset-0 opacity-0 pointer-events-none select-none"
               style={{ transform: "translateZ(-6rem)" }}
             >
               <NameLines />
