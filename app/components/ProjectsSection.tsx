@@ -255,7 +255,8 @@ export default function ProjectsSection() {
                   title/tag forced its OWN text column to claim more than
                   its fr-share, stealing width from the image column next
                   to it. Measured live: at an identical 920px viewport,
-                  "Blog Engine" rendered its image at 408px while "APA Tax
+                  "Blog Engine" (a since-removed slide) rendered its image
+                  at 408px while "APA Tax
                   Accounting Inc" (longest word "Accounting", wider at
                   text-5xl bold) rendered the SAME image column at only
                   327px — different projects at the same viewport,

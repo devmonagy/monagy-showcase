@@ -151,15 +151,14 @@ export type Project = {
 // deck and renumbers every slide.
 export const PROJECTS: Project[] = [
   {
-    id: "blog-engine",
-    title: "Blog Engine",
-    subtitle: "MERN + TypeScript",
+    id: "teba-pharmacy",
+    title: "Teba Pharmacy",
+    subtitle: "Compounding Pharmacy, Brooklyn",
     description:
-      "A full-stack blog engine inspired by platforms like Medium, built with the MERN stack, TypeScript, Tailwind CSS, and modern tooling. Includes robust secure authentication, post management, and a highly optimized, responsive UI.",
-    tech: ["MongoDB", "Express", "React", "Node.js", "TypeScript", "Tailwind CSS", "JWT"],
-    image: "/assets/blogwebapp-screen.webp",
-    liveUrl: "https://blogwebapp.monagy.com",
-    status: "In Development",
+      "A brand site for a lifestyle compounding pharmacy in Bay Ridge, Brooklyn. Custom compounded medications, prescription refills, and free delivery, presented through a dark molecular interface built on React and Vite, styled with Tailwind CSS and shipping on Cloudflare Pages.",
+    tech: ["React", "Vite", "TypeScript", "Tailwind CSS", "Cloudflare Pages"],
+    image: "/assets/TebaRX.webp",
+    liveUrl: "https://tebarx.com",
   },
   {
     id: "namman-flooring",
