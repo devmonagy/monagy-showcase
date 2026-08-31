@@ -10,6 +10,7 @@ import MagneticLink from "./MagneticLink";
 import DescriptionReveal from "./DescriptionReveal";
 import GlitchText from "./fx/GlitchText";
 import ScrambleLabel from "./fx/ScrambleLabel";
+import { ARROW_NE } from "./fx/constants";
 
 if (typeof window !== "undefined") {
   gsap.registerPlugin(ScrollTrigger, useGSAP);
@@ -483,7 +484,7 @@ export default function ProjectsSection() {
                     {/* Hover glitch rides the label span, not the anchor —
                         MagneticLink owns the anchor's transform entirely. */}
                     <GlitchText trigger="hover">Launch App</GlitchText>
-                    <span aria-hidden="true">↗</span>
+                    <span aria-hidden="true">{ARROW_NE}</span>
                   </MagneticLink>
                 </div>
               </div>

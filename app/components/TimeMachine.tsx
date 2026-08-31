@@ -6,6 +6,7 @@ import gsap from "gsap";
 import { ScrollSmoother } from "gsap/ScrollSmoother";
 import { useGSAP } from "@gsap/react";
 import { SITE_VERSIONS } from "../data/content";
+import { ARROW_NE } from "./fx/constants";
 
 if (typeof window !== "undefined") {
   gsap.registerPlugin(ScrollSmoother, useGSAP);
@@ -515,7 +516,7 @@ export default function TimeMachine() {
                             className="ml-auto font-mono text-xs font-bold tracking-wider"
                             style={{ color: accent.color }}
                           >
-                            VISIT ↗
+                            VISIT {ARROW_NE}
                           </span>
                         </span>
                       </span>

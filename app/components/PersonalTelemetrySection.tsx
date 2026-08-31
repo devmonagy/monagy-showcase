@@ -12,6 +12,7 @@ import type { WeatherData } from "../api/weather/route";
 import { FINE_POINTER_QUERY } from "./SmoothScroll";
 import GlitchText from "./fx/GlitchText";
 import ScrambleLabel from "./fx/ScrambleLabel";
+import { ARROW_NE } from "./fx/constants";
 
 if (typeof window !== "undefined") {
   gsap.registerPlugin(ScrollTrigger, Draggable, InertiaPlugin, useGSAP);
@@ -712,7 +713,23 @@ export default function PersonalTelemetrySection() {
       className="relative overflow-hidden py-20 sm:py-28 px-5 sm:px-6 md:px-8"
     >
       {/* Ambient glow — static; all motion in this section belongs to the
-          island bodies and the globe. */}
+          island bodies and the globe.
+
+          These two orbs are why every muted --text line in this section
+          runs at opacity-90 rather than the opacity-80 used elsewhere.
+          axe (and therefore Lighthouse) does not model `filter: blur()`:
+          it reads the volt orb below as a flat 8% wash of #d6ff3f sitting
+          directly behind the text, when the 140px blur actually spreads it
+          to a small fraction of that. Against axe's imagined background,
+          #9a9aa5 at 80% composites to rgb(128,128,134) for a ratio of
+          4.55:1 — over the 4.5 line by four hundredths, so the audit
+          passed or failed depending on which text happened to be on screen
+          for that run. The Spotify artist line is the one that surfaced it,
+          and only because a track was playing during the desktop run.
+          opacity-90 takes the same text to ~5.4:1 against the volt orb and
+          ~5.6:1 against the cyan one — an actual margin instead of a coin
+          flip, at a brightness difference that is imperceptible on a near
+          black canvas. */}
       <div aria-hidden="true" className="absolute inset-0 pointer-events-none">
         <div className="ambient-orb absolute top-1/4 left-[-10%] w-[50vw] h-[50vw] max-w-[38rem] max-h-[38rem] rounded-full blur-[140px] bg-[var(--accent-volt)] opacity-[0.08]" />
         <div className="ambient-orb absolute bottom-0 right-[-10%] w-[46vw] h-[46vw] max-w-[34rem] max-h-[34rem] rounded-full blur-[140px] bg-[var(--accent-cyan)] opacity-[0.07]" />
@@ -741,7 +758,7 @@ export default function PersonalTelemetrySection() {
               Clock
             </div>
           </div>
-          <span className="hidden sm:flex items-center gap-2 font-mono text-[0.625rem] uppercase tracking-[0.3em] text-[var(--text)] opacity-80 pb-2">
+          <span className="hidden sm:flex items-center gap-2 font-mono text-[0.625rem] uppercase tracking-[0.3em] text-[var(--text)] opacity-90 pb-2">
             <span className="w-1.5 h-1.5 rounded-full bg-[var(--accent-volt)] animate-pulse" />
             <ScrambleLabel text="Live feeds" trigger="enter" />
           </span>
@@ -846,13 +863,13 @@ export default function PersonalTelemetrySection() {
                         </div>
                         <span
                           dir="auto"
-                          className={`block text-[0.6875rem] sm:text-sm opacity-80 truncate mt-1 ${
+                          className={`block text-[0.6875rem] sm:text-sm opacity-90 truncate mt-1 ${
                             artistIsArabic
                               ? "font-[family-name:var(--font-arabic-display),sans-serif]"
                               : "font-mono"
                           }`}
                         >
-                          {nowPlaying.artist} ↗
+                          {nowPlaying.artist} {ARROW_NE}
                         </span>
                       </div>
                     </a>
@@ -861,7 +878,7 @@ export default function PersonalTelemetrySection() {
                       <span className="text-outline block font-[family-name:var(--font-syne)] font-extrabold text-3xl sm:text-5xl uppercase leading-none">
                         Off Air
                       </span>
-                      <span className="block font-mono text-[0.625rem] sm:text-xs uppercase tracking-widest opacity-80 mt-3">
+                      <span className="block font-mono text-[0.625rem] sm:text-xs uppercase tracking-widest opacity-90 mt-3">
                         Mo isn&apos;t playing anything right now
                       </span>
                     </div>
@@ -943,18 +960,18 @@ export default function PersonalTelemetrySection() {
                         <span className="block font-[family-name:var(--font-syne)] font-extrabold text-5xl sm:text-7xl leading-none tabular-nums text-[var(--text-contrast)]">
                           {weather.tempF}°
                         </span>
-                        <span className="block font-mono text-[0.6875rem] sm:text-sm opacity-80 mt-2">
+                        <span className="block font-mono text-[0.6875rem] sm:text-sm opacity-90 mt-2">
                           {CONDITION_LABEL[weather.condition]} · Feels{" "}
                           {weather.feelsLikeF}°
                         </span>
-                        <span className="block font-mono text-[0.625rem] sm:text-xs uppercase tracking-wider opacity-80 mt-1">
+                        <span className="block font-mono text-[0.625rem] sm:text-xs uppercase tracking-wider opacity-90 mt-1">
                           {nycTime ?? "--:--"} in NYC · Wind {weather.windMph}{" "}
                           mph · Hum {weather.humidity}%
                         </span>
                       </div>
                     </div>
                   ) : (
-                    <span className="block font-mono text-[0.6875rem] sm:text-xs uppercase tracking-widest opacity-80 animate-pulse">
+                    <span className="block font-mono text-[0.6875rem] sm:text-xs uppercase tracking-widest opacity-90 animate-pulse">
                       Reading the NYC sky…
                     </span>
                   )}
@@ -1147,7 +1164,7 @@ export default function PersonalTelemetrySection() {
                             {hoveredCountry.hint ? ` · ${hoveredCountry.hint}` : ""}
                           </span>
                         ) : (
-                          <span className="opacity-80">Drag the globe · hover a flag</span>
+                          <span className="opacity-90">Drag the globe · hover a flag</span>
                         )}
                       </div>
                     </div>
@@ -1196,7 +1213,7 @@ export default function PersonalTelemetrySection() {
                   >
                     {LEARNING.title}
                   </span>
-                  <p className="font-mono text-[0.6875rem] sm:text-sm opacity-80 mt-3 mb-5 max-w-sm">
+                  <p className="font-mono text-[0.6875rem] sm:text-sm opacity-90 mt-3 mb-5 max-w-sm">
                     {LEARNING.description}
                   </p>
 

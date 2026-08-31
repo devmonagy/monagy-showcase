@@ -8,7 +8,7 @@ import { useGSAP } from "@gsap/react";
 import { NAV_LINKS, SITE, SOCIALS } from "../data/content";
 import MagneticLink from "./MagneticLink";
 import GlitchText, { playGlitchBurst } from "./fx/GlitchText";
-import { SCRAMBLE_CHARS } from "./fx/constants";
+import { ARROW_NE, SCRAMBLE_CHARS } from "./fx/constants";
 import { FINE_POINTER_QUERY, scrollToSection } from "./SmoothScroll";
 import { entranceAt } from "./HeroSection";
 
@@ -634,7 +634,7 @@ export default function Navbar() {
               rel="noopener noreferrer"
               className="mnav-meta inline-flex items-center gap-3 rounded-full bg-[var(--accent-volt)] text-[var(--accent-volt-ink)] px-6 py-3 font-mono text-xs font-bold uppercase tracking-widest"
             >
-              View Resume <span aria-hidden="true">↗</span>
+              View Resume <span aria-hidden="true">{ARROW_NE}</span>
             </a>
             <div className="mnav-meta flex flex-wrap gap-x-6 gap-y-2 font-mono text-[0.625rem] uppercase tracking-widest text-[var(--text)]">
               {SOCIALS.map((s) => (
@@ -645,7 +645,7 @@ export default function Navbar() {
                   rel="noopener noreferrer"
                   className="hover:text-[var(--accent-volt)] transition-colors duration-200"
                 >
-                  {s.label} ↗
+                  {s.label} {ARROW_NE}
                 </a>
               ))}
             </div>

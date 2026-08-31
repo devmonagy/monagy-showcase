@@ -10,7 +10,7 @@ import { useGSAP } from "@gsap/react";
 import { SITE, SOCIALS } from "../data/content";
 import { FINE_POINTER_QUERY } from "./SmoothScroll";
 import GlitchText, { playGlitchBurst } from "./fx/GlitchText";
-import { SCRAMBLE_CHARS, SIGNAL_LOCK_EASE } from "./fx/constants";
+import { ARROW_NE, SCRAMBLE_CHARS, SIGNAL_LOCK_EASE } from "./fx/constants";
 
 if (typeof window !== "undefined") {
   gsap.registerPlugin(
@@ -368,7 +368,7 @@ export default function ContactSection() {
               rel="noopener noreferrer"
               className="hover:text-[var(--accent-volt)] transition-colors duration-200"
             >
-              {s.label} ↗
+              {s.label} {ARROW_NE}
             </a>
           ))}
         </div>

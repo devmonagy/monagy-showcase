@@ -10,7 +10,7 @@ import { BIO_PARAGRAPHS, SITE, TECH_STACK } from "../data/content";
 import MagneticLink from "./MagneticLink";
 import ScrambleLabel from "./fx/ScrambleLabel";
 import GlitchText, { playGlitchBurst } from "./fx/GlitchText";
-import { SIGNAL_LOCK_EASE } from "./fx/constants";
+import { ARROW_NE, SIGNAL_LOCK_EASE } from "./fx/constants";
 import { FINE_POINTER_QUERY } from "./SmoothScroll";
 import { isLowPerf } from "../lib/perf";
 
@@ -794,7 +794,7 @@ export default function HeroSection() {
             {/* Hover glitch rides the label span, not the anchor —
                 MagneticLink owns the anchor's transform entirely. */}
             <GlitchText trigger="hover">View Resume</GlitchText>
-            <span aria-hidden="true">↗</span>
+            <span aria-hidden="true">{ARROW_NE}</span>
           </MagneticLink>
         </div>
       </div>
